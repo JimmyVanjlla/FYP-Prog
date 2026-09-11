@@ -111,3 +111,47 @@ def test_manager_can_deactivate_staff_account(client):
     )
     assert resp.status_code == 200
     assert resp.json()["is_active"] is False
+
+
+def test_manager_can_view_audit_log(client):
+    """FR1.5 — the audit log Sprint 1 started writing is now actually
+    readable, not just write-only."""
+    manager_token = register_and_login(client, email="manager2@restaurant.com", role="Restaurant Manager")
+    # register + login themselves are logged (see app/services/auth.py).
+    resp = client.get("/users/audit-logs", headers=auth_headers(manager_token))
+    assert resp.status_code == 200
+    actions = [entry["action"] for entry in resp.json()]
+    assert "register" in actions
+    assert "login" in actions
+
+
+def test_audit_log_records_staff_updates(client):
+    """FR1.4 + FR1.5 together — a staff update shows up in the log."""
+    manager_token = register_and_login(client, email="manager3@restaurant.com", role="Restaurant Manager")
+    client.post(
+        "/auth/register",
+        json={
+            "name": "Kitchen Person",
+            "email": "kitchenperson@restaurant.com",
+            "password": "password123",
+            "role": "Kitchen Staff",
+        },
+    )
+    users = client.get("/users", headers=auth_headers(manager_token)).json()
+    staff = next(u for u in users if u["email"] == "kitchenperson@restaurant.com")
+    client.patch(
+        f"/users/{staff['user_id']}",
+        json={"is_active": False},
+        headers=auth_headers(manager_token),
+    )
+
+    resp = client.get("/users/audit-logs", headers=auth_headers(manager_token))
+    actions = [entry["action"] for entry in resp.json()]
+    assert any(a.startswith(f"update_user:{staff['user_id']}:") for a in actions)
+
+
+def test_non_manager_cannot_view_audit_log(client):
+    """FR1.3 RBAC applied to the audit log endpoint."""
+    token = register_and_login(client, email="kitchen6@restaurant.com", role="Kitchen Staff")
+    resp = client.get("/users/audit-logs", headers=auth_headers(token))
+    assert resp.status_code == 403

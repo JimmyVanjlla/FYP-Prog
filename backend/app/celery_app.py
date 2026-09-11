@@ -25,6 +25,7 @@ celery_app = Celery(
         "app.tasks.inventory_tasks",
         "app.tasks.feedback_tasks",
         "app.tasks.reporting_tasks",
+        "app.tasks.waste_tasks",
     ],
 )
 
@@ -41,10 +42,11 @@ celery_app.conf.update(
 )
 
 # Ch4 §4.1 — Celery Beat triggers: Prophet forecast training, leftover-rate
-# analysis, waste aggregation (piggybacks on the near-expiry scan and on
-# leftover logging itself — see app/tasks/inventory_tasks.py and
-# app/services/kitchen.py), near-expiry batch scanning, and weekly report
-# generation.
+# analysis, waste aggregation, near-expiry batch scanning, and weekly
+# report generation. (Individual WasteLog rows are also created
+# event-driven off the near-expiry scan and off leftover logging itself —
+# see app/tasks/inventory_tasks.py and app/services/kitchen.py — but the
+# periodic WasteReductionTrend rollup below is its own scheduled job.)
 celery_app.conf.beat_schedule = {
     "train-and-generate-forecasts-daily": {
         "task": "app.tasks.forecasting_tasks.train_and_generate_forecasts",
@@ -57,6 +59,10 @@ celery_app.conf.beat_schedule = {
     "identify-high-leftover-dishes-daily": {
         "task": "app.tasks.feedback_tasks.identify_high_leftover_dishes",
         "schedule": crontab(hour=6, minute=30),  # after forecast training
+    },
+    "aggregate-weekly-waste-trend": {
+        "task": "app.tasks.waste_tasks.aggregate_weekly_waste_trend",
+        "schedule": crontab(day_of_week=1, hour=5, minute=30),  # Monday, after the near-expiry scan
     },
     "generate-weekly-report": {
         "task": "app.tasks.reporting_tasks.generate_weekly_report",

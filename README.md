@@ -175,6 +175,23 @@ Module 7's exact `leftover_rate` signal — see that function's docstring,
 and `test_high_leftover_rate_pulls_forecast_down` in
 `tests/test_forecasting.py` for the regression test. 61/61 tests passing.
 
+## Post-Sprint-5 fixes: broader NFR/architecture audit
+
+Asked "does everything else match the docs" — beyond the FR-level check
+above, this turned up two more real gaps, both now fixed:
+
+- **Waste aggregation wasn't actually scheduled.** Ch4 §4.1 lists "waste
+  aggregation" as one of Celery Beat's five scheduled jobs, but
+  `WasteReductionTrend` rollups (FR6.3) were only reachable via a manual
+  Manager-triggered endpoint. Fixed: `app/tasks/waste_tasks.py`, running
+  weekly alongside the report generation task.
+- **The audit log was write-only.** FR1.5 logs actions "for audit trail
+  purposes," but Sprint 1 never built a way to actually read `AuditLog`
+  back — a log nobody can view doesn't really serve that purpose. Fixed:
+  `GET /users/audit-logs` (Manager-only).
+
+64/64 backend tests passing.
+
 ## Known gaps / good next steps
 
 - Flutter screens for Staff Scheduling, full Procurement (supplier/PO
@@ -184,6 +201,16 @@ and `test_high_leftover_rate_pulls_forecast_down` in
 - FCM push notifications are stored honestly as `queued_for_retry` —
   wiring a real Firebase service account (`Settings.fcm_credentials_path`)
   would make them actually deliver.
+- Android's `minSdkVersion` uses the Flutter SDK's default (API 24 /
+  Android 7.0) rather than being explicitly pinned to match
+  NFR-Usability's stated "Android 8.0 and above" floor. Broader
+  compatibility isn't a functional problem, but the config doesn't
+  encode the documented claim exactly — bump `minSdk` to 26 in
+  `frontend/android/app/build.gradle.kts` if that precision matters.
+  (iOS is already correctly pinned to 13.0.)
+- NFR-Performance targets (API <2s, a full Prophet cycle <60s for up to
+  100 menu items, weekly PDF <30s) are asserted in the report but never
+  load-tested here — plausible given the stack, not measured.
 - No CI pipeline yet (tests are run locally).
 - Deployment (Railway/Render per Ch2's feasibility study) hasn't been set
   up — everything so far runs locally against the real Supabase/Redis

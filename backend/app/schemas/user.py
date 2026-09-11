@@ -45,3 +45,15 @@ class UserUpdate(BaseModel):
 
     role: Role | None = None
     is_active: bool | None = None
+
+
+class AuditLogOut(BaseModel):
+    """FR1.5 — read side of the audit trail (see app/models/audit.py for
+    why this table exists beyond Ch4's documented 33 entities)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    audit_log_id: int
+    user_id: int
+    action: str
+    timestamp: datetime
