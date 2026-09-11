@@ -7,6 +7,7 @@ backend/.pytest_cache/
 backend/.env
 backend/dev.db
 backend/*.db
+backend/generated_reports/
 
 # --- Frontend (Flutter) ---
 frontend/.dart_tool/

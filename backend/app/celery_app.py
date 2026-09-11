@@ -24,6 +24,7 @@ celery_app = Celery(
         "app.tasks.forecasting_tasks",
         "app.tasks.inventory_tasks",
         "app.tasks.feedback_tasks",
+        "app.tasks.reporting_tasks",
     ],
 )
 
@@ -43,7 +44,7 @@ celery_app.conf.update(
 # analysis, waste aggregation (piggybacks on the near-expiry scan and on
 # leftover logging itself — see app/tasks/inventory_tasks.py and
 # app/services/kitchen.py), near-expiry batch scanning, and weekly report
-# generation (Sprint 5, not yet scheduled here).
+# generation.
 celery_app.conf.beat_schedule = {
     "train-and-generate-forecasts-daily": {
         "task": "app.tasks.forecasting_tasks.train_and_generate_forecasts",
@@ -56,5 +57,9 @@ celery_app.conf.beat_schedule = {
     "identify-high-leftover-dishes-daily": {
         "task": "app.tasks.feedback_tasks.identify_high_leftover_dishes",
         "schedule": crontab(hour=6, minute=30),  # after forecast training
+    },
+    "generate-weekly-report": {
+        "task": "app.tasks.reporting_tasks.generate_weekly_report",
+        "schedule": crontab(day_of_week=1, hour=6, minute=0),  # Monday, after the day's other runs
     },
 }

@@ -22,3 +22,6 @@ redis==5.2.1
 pandas==2.2.3
 prophet==1.1.6
 
+# Sprint 5: Reporting & Analytics (Ch4 §4.1 "External & Invoked Services")
+reportlab==4.2.5
+

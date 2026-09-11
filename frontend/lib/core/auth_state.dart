@@ -50,6 +50,10 @@ class AuthState extends ChangeNotifier {
   bool get isAuthenticated => _token != null;
   String? get role => _role;
   bool get isRestoring => _restoring;
+  // Only used to build the report-download URL (see
+  // ApiClient.reportDownloadUrl) for the system browser, which can't send
+  // an Authorization header itself — never logged or displayed.
+  String? get token => _token;
 
   /// Called once at app startup to resume a session without asking the
   /// user to log in again every time they reopen the app.

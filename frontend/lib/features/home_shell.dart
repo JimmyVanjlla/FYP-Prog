@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../core/auth_state.dart';
 import 'inventory/inventory_list_screen.dart';
 import 'kitchen/leftover_log_screen.dart';
+import 'manager/approvals_screen.dart';
+import 'manager/reports_screen.dart';
+import 'manager/waste_screen.dart';
 import 'menu/menu_list_screen.dart';
 
 /// Role-scoped bottom navigation — each tab is a module screen; a role only
@@ -67,6 +70,11 @@ class _HomeShellState extends State<HomeShell> {
     }
     if (role == Roles.kitchenStaff) {
       tabs.add(const _Tab('Leftovers', Icons.restaurant, LeftoverLogScreen()));
+    }
+    if (role == Roles.manager) {
+      tabs.add(const _Tab('Approvals', Icons.fact_check, ApprovalsScreen()));
+      tabs.add(const _Tab('Waste', Icons.delete_outline, WasteScreen()));
+      tabs.add(const _Tab('Reports', Icons.summarize, ReportsScreen()));
     }
     return tabs;
   }

@@ -6,7 +6,7 @@ FR1.3 / NFR-Security: role-based access control is enforced here, at the API
 layer, on every protected endpoint — never left to the Flutter UI to hide a
 button and call it secure.
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
@@ -15,7 +15,7 @@ from app.db.session import get_db
 from app.models.roles import Role
 from app.models.user import User
 
-_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 _CREDENTIALS_ERROR = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -25,8 +25,17 @@ _CREDENTIALS_ERROR = HTTPException(
 
 
 def get_current_user(
-    token: str = Depends(_oauth2_scheme), db: Session = Depends(get_db)
+    header_token: str | None = Depends(_oauth2_scheme),
+    query_token: str | None = Query(default=None, alias="token"),
+    db: Session = Depends(get_db),
 ) -> User:
+    # A plain browser tab opening a file-download link (FR11.2's PDF —
+    # see reports.router.download_report) can't attach an Authorization
+    # header, so this one accepts the token as a query param as a
+    # fallback. The header takes priority when both are present.
+    token = header_token or query_token
+    if token is None:
+        raise _CREDENTIALS_ERROR
     try:
         payload = decode_access_token(token)
         user_id = payload.get("sub")

@@ -42,6 +42,9 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   # App-wide auth state (current user/role) shared across screens.
   provider: ^6.1.2
+  # Opens a generated report PDF in the system browser/viewer (FR11.2) —
+  # the app itself has no in-app PDF renderer.
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:

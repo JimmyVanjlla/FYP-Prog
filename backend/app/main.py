@@ -9,6 +9,7 @@ from app.routers import (
     kitchen,
     menu,
     procurement,
+    reporting,
     staffing,
     users,
     waste,
@@ -22,10 +23,11 @@ app = FastAPI(
         "Module 4 (Demand Forecasting), Module 5 (Kitchen Operations). Sprint 3: "
         "Module 6 (Waste Management), Module 7 (Portion & Forecast Feedback), "
         "Module 8 (Staff Scheduling). Sprint 4: Module 9 (Procurement & Supplier "
-        "Management), Module 10 (Delivery Management). Interactive docs at /docs "
-        "(FastAPI's automatic OpenAPI generation — see Ch4 NFR-Maintainability)."
+        "Management), Module 10 (Delivery Management). Sprint 5: Module 11 "
+        "(Reporting & Analytics). Interactive docs at /docs (FastAPI's "
+        "automatic OpenAPI generation — see Ch4 NFR-Maintainability)."
     ),
-    version="0.4.0",
+    version="0.5.0",
 )
 
 app.include_router(auth.router)
@@ -39,6 +41,7 @@ app.include_router(feedback.router)
 app.include_router(staffing.router)
 app.include_router(procurement.router)
 app.include_router(delivery.router)
+app.include_router(reporting.router)
 
 
 @app.get("/health", tags=["health"])

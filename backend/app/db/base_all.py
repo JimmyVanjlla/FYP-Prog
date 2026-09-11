@@ -41,3 +41,4 @@ from app.models.procurement import (  # noqa: F401
     SupplierDiscrepancy,
 )
 from app.models.delivery import Delivery, DeliveryItem, DeliveryDiscrepancy  # noqa: F401
+from app.models.report import Report  # noqa: F401

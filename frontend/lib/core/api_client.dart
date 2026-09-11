@@ -231,6 +231,105 @@ class ApiClient {
     return _decode(resp) as Map<String, dynamic>;
   }
 
+  // --- Module 7: Portion & Forecast Feedback ---
+
+  Future<List<dynamic>> listPortionRecommendations({String? status}) async {
+    final uri = _uri('/portion-feedback/recommendations').replace(
+      queryParameters: status != null ? {'status_filter': status} : null,
+    );
+    final resp = await http.get(uri, headers: _headers);
+    return _decode(resp) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> approvePortionRecommendation(
+    int recommendationId,
+  ) async {
+    final resp = await http.post(
+      _uri('/portion-feedback/recommendations/$recommendationId/approve'),
+      headers: _headers,
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> rejectPortionRecommendation(
+    int recommendationId,
+  ) async {
+    final resp = await http.post(
+      _uri('/portion-feedback/recommendations/$recommendationId/reject'),
+      headers: _headers,
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  // --- Module 6: Waste Management ---
+
+  Future<List<dynamic>> listWasteLogs() async {
+    final resp = await http.get(_uri('/waste/logs'), headers: _headers);
+    return _decode(resp) as List<dynamic>;
+  }
+
+  Future<List<dynamic>> listWasteTrends() async {
+    final resp = await http.get(_uri('/waste/trends'), headers: _headers);
+    return _decode(resp) as List<dynamic>;
+  }
+
+  // --- Module 9: Procurement & Supplier Management ---
+
+  Future<List<dynamic>> listPurchaseOrders({String? status}) async {
+    final uri = _uri('/procurement/purchase-orders').replace(
+      queryParameters: status != null ? {'status_filter': status} : null,
+    );
+    final resp = await http.get(uri, headers: _headers);
+    return _decode(resp) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> approvePurchaseOrder(int poId) async {
+    final resp = await http.post(
+      _uri('/procurement/purchase-orders/$poId/approve'),
+      headers: _headers,
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> rejectPurchaseOrder(int poId) async {
+    final resp = await http.post(
+      _uri('/procurement/purchase-orders/$poId/reject'),
+      headers: _headers,
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  // --- Module 11: Reporting & Analytics ---
+
+  Future<List<dynamic>> listReports() async {
+    final resp = await http.get(_uri('/reports'), headers: _headers);
+    return _decode(resp) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> generateWeeklyReport({
+    required String periodStart,
+    required String periodEnd,
+  }) async {
+    final resp = await http.post(
+      _uri('/reports/weekly'),
+      headers: _headers,
+      body: jsonEncode({'period_start': periodStart, 'period_end': periodEnd}),
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  /// Not fetched via http — handed to url_launcher so the system browser
+  /// (which already carries no auth) opens it; the token is passed as a
+  /// query param since a plain browser tab can't send an Authorization
+  /// header itself. FastAPI's OAuth2PasswordBearer only reads the header
+  /// by default, so the download route also needs to accept this query
+  /// param — see app/routers/reporting.py.
+  Uri reportDownloadUrl(int reportId, {required String token}) {
+    return _uri(
+      '/reports/$reportId/download',
+    ).replace(queryParameters: {'token': token});
+  }
+
   Future<Map<String, dynamic>> logLeftover({
     required int menuItemId,
     required String servicePeriodDate,

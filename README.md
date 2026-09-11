@@ -2,8 +2,9 @@
 
 Implementation of Ng Jim Shen's Final Year Project (see `../` for the FYP1
 report: Chapters 1-4). Built module-by-module following the sprint order in
-Form 2's project schedule. Current status: **Sprint 4 — Module 9
-(Procurement & Supplier Management), Module 10 (Delivery Management)**.
+Form 2's project schedule. Current status: **Sprint 5 (final planned
+sprint) — Module 11 (Reporting & Analytics) + UI/UX polish. All 11 modules
+now have a working, tested backend.**
 
 ## Stack
 
@@ -122,14 +123,53 @@ Run tests: `flutter test`. Run static analysis: `flutter analyze`.
   `None`/`0.00`.
 - 57/57 backend tests passing; migration applied to Supabase.
 
+**Sprint 5**
+- **Module 11**: weekly summary report — compiles forecast accuracy, then
+  waste cost & trends, then budget utilisation (UC-RA-02's order), exports
+  a real 2-page PDF via ReportLab following every one of Ch4 §4.7.2's
+  design principles (fixed white page, single Helvetica family, the
+  blue/orange predicted-vs-actual and leftover-vs-expiry color pair,
+  green reserved for "on track" only, numbered sections, every figure
+  captioned with its source FR/entity, paginated not one long scroll).
+  Rejects date ranges with no underlying data (FR11.6).
+- Found and fixed a real bug while building this: unquantized Decimal
+  products were carrying extra decimal places into columns declared with
+  a fixed scale — masked by Postgres auto-rounding on insert, but visible
+  once a real report tried to print them cleanly.
+- Push notifications (FR5.4/FR6.4) were already wired in Sprints 2-3 —
+  nothing new needed here beyond what's already honestly queued pending
+  real FCM credentials.
+- **UI/UX polish**: added the Manager's combined "Needs your attention"
+  list (pending POs + portion-size reviews in one queue, exactly as
+  described in Ch4 §4.4.1 — not two separate screens), a Waste view, and
+  a Reports view that opens the generated PDF in the system viewer. Staff
+  Scheduling and full Procurement/Delivery screens are still API-only
+  (`/docs`) — the biggest gap remaining if this continues past FYP2.
+- 60/60 backend tests passing; `flutter analyze` clean; migration applied
+  to Supabase.
+
 See `backend/app/` (routers → services → models, one file per module) and
 `frontend/lib/features/` for the code, and each file's module-level
 docstring/comment for which FR(s) it implements.
 
-## Planned sprint order (Form 2)
+## Sprint order (Form 2) — all done
 
 1. ~~User & Access Management, Menu & Recipe Management~~
 2. ~~Inventory Management, Demand Forecasting, Kitchen Operations~~
 3. ~~Waste Management, Portion & Forecast Feedback, Staff Scheduling~~
-4. ~~Procurement & Supplier Management, Delivery Management~~ ← we are here
-5. Reporting & Analytics, push notifications, UI/UX polish
+4. ~~Procurement & Supplier Management, Delivery Management~~
+5. ~~Reporting & Analytics, push notifications, UI/UX polish~~ ← we are here
+
+## Known gaps / good next steps
+
+- Flutter screens for Staff Scheduling, full Procurement (supplier/PO
+  management beyond the Manager's approval queue), and Delivery are not
+  built yet — those modules are backend-complete and tested but
+  API-only for now.
+- FCM push notifications are stored honestly as `queued_for_retry` —
+  wiring a real Firebase service account (`Settings.fcm_credentials_path`)
+  would make them actually deliver.
+- No CI pipeline yet (tests are run locally).
+- Deployment (Railway/Render per Ch2's feasibility study) hasn't been set
+  up — everything so far runs locally against the real Supabase/Redis
+  Cloud instances.
