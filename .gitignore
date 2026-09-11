@@ -1,0 +1,31 @@
+# --- Backend (Python) ---
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.egg-info/
+backend/.pytest_cache/
+backend/.env
+backend/dev.db
+backend/*.db
+
+# --- Frontend (Flutter) ---
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/android/.gradle/
+frontend/android/app/debug/
+frontend/android/app/profile/
+frontend/android/app/release/
+frontend/ios/Pods/
+frontend/ios/Flutter/Flutter.framework/
+frontend/ios/Flutter/Flutter.podspec
+frontend/*.iml
+frontend/.idea/
+
+# --- Editors / OS ---
+.vscode/
+.DS_Store
+Thumbs.db
