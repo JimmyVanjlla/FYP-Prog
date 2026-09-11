@@ -26,11 +26,16 @@ def _to_out(item, db: Session) -> MenuItemOut:
 
 @router.get("", response_model=list[MenuItemOut])
 def list_menu_items(
-    db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+    include_inactive: bool = False,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ) -> list[MenuItemOut]:
     """FR2.4 — every authenticated role can view the menu list with its
-    stock-based availability flag; only Managers can mutate it."""
-    return [_to_out(item, db) for item in menu_service.list_menu_items(db)]
+    stock-based availability flag; only Managers can mutate it.
+    include_inactive is for a Manager reviewing past items (UC-MR-01 Alt
+    Flow 3a) — everyone else effectively only ever sees active ones since
+    the default excludes deactivated items from ordering/prep screens."""
+    return [_to_out(item, db) for item in menu_service.list_menu_items(db, include_inactive=include_inactive)]
 
 
 @router.post("", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)
@@ -89,3 +94,17 @@ def add_recipe_link(
     except menu_service.MenuItemNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Menu item not found.")
     return link
+
+
+@router.delete("/{menu_item_id}/recipe-links/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_recipe_link(
+    menu_item_id: int,
+    link_id: int,
+    db: Session = Depends(get_db),
+    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+) -> None:
+    """UC-MR-02 Alt Flow 2a."""
+    try:
+        menu_service.remove_recipe_link(db, menu_item_id, link_id)
+    except menu_service.RecipeLinkNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recipe link not found.")

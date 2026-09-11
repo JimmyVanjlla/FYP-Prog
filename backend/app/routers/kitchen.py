@@ -39,18 +39,22 @@ def generate_prep_recommendation(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> PrepRecommendationOut:
-    """FR5.1."""
+    """FR5.1 / UC-KO-01 Alt Flow 3a."""
     try:
         return kitchen_service.generate_prep_recommendation(
             db,
             menu_item_id=data.menu_item_id,
             meal_period=data.meal_period,
             forecast_date=data.forecast_date,
+            manual_quantity=data.manual_quantity,
         )
+    except kitchen_service.MenuItemInactiveError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Menu item not found or inactive.")
     except kitchen_service.NoForecastAvailableError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No forecast available yet for this item/meal period/date.",
+            detail="No forecast available yet for this item/meal period/date. "
+            "Provide manual_quantity to enter a prep quantity manually.",
         )
 
 

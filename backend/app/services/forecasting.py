@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.forecasting import Forecast, ForecastAccuracy, Order
+from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 from app.services.feedback import compute_leftover_rate
 
@@ -30,6 +31,12 @@ from app.services.feedback import compute_leftover_rate
 # data points for an item, Prophet is skipped and the item is flagged
 # rather than forced through a fit that would overfit noise.
 MIN_DATA_POINTS = 14
+# FR5.4 / UC-KO-04 — how far above an item/meal_period's own historical
+# average a new forecast has to be before it's treated as a "high-demand"
+# spike worth alerting Kitchen Staff about. Ch4 doesn't name an exact
+# figure ("exceeding a configured threshold"), so this is a documented,
+# reasonable default rather than a transcribed report value.
+HIGH_DEMAND_MULTIPLIER = 1.5
 # How many days ahead each training run forecasts.
 FORECAST_HORIZON_DAYS = 7
 
@@ -139,16 +146,36 @@ def train_and_generate_forecasts(
         # future date is being predicted.
         adjustment = _leftover_adjustment_factor(db, int(menu_item_id), today=today)
 
+        # FR5.4 / UC-KO-04 — "high-demand alert...based on the latest
+        # forecast": a forecast is a spike if it clears
+        # HIGH_DEMAND_MULTIPLIER times this item/meal_period's own
+        # historical average order volume. Computed once per group, same
+        # as the adjustment factor above.
+        historical_average = float(group["y"].mean())
+
         # Step 13.
         for _, row in future_rows.iterrows():
+            predicted_quantity = max(0.0, round(float(row["yhat"]) * adjustment, 2))
             forecast = Forecast(
                 menu_item_id=int(menu_item_id),
                 meal_period=meal_period,
                 forecast_date=row["ds"].date(),
-                predicted_quantity=max(0.0, round(float(row["yhat"]) * adjustment, 2)),
+                predicted_quantity=predicted_quantity,
             )
             db.add(forecast)
             created_forecasts.append(forecast)
+
+            if historical_average > 0 and predicted_quantity > historical_average * HIGH_DEMAND_MULTIPLIER:
+                notification_service.notify(
+                    db,
+                    recipient_role="Kitchen Staff",
+                    type_="high_demand_alert",
+                    message=(
+                        f"High demand forecast for menu item #{int(menu_item_id)} on "
+                        f"{row['ds'].date()} ({meal_period}): {predicted_quantity} portions "
+                        f"(usual average: {round(historical_average, 1)})."
+                    ),
+                )
 
     db.commit()
     for f in created_forecasts:

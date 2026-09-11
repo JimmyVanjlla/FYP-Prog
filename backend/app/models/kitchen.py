@@ -16,7 +16,12 @@ class PrepRecommendation(Base):
 
     recommendation_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     menu_item_id: Mapped[int] = mapped_column(ForeignKey("menu_items.menu_item_id"), nullable=False)
-    forecast_id: Mapped[int] = mapped_column(ForeignKey("forecasts.forecast_id"), nullable=False)
+    # Nullable, diverging slightly from Ch4's dictionary (which shows this
+    # required): UC-KO-01 Alt Flow 3a explicitly requires falling back to
+    # manual prep quantity entry when no forecast exists yet (e.g. a new
+    # menu item with no order history) — there is no forecast to point at
+    # in that case. See app/services/kitchen.py::generate_prep_recommendation.
+    forecast_id: Mapped[int | None] = mapped_column(ForeignKey("forecasts.forecast_id"), nullable=True)
     meal_period: Mapped[str] = mapped_column(String(20), nullable=False)
     recommended_quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 

@@ -125,3 +125,67 @@ def test_deactivate_menu_item(client):
     resp = client.delete(f"/menu-items/{item['menu_item_id']}", headers=auth_headers(token))
     assert resp.status_code == 200
     assert resp.json()["is_active"] is False
+
+
+def test_deactivated_menu_item_excluded_from_default_listing(client):
+    """UC-MR-01 Alt Flow 3a — deactivation removes it from active
+    ordering/prep screens while preserving it for reporting."""
+    token = _manager_token(client)
+    item = client.post(
+        "/menu-items",
+        json={"name": "Discontinued Dish", "price": "8.00", "category": "Main"},
+        headers=auth_headers(token),
+    ).json()
+    client.delete(f"/menu-items/{item['menu_item_id']}", headers=auth_headers(token))
+
+    default_listing = client.get("/menu-items", headers=auth_headers(token)).json()
+    assert item["menu_item_id"] not in [m["menu_item_id"] for m in default_listing]
+
+    with_inactive = client.get(
+        "/menu-items", params={"include_inactive": True}, headers=auth_headers(token)
+    ).json()
+    assert item["menu_item_id"] in [m["menu_item_id"] for m in with_inactive]
+
+
+def test_remove_recipe_link(client):
+    """UC-MR-02 Alt Flow 2a."""
+    token = _manager_token(client)
+    item = client.post(
+        "/menu-items",
+        json={"name": "Nasi Lemak Ayam", "price": "12.50", "category": "Main"},
+        headers=auth_headers(token),
+    ).json()
+    link = client.post(
+        f"/menu-items/{item['menu_item_id']}/recipe-links",
+        json={"ingredient_id": 4, "quantity_per_serving": "0.180"},
+        headers=auth_headers(token),
+    ).json()
+
+    resp = client.delete(
+        f"/menu-items/{item['menu_item_id']}/recipe-links/{link['link_id']}", headers=auth_headers(token)
+    )
+    assert resp.status_code == 204
+
+    updated = client.get("/menu-items", headers=auth_headers(token)).json()
+    dish = next(m for m in updated if m["menu_item_id"] == item["menu_item_id"])
+    assert dish["recipe_links"] == []
+
+
+def test_remove_recipe_link_404_for_wrong_menu_item(client):
+    token = _manager_token(client)
+    item_a = client.post(
+        "/menu-items", json={"name": "Dish A", "price": "5.00", "category": "Main"}, headers=auth_headers(token)
+    ).json()
+    item_b = client.post(
+        "/menu-items", json={"name": "Dish B", "price": "5.00", "category": "Main"}, headers=auth_headers(token)
+    ).json()
+    link = client.post(
+        f"/menu-items/{item_a['menu_item_id']}/recipe-links",
+        json={"ingredient_id": 4, "quantity_per_serving": "0.180"},
+        headers=auth_headers(token),
+    ).json()
+
+    resp = client.delete(
+        f"/menu-items/{item_b['menu_item_id']}/recipe-links/{link['link_id']}", headers=auth_headers(token)
+    )
+    assert resp.status_code == 404

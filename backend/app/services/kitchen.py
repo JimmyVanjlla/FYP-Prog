@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.kitchen import LeftoverLog, Notification, PrepConfirmation, PrepRecommendation
+from app.models.menu import MenuItem
 from app.schemas.kitchen import LeftoverLogCreate, PrepConfirmationCreate
 from app.services import notifications as notification_service
 from app.services import waste as waste_service
@@ -14,7 +15,13 @@ from app.services.forecasting import get_latest_forecast
 
 
 class NoForecastAvailableError(Exception):
-    """FR5.1 — nothing to base a recommendation on yet."""
+    """FR5.1 — no forecast, and no manual_quantity fallback was given
+    either (UC-KO-01 Alt Flow 3a)."""
+
+
+class MenuItemInactiveError(Exception):
+    """UC-MR-01 Alt Flow 3a — a deactivated item is removed from prep
+    recommendation screens."""
 
 
 class RecommendationNotFoundError(Exception):
@@ -26,15 +33,40 @@ class DeviationReasonRequiredError(Exception):
 
 
 def generate_prep_recommendation(
-    db: Session, *, menu_item_id: int, meal_period: str, forecast_date: date
+    db: Session,
+    *,
+    menu_item_id: int,
+    meal_period: str,
+    forecast_date: date,
+    manual_quantity=None,
 ) -> PrepRecommendation:
     """FR5.1 — one recommendation per (menu_item, meal_period, forecast_date),
-    reusing an existing one if already generated rather than duplicating."""
+    reusing an existing one if already generated rather than duplicating.
+
+    UC-KO-01 Alt Flow 3a — when no forecast exists yet, manual_quantity
+    (if given) creates a manual recommendation instead of dead-ending;
+    forecast_id is left null on that row (see the model's docstring for
+    why that's a deliberate, documented divergence from Ch4's dictionary)."""
+    item = db.get(MenuItem, menu_item_id)
+    if item is None or not item.is_active:
+        raise MenuItemInactiveError
+
     forecast = get_latest_forecast(
         db, menu_item_id=menu_item_id, meal_period=meal_period, forecast_date=forecast_date
     )
     if forecast is None:
-        raise NoForecastAvailableError
+        if manual_quantity is None:
+            raise NoForecastAvailableError
+        recommendation = PrepRecommendation(
+            menu_item_id=menu_item_id,
+            forecast_id=None,
+            meal_period=meal_period,
+            recommended_quantity=manual_quantity,
+        )
+        db.add(recommendation)
+        db.commit()
+        db.refresh(recommendation)
+        return recommendation
 
     existing_reco = db.scalars(
         select(PrepRecommendation).where(PrepRecommendation.forecast_id == forecast.forecast_id)
@@ -51,6 +83,19 @@ def generate_prep_recommendation(
     db.add(recommendation)
     db.commit()
     db.refresh(recommendation)
+    # FR5.4 / UC-KO-04 main flow step 1 — "an update to prep quantity
+    # recommendations following a new forecast cycle". Recommendations
+    # here are generated on request rather than automatically the moment
+    # training finishes, so "new" is scoped to this call producing a
+    # recommendation that didn't already exist (the `existing_reco` early
+    # return above is deliberately excluded from this notification).
+    notification_service.notify(
+        db,
+        recipient_role="Kitchen Staff",
+        type_="prep_update",
+        message=f"New prep recommendation for menu item #{menu_item_id} ({meal_period}, "
+        f"{forecast_date}): {recommendation.recommended_quantity} portions.",
+    )
     return recommendation
 
 

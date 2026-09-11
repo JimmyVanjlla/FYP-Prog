@@ -43,6 +43,19 @@ class ShiftAssignmentOut(BaseModel):
     attendance_status: str
 
 
+class MyShiftOut(BaseModel):
+    """UC-SS-05 — a staff member's own shift, with the schedule's date/
+    meal_period folded in so the client doesn't need a second lookup per
+    assignment."""
+
+    assignment_id: int
+    schedule_id: int
+    date: date
+    meal_period: str
+    station: str
+    attendance_status: str
+
+
 class AttendanceUpdate(BaseModel):
     attendance_status: str = Field(min_length=1, max_length=20)
 

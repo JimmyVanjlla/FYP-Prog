@@ -219,3 +219,35 @@ def test_list_forecast_accuracy(client, db_session):
     assert resp.status_code == 200
     assert len(resp.json()) == 1
     assert resp.json()[0]["actual_quantity"] == "95.00"
+
+
+def test_high_demand_forecast_triggers_alert(client):
+    """FR5.4 / UC-KO-04 — a forecast well above the item's historical
+    average notifies Kitchen Staff."""
+    manager_token = _manager_token(client)
+    item = _create_menu_item(client, manager_token)
+    kitchen_token = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")
+
+    # A strong upward trend: low and flat for the first three weeks, then a
+    # sharp step up for the last few days, so Prophet's near-term forecast
+    # continues near the recent high — well above the overall historical
+    # mean (which is dragged down by the long flat stretch at the start).
+    base = date.today() - timedelta(days=28)
+    for i in range(28):
+        quantity = 10 if i < 21 else 200
+        client.post(
+            "/forecasting/orders",
+            json={
+                "menu_item_id": item["menu_item_id"],
+                "quantity": quantity,
+                "meal_period": "Lunch",
+                "order_date": (base + timedelta(days=i)).isoformat(),
+            },
+            headers=auth_headers(manager_token),
+        )
+
+    client.post("/forecasting/train", headers=auth_headers(manager_token))
+
+    notifications = client.get("/kitchen/notifications", headers=auth_headers(kitchen_token)).json()
+    high_demand = [n for n in notifications if n["type"] == "high_demand_alert"]
+    assert len(high_demand) > 0

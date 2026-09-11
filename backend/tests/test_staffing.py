@@ -159,3 +159,76 @@ def test_list_shift_assignments_after_assigning(client):
     assert resp.status_code == 200
     assert len(resp.json()) == 1
     assert resp.json()[0]["staff_id"] == kitchen_user_id
+
+
+def test_my_schedule_only_shows_published_assignments(client):
+    """UC-SS-05 "View My Shift Schedule" — a staff member's own shifts,
+    without needing a schedule_id; drafts don't count as "my schedule"
+    yet."""
+    supervisor_token = _supervisor_token(client)
+    schedule = client.post(
+        "/staffing/schedules", json={"date": "2026-08-22", "meal_period": "Dinner"}, headers=auth_headers(supervisor_token)
+    ).json()
+    kitchen_token = register_and_login(client, email="kitchen4@restaurant.com", role="Kitchen Staff")
+    kitchen_user_id = client.get("/users/me", headers=auth_headers(kitchen_token)).json()["user_id"]
+    client.post(
+        f"/staffing/schedules/{schedule['schedule_id']}/assignments",
+        json={"staff_id": kitchen_user_id, "station": "Kitchen"},
+        headers=auth_headers(supervisor_token),
+    )
+
+    before_publish = client.get("/staffing/my-schedule", headers=auth_headers(kitchen_token)).json()
+    assert before_publish == []
+
+    client.post(f"/staffing/schedules/{schedule['schedule_id']}/publish", headers=auth_headers(supervisor_token))
+
+    after_publish = client.get("/staffing/my-schedule", headers=auth_headers(kitchen_token)).json()
+    assert len(after_publish) == 1
+    assert after_publish[0]["date"] == "2026-08-22"
+    assert after_publish[0]["station"] == "Kitchen"
+
+
+def test_publish_schedule_notifies_assigned_staff(client):
+    """UC-SS-02 main flow step 5."""
+    supervisor_token = _supervisor_token(client)
+    schedule = client.post(
+        "/staffing/schedules", json={"date": "2026-08-23", "meal_period": "Lunch"}, headers=auth_headers(supervisor_token)
+    ).json()
+    kitchen_token = register_and_login(client, email="kitchen5@restaurant.com", role="Kitchen Staff")
+    kitchen_user_id = client.get("/users/me", headers=auth_headers(kitchen_token)).json()["user_id"]
+    client.post(
+        f"/staffing/schedules/{schedule['schedule_id']}/assignments",
+        json={"staff_id": kitchen_user_id, "station": "Kitchen"},
+        headers=auth_headers(supervisor_token),
+    )
+
+    client.post(f"/staffing/schedules/{schedule['schedule_id']}/publish", headers=auth_headers(supervisor_token))
+
+    notifications = client.get("/kitchen/notifications", headers=auth_headers(kitchen_token)).json()
+    assert len(notifications) == 1
+    assert notifications[0]["type"] == "shift_published"
+
+
+def test_publish_schedule_logs_staffing_deviation(client):
+    """UC-SS-02 Alt Flow 3a — assigning fewer/more staff than the AI
+    recommendation is logged for later comparison."""
+    supervisor_token = _supervisor_token(client)
+    schedule = client.post(
+        "/staffing/schedules", json={"date": "2026-09-05", "meal_period": "Lunch"}, headers=auth_headers(supervisor_token)
+    ).json()
+    # No forecast exists, so the recommendation falls back to 0 staff per
+    # station (per test_staffing_recommendation_falls_back_with_no_forecast).
+    client.post(f"/staffing/schedules/{schedule['schedule_id']}/recommendations", headers=auth_headers(supervisor_token))
+
+    kitchen_token = register_and_login(client, email="kitchen6@restaurant.com", role="Kitchen Staff")
+    kitchen_user_id = client.get("/users/me", headers=auth_headers(kitchen_token)).json()["user_id"]
+    client.post(
+        f"/staffing/schedules/{schedule['schedule_id']}/assignments",
+        json={"staff_id": kitchen_user_id, "station": "Kitchen"},
+        headers=auth_headers(supervisor_token),
+    )
+    client.post(f"/staffing/schedules/{schedule['schedule_id']}/publish", headers=auth_headers(supervisor_token))
+
+    manager_token = register_and_login(client, email="manager_audit@restaurant.com", role="Restaurant Manager")
+    audit = client.get("/users/audit-logs", headers=auth_headers(manager_token)).json()
+    assert any("staffing_deviation" in entry["action"] and "station=Kitchen" in entry["action"] for entry in audit)

@@ -32,26 +32,26 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
 
 ## B. Missing use cases / features (medium)
 
-- [ ] **B1. UC-SS-05 "View My Shift Schedule" — entire use case missing.**
-  No endpoint for a staff member to see their own shift assignments across
-  schedules; only per-schedule listing exists (`GET
-  /staffing/schedules/{id}/assignments`), which requires already knowing
-  the schedule_id.
-- [ ] **B2. UC-KO-01 Alt Flow 3a — no manual prep entry fallback.** When no
-  forecast exists yet, `generate_prep_recommendation` just 404s.
-  Documented behavior: fall through to manual prep quantity entry instead
-  of a dead end.
-- [ ] **B3. FR5.4 only half-built.** Only "prep deviation" notifications
-  exist. Missing: notify Kitchen Staff when a *new forecast cycle updates*
-  a prep recommendation (UC-KO-04 main flow step 1), and "high-demand
-  alert" notifications for a forecasted demand spike (also named in FR5.4
-  and UC-KO-04) were never built at all.
-- [ ] **B4. UC-MR-02 Alt Flow 2a — no way to remove a recipe-ingredient
-  link.** Only `POST` (add) exists; no `DELETE`.
-- [ ] **B5. Deactivating a menu item doesn't hide it anywhere.** UC-MR-01
-  Alt Flow 3a: deactivation should remove the item from active listings and
-  prep recommendations. `GET /menu-items` returns all items regardless of
-  `is_active`, and `generate_prep_recommendation` doesn't check it either.
+- [x] **B1. UC-SS-05 "View My Shift Schedule" — entire use case missing.**
+  Fixed: `GET /staffing/my-schedule` (published assignments only, joined
+  with schedule date/meal_period).
+- [x] **B2. UC-KO-01 Alt Flow 3a — no manual prep entry fallback.** Fixed:
+  `manual_quantity` on `POST /kitchen/prep-recommendations`; required
+  `PrepRecommendation.forecast_id` nullable to support it (documented
+  divergence, same reasoning as the existing Staffing/Procurement
+  recommendation nullable FKs).
+- [x] **B3. FR5.4 only half-built.** Fixed both halves: "prep update"
+  notification now fires when `generate_prep_recommendation` creates a
+  genuinely new recommendation (not a cache-hit on an existing one), and a
+  "high-demand alert" fires in `train_and_generate_forecasts` when a new
+  forecast clears 1.5x the item/meal_period's own historical average
+  (documented as this project's own threshold — Ch4 doesn't name a figure).
+- [x] **B4. UC-MR-02 Alt Flow 2a — no way to remove a recipe-ingredient
+  link.** Fixed: `DELETE /menu-items/{id}/recipe-links/{link_id}`.
+- [x] **B5. Deactivating a menu item doesn't hide it anywhere.** Fixed:
+  `GET /menu-items` excludes inactive items by default
+  (`include_inactive=true` for a Manager reviewing history), and
+  `generate_prep_recommendation` now rejects inactive items.
 - [ ] **B6. UC-PS-04 Alt Flow 3a — no way to deactivate a supplier.**
   `Supplier.is_active` exists; nothing ever sets it to `False`.
 - [ ] **B7. UC-PS-07 Alt Flow 3a — `SupplierDiscrepancy` has no resolve
@@ -65,11 +65,13 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
 
 - [ ] **C1. PO approve/reject doesn't notify the Procurement Officer**
   (UC-PS-01 main flow step 5 / Alt Flow 4a).
-- [ ] **C2. Publishing a schedule / assigning staff doesn't notify anyone**
-  (UC-SS-02 main flow step 5).
-- [ ] **C3. UC-SS-02 Alt Flow 3a — assigning fewer/more staff than the AI
-  recommendation isn't logged** for later comparison against actual shift
-  performance.
+- [x] **C2. Publishing a schedule / assigning staff doesn't notify anyone**
+  (UC-SS-02 main flow step 5). Fixed: `publish_schedule` now notifies every
+  assigned staff member.
+- [x] **C3. UC-SS-02 Alt Flow 3a — assigning fewer/more staff than the AI
+  recommendation isn't logged.** Fixed: `publish_schedule` compares actual
+  headcount per station against `StaffingRecommendation` and logs any
+  mismatch via `AuditLog`.
 
 ## D. Minor / cosmetic (already known from earlier audit passes)
 
@@ -108,5 +110,5 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
   create endpoint (it's always system-derived).
 
 ---
-**Progress**: 0/21 actionable items fixed (A-C), 6 noted-not-fixed (D), 5
+**Progress**: 7/21 actionable items fixed (A-C), 6 noted-not-fixed (D), 5
 accepted-as-is (E).

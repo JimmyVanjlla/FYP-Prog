@@ -60,6 +60,43 @@ def test_generate_prep_recommendation_without_forecast_404s(client):
     assert resp.status_code == 404
 
 
+def test_manual_prep_quantity_when_no_forecast(client):
+    """UC-KO-01 Alt Flow 3a — manual_quantity fallback instead of a dead end."""
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+
+    resp = client.post(
+        "/kitchen/prep-recommendations",
+        json={
+            "menu_item_id": item["menu_item_id"],
+            "meal_period": "Dinner",
+            "forecast_date": "2026-08-21",
+            "manual_quantity": "40",
+        },
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["forecast_id"] is None
+    assert body["recommended_quantity"] == "40.00"
+
+
+def test_prep_recommendation_rejected_for_inactive_menu_item(client, db_session):
+    """UC-MR-01 Alt Flow 3a — a deactivated item is removed from prep
+    recommendation screens."""
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+    _seed_forecast(db_session, menu_item_id=item["menu_item_id"])
+    client.delete(f"/menu-items/{item['menu_item_id']}", headers=auth_headers(token))
+
+    resp = client.post(
+        "/kitchen/prep-recommendations",
+        json={"menu_item_id": item["menu_item_id"], "meal_period": "Lunch", "forecast_date": "2026-08-21"},
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 404
+
+
 def test_confirm_prep_within_threshold_needs_no_reason(client, db_session):
     """FR5.2 — small adjustments don't require a justification."""
     token = _manager_token(client)
@@ -155,13 +192,16 @@ def test_notification_queued_when_fcm_not_configured(client, db_session):
     token = _manager_token(client)
     item = _create_menu_item(client, token)
     _seed_forecast(db_session, menu_item_id=item["menu_item_id"])
+    # Registered before the recommendation is generated, so the
+    # UC-KO-04-step-1 notification fan-out (by role) actually has a
+    # Kitchen Staff recipient to find.
+    kitchen_token = register_and_login(client, email="kitchen5@restaurant.com", role="Kitchen Staff")
     reco = client.post(
         "/kitchen/prep-recommendations",
         json={"menu_item_id": item["menu_item_id"], "meal_period": "Lunch", "forecast_date": "2026-08-21"},
         headers=auth_headers(token),
     ).json()
 
-    kitchen_token = register_and_login(client, email="kitchen5@restaurant.com", role="Kitchen Staff")
     client.post(
         f"/kitchen/prep-recommendations/{reco['recommendation_id']}/confirm",
         json={"confirmed_quantity": "150.00", "deviation_reason": "Local event"},
@@ -169,9 +209,11 @@ def test_notification_queued_when_fcm_not_configured(client, db_session):
     )
 
     notifications = client.get("/kitchen/notifications", headers=auth_headers(kitchen_token)).json()
-    assert len(notifications) == 1
-    assert notifications[0]["status"] == "queued_for_retry"
-    assert notifications[0]["type"] == "prep_update"
+    # One from generating the recommendation (UC-KO-04 main flow step 1),
+    # one from confirming it with a significant deviation (FR5.4).
+    assert len(notifications) == 2
+    assert all(n["status"] == "queued_for_retry" for n in notifications)
+    assert all(n["type"] == "prep_update" for n in notifications)
 
 
 def test_list_prep_recommendations(client, db_session):

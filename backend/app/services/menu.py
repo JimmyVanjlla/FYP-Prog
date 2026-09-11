@@ -14,6 +14,10 @@ class MenuItemNotFoundError(Exception):
     pass
 
 
+class RecipeLinkNotFoundError(Exception):
+    pass
+
+
 def create_menu_item(db: Session, data: MenuItemCreate) -> MenuItem:
     item = MenuItem(
         name=data.name,
@@ -28,8 +32,16 @@ def create_menu_item(db: Session, data: MenuItemCreate) -> MenuItem:
     return item
 
 
-def list_menu_items(db: Session) -> list[MenuItem]:
-    return list(db.scalars(select(MenuItem).order_by(MenuItem.name)))
+def list_menu_items(db: Session, *, include_inactive: bool = False) -> list[MenuItem]:
+    """UC-MR-01 Alt Flow 3a — a deactivated item is removed "from active
+    ordering and prep recommendation screens while preserving its
+    historical order and forecast data for reporting", so listing excludes
+    inactive items by default; include_inactive=True is for a Manager
+    reviewing/reactivating past items, not the normal menu view."""
+    stmt = select(MenuItem).order_by(MenuItem.name)
+    if not include_inactive:
+        stmt = stmt.where(MenuItem.is_active.is_(True))
+    return list(db.scalars(stmt))
 
 
 def get_menu_item(db: Session, menu_item_id: int) -> MenuItem:
@@ -73,6 +85,23 @@ def add_recipe_link(
     db.commit()
     db.refresh(link)
     return link
+
+
+def remove_recipe_link(db: Session, menu_item_id: int, link_id: int) -> None:
+    """UC-MR-02 Alt Flow 2a — removes an ingredient link from a recipe.
+    The use case also says this should "flag any pending prep
+    recommendations that relied on the old recipe for recalculation" —
+    there's nothing concrete to flag in practice, since PrepRecommendation
+    is forecast-driven (a portion count) rather than recipe-driven; recipe
+    links affect availability (FR2.4), profit margin (FR2.1), and waste
+    cost (Module 6), all of which are computed live on every read rather
+    than cached, so removing a link takes effect immediately everywhere
+    that matters without a separate recalculation step."""
+    link = db.get(RecipeIngredientLink, link_id)
+    if link is None or link.menu_item_id != menu_item_id:
+        raise RecipeLinkNotFoundError
+    db.delete(link)
+    db.commit()
 
 
 def compute_profit_margin(db: Session, item: MenuItem) -> Decimal | None:

@@ -9,8 +9,10 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.audit import AuditLog
 from app.models.forecasting import Forecast
 from app.models.staffing import ShiftAssignment, ShiftClosingReport, ShiftSchedule, StaffingRecommendation
+from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 
 # Ch4 UI mockups reference these two stations by name (§4.4.1); Module 8's
@@ -101,6 +103,23 @@ def get_schedule(db: Session, schedule_id: int) -> ShiftSchedule:
     return schedule
 
 
+def list_my_assignments(db: Session, staff_id: int) -> list[tuple[ShiftAssignment, ShiftSchedule]]:
+    """UC-SS-05 "View My Shift Schedule" — an entire use case that was
+    missing: any staff member should be able to see their own published
+    shifts (date, meal period, role/station) without knowing a
+    schedule_id in advance or going through the Shift Supervisor. Only
+    published schedules are included — a draft schedule isn't "my
+    schedule" yet."""
+    rows = db.execute(
+        select(ShiftAssignment, ShiftSchedule)
+        .join(ShiftSchedule, ShiftAssignment.schedule_id == ShiftSchedule.schedule_id)
+        .where(ShiftAssignment.staff_id == staff_id)
+        .where(ShiftSchedule.status == "published")
+        .order_by(ShiftSchedule.date)
+    ).all()
+    return [(a, s) for a, s in rows]
+
+
 def list_staffing_recommendations(db: Session, schedule_id: int) -> list[StaffingRecommendation]:
     """FR8.1 — recommendations were previously only ever returned once, at
     the moment POST .../recommendations was called; reloading the
@@ -139,10 +158,48 @@ def assign_staff(db: Session, *, schedule_id: int, staff_id: int, station: str) 
     return assignment
 
 
-def publish_schedule(db: Session, schedule_id: int) -> ShiftSchedule:
-    """FR8.2."""
+def publish_schedule(db: Session, schedule_id: int, published_by: int) -> ShiftSchedule:
+    """FR8.2. Also covers two things UC-SS-02's main/alt flows name that
+    weren't previously wired to publishing at all:
+      - step 5: notify each assigned staff member of their shift.
+      - Alt Flow 3a: log it when the actual headcount at a station
+        deviates from what Algorithm 3 (Ch4 SS4.8.3) recommended, "for
+        later comparison against actual shift performance" — via
+        AuditLog, the same mechanism Module 1 already uses for this kind
+        of record, since Ch4's dictionary has no dedicated table for it."""
     schedule = get_schedule(db, schedule_id)
     schedule.status = "published"
+
+    assignments = list(
+        db.scalars(select(ShiftAssignment).where(ShiftAssignment.schedule_id == schedule_id))
+    )
+    for assignment in assignments:
+        notification_service.notify(
+            db,
+            recipient_id=assignment.staff_id,
+            type_="shift_published",
+            message=f"You're scheduled for {schedule.date} ({schedule.meal_period}), station: {assignment.station}.",
+        )
+
+    recommendations = list(
+        db.scalars(select(StaffingRecommendation).where(StaffingRecommendation.schedule_id == schedule_id))
+    )
+    actual_by_station: dict[str, int] = {}
+    for assignment in assignments:
+        actual_by_station[assignment.station] = actual_by_station.get(assignment.station, 0) + 1
+    for reco in recommendations:
+        actual = actual_by_station.get(reco.station, 0)
+        if actual != reco.recommended_staff_count:
+            db.add(
+                AuditLog(
+                    user_id=published_by,
+                    action=(
+                        f"staffing_deviation:schedule={schedule_id}:station={reco.station}:"
+                        f"recommended={reco.recommended_staff_count}:actual={actual}"
+                    ),
+                )
+            )
+
     db.commit()
     db.refresh(schedule)
     return schedule

@@ -7,11 +7,17 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 class PrepRecommendationRequest(BaseModel):
     """FR5.1 — asks the system to generate (or return the existing)
     recommendation for an item/meal-period/date, derived from the latest
-    matching Forecast."""
+    matching Forecast.
+
+    UC-KO-01 Alt Flow 3a — when no forecast exists yet (e.g. a brand new
+    menu item with no order history), manual_quantity is the fallback:
+    Kitchen Staff enters a prep quantity directly instead of hitting a
+    dead end. Omit it on the normal, forecast-backed path."""
 
     menu_item_id: int
     meal_period: str = Field(min_length=1, max_length=20)
     forecast_date: date
+    manual_quantity: Decimal | None = Field(default=None, gt=0)
 
 
 class PrepRecommendationOut(BaseModel):
@@ -19,7 +25,7 @@ class PrepRecommendationOut(BaseModel):
 
     recommendation_id: int
     menu_item_id: int
-    forecast_id: int
+    forecast_id: int | None
     meal_period: str
     recommended_quantity: Decimal
 

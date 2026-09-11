@@ -7,6 +7,7 @@ from app.models.roles import Role
 from app.models.user import User
 from app.schemas.staffing import (
     AttendanceUpdate,
+    MyShiftOut,
     ShiftAssignmentCreate,
     ShiftAssignmentOut,
     ShiftClosingReportCreate,
@@ -18,6 +19,27 @@ from app.schemas.staffing import (
 from app.services import staffing as staffing_service
 
 router = APIRouter(prefix="/staffing", tags=["staffing"])
+
+
+@router.get("/my-schedule", response_model=list[MyShiftOut])
+def list_my_schedule(
+    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+) -> list[MyShiftOut]:
+    """UC-SS-05 "View My Shift Schedule" — any staff member's own
+    published shifts, without needing a schedule_id or going through the
+    Shift Supervisor."""
+    rows = staffing_service.list_my_assignments(db, user.user_id)
+    return [
+        MyShiftOut(
+            assignment_id=a.assignment_id,
+            schedule_id=s.schedule_id,
+            date=s.date,
+            meal_period=s.meal_period,
+            station=a.station,
+            attendance_status=a.attendance_status,
+        )
+        for a, s in rows
+    ]
 
 
 @router.get("/schedules", response_model=list[ShiftScheduleOut])
@@ -105,11 +127,12 @@ def assign_staff(
 def publish_schedule(
     schedule_id: int,
     db: Session = Depends(get_db),
-    _supervisor: User = Depends(require_role(Role.SHIFT_SUPERVISOR)),
+    supervisor: User = Depends(require_role(Role.SHIFT_SUPERVISOR)),
 ) -> ShiftScheduleOut:
-    """FR8.2."""
+    """FR8.2 / UC-SS-02 main flow step 5 (notify staff) / Alt Flow 3a (log
+    staffing deviations)."""
     try:
-        return staffing_service.publish_schedule(db, schedule_id)
+        return staffing_service.publish_schedule(db, schedule_id, supervisor.user_id)
     except staffing_service.ScheduleNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found.")
 
