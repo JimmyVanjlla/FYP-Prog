@@ -1,10 +1,13 @@
 """Module 2 business logic. FR2.1-FR2.5."""
+from decimal import Decimal
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.inventory import Ingredient
 from app.models.menu import MenuItem, RecipeIngredientLink
 from app.schemas.menu import MenuItemCreate, MenuItemUpdate, RecipeIngredientLinkCreate
+from app.services.procurement import get_unit_price
 
 
 class MenuItemNotFoundError(Exception):
@@ -72,12 +75,22 @@ def add_recipe_link(
     return link
 
 
-def compute_profit_margin(item: MenuItem) -> None:
-    """FR2.1 — profit margin = price minus recipe ingredient cost. Stubbed
-    to None until Sprint 2 gives RecipeIngredientLink a real Ingredient/
-    SupplierPricing to cost against; wire the real calculation in here then
-    rather than changing the call site."""
-    return None
+def compute_profit_margin(db: Session, item: MenuItem) -> Decimal | None:
+    """FR2.1 — profit margin = price minus recipe ingredient cost, now
+    that Module 9's SupplierPricing exists (Sprint 4) to cost each linked
+    ingredient against. Still None for an item with no recipe defined yet
+    — nothing to subtract, not the same as a margin of exactly `price`."""
+    if not item.recipe_links:
+        return None
+
+    ingredient_cost = sum(
+        (link.quantity_per_serving * get_unit_price(db, link.ingredient_id) for link in item.recipe_links),
+        Decimal("0.00"),
+    )
+    # Quantized to 2dp to match MenuItem.price's DECIMAL(10,2) — the raw
+    # product otherwise carries however many decimal places
+    # quantity_per_serving (3dp) × unit_price (2dp) multiplies out to.
+    return (item.price - ingredient_cost).quantize(Decimal("0.01"))
 
 
 def compute_is_available(db: Session, item: MenuItem) -> bool:

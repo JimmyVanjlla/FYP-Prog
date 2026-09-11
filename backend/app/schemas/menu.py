@@ -50,9 +50,9 @@ class MenuItemOut(BaseModel):
     is_active: bool
     created_at: datetime
     recipe_links: list[RecipeIngredientLinkOut] = []
-    # FR2.1 — profit margin per item, computed from price minus linked
-    # ingredient cost; None until Sprint 2 wires up real Ingredient pricing
-    # (see app/services/menu.py).
+    # FR2.1 — profit margin per item: price minus linked ingredient cost
+    # (via Module 9's SupplierPricing); None only when no recipe is
+    # defined yet (see app/services/menu.py).
     profit_margin: Decimal | None = None
     # FR2.4 — stock-based availability flag: False the moment any linked
     # ingredient's on-hand stock can't cover one more serving.

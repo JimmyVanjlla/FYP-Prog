@@ -31,3 +31,13 @@ from app.models.staffing import (  # noqa: F401
     ShiftAssignment,
     ShiftClosingReport,
 )
+from app.models.procurement import (  # noqa: F401
+    Supplier,
+    SupplierPricing,
+    ProcurementRecommendation,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Budget,
+    SupplierDiscrepancy,
+)
+from app.models.delivery import Delivery, DeliveryItem, DeliveryDiscrepancy  # noqa: F401

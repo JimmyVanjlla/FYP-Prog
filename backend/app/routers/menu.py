@@ -19,7 +19,7 @@ router = APIRouter(prefix="/menu-items", tags=["menu"])
 
 def _to_out(item, db: Session) -> MenuItemOut:
     out = MenuItemOut.model_validate(item)
-    out.profit_margin = menu_service.compute_profit_margin(item)
+    out.profit_margin = menu_service.compute_profit_margin(db, item)
     out.is_available = menu_service.compute_is_available(db, item)
     return out
 

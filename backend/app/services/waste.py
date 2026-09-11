@@ -2,11 +2,9 @@
 Module 6: Waste Management business logic. FR6.1-FR6.5, plus ALGORITHM
 CalculateWasteCost (Ch4 §4.8.4).
 
-Waste cost = wasted ingredient quantity × ingredient unit price. Unit price
-comes from SupplierPricing (Module 9), which doesn't exist until Sprint 4 —
-_get_unit_price stubs it to 0.00 until then, exactly like FR2.1's profit
-margin was stubbed in Sprint 1 pending the same module. Swap that one
-function's body out once Module 9 lands; nothing else here needs to change.
+Waste cost = wasted ingredient quantity × ingredient unit price, via
+Module 9's SupplierPricing (Sprint 4) — see app/services/procurement.py's
+get_unit_price (cheapest active supplier, 0.00 if nobody prices it yet).
 """
 from datetime import date
 from decimal import Decimal
@@ -17,12 +15,7 @@ from sqlalchemy.orm import Session
 from app.models.kitchen import LeftoverLog
 from app.models.menu import RecipeIngredientLink
 from app.models.waste import WasteLog, WasteReductionTrend
-
-
-def _get_unit_price(db: Session, ingredient_id: int) -> Decimal:
-    """Stub pending Module 9 (Sprint 4)'s SupplierPricing — see module
-    docstring."""
-    return Decimal("0.00")
+from app.services.procurement import get_unit_price as _get_unit_price
 
 
 def record_leftover_waste(db: Session, leftover_log: LeftoverLog) -> list[WasteLog]:
@@ -38,8 +31,10 @@ def record_leftover_waste(db: Session, leftover_log: LeftoverLog) -> list[WasteL
 
     created: list[WasteLog] = []
     for link in links:
-        ingredient_qty_wasted = leftover_log.leftover_quantity * link.quantity_per_serving
-        cost = ingredient_qty_wasted * _get_unit_price(db, link.ingredient_id)
+        ingredient_qty_wasted = (leftover_log.leftover_quantity * link.quantity_per_serving).quantize(
+            Decimal("0.001")
+        )
+        cost = (ingredient_qty_wasted * _get_unit_price(db, link.ingredient_id)).quantize(Decimal("0.01"))
         waste_log = WasteLog(
             source_type="leftover",
             source_ref_id=leftover_log.log_id,
@@ -63,7 +58,9 @@ def record_expiry_waste(db: Session, expiry_waste_events: list[dict]) -> list[Wa
     (Algorithm CalculateWasteCost step 3), so no conversion needed."""
     created: list[WasteLog] = []
     for event in expiry_waste_events:
-        cost = Decimal(str(event["quantity"])) * _get_unit_price(db, event["ingredient_id"])
+        cost = (Decimal(str(event["quantity"])) * _get_unit_price(db, event["ingredient_id"])).quantize(
+            Decimal("0.01")
+        )
         waste_log = WasteLog(
             source_type="expiry",
             source_ref_id=event["source_ref_id"],

@@ -1,0 +1,94 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.deps import get_current_user, require_role
+from app.models.roles import Role
+from app.models.user import User
+from app.schemas.delivery import (
+    DeliveryDiscrepancyOut,
+    DeliveryOut,
+    DeliveryScheduleCreate,
+    ReceiptConfirmation,
+    ReceiptConfirmationResult,
+)
+from app.services import delivery as delivery_service
+
+router = APIRouter(prefix="/deliveries", tags=["deliveries"])
+
+_DELIVERY_ROLES = (Role.DELIVERY_LOGISTICS_STAFF, Role.RESTAURANT_MANAGER)
+# Scheduling a delivery follows straight on from creating its purchase
+# order, so the Procurement Officer who raised the PO can also schedule
+# the delivery — not just Delivery staff/the Manager.
+_SCHEDULING_ROLES = (*_DELIVERY_ROLES, Role.PROCUREMENT_OFFICER)
+
+
+@router.get("", response_model=list[DeliveryOut])
+def list_deliveries(
+    status_filter: str | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[DeliveryOut]:
+    """FR10.1 / FR10.4."""
+    return delivery_service.list_deliveries(db, status=status_filter)
+
+
+@router.post("", response_model=DeliveryOut, status_code=status.HTTP_201_CREATED)
+def schedule_delivery(
+    data: DeliveryScheduleCreate,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_SCHEDULING_ROLES)),
+) -> DeliveryOut:
+    """FR10.1."""
+    try:
+        return delivery_service.schedule_delivery(db, po_id=data.po_id, scheduled_date=data.scheduled_date)
+    except delivery_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found.")
+
+
+@router.post("/{delivery_id}/confirm-receipt", response_model=ReceiptConfirmationResult)
+def confirm_receipt(
+    delivery_id: int,
+    data: ReceiptConfirmation,
+    db: Session = Depends(get_db),
+    staff: User = Depends(require_role(Role.DELIVERY_LOGISTICS_STAFF)),
+) -> ReceiptConfirmationResult:
+    """FR10.2 / FR10.5."""
+    try:
+        delivery, discrepancies = delivery_service.confirm_receipt(
+            db,
+            delivery_id=delivery_id,
+            received_by=staff.user_id,
+            received_quantities=data.received_quantities,
+        )
+    except delivery_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery not found.")
+    except delivery_service.NegativeReceivedQuantityError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Received quantity cannot be negative.",
+        )
+    return ReceiptConfirmationResult(delivery=delivery, discrepancies=discrepancies)
+
+
+@router.get("/discrepancies", response_model=list[DeliveryDiscrepancyOut])
+def list_discrepancies(
+    delivery_id: int | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[DeliveryDiscrepancyOut]:
+    """FR10.3."""
+    return delivery_service.list_delivery_discrepancies(db, delivery_id=delivery_id)
+
+
+@router.post("/discrepancies/{discrepancy_id}/resolve", response_model=DeliveryDiscrepancyOut)
+def resolve_discrepancy(
+    discrepancy_id: int,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_DELIVERY_ROLES)),
+) -> DeliveryDiscrepancyOut:
+    """FR10.3."""
+    try:
+        return delivery_service.resolve_discrepancy(db, discrepancy_id)
+    except delivery_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discrepancy not found.")

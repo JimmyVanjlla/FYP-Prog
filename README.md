@@ -2,9 +2,8 @@
 
 Implementation of Ng Jim Shen's Final Year Project (see `../` for the FYP1
 report: Chapters 1-4). Built module-by-module following the sprint order in
-Form 2's project schedule. Current status: **Sprint 3 — Module 6 (Waste
-Management), Module 7 (Portion & Forecast Feedback), Module 8 (Staff
-Scheduling)**.
+Form 2's project schedule. Current status: **Sprint 4 — Module 9
+(Procurement & Supplier Management), Module 10 (Delivery Management)**.
 
 ## Stack
 
@@ -106,6 +105,23 @@ Run tests: `flutter test`. Run static analysis: `flutter analyze`.
   tested (46/46) but surfaced through `/docs` for now rather than new
   Flutter screens.
 
+**Sprint 4**
+- **Module 9**: supplier directory + pricing, purchase-order-recommendation
+  heuristic (forecasted consumption minus current stock — FR9.2 has no
+  Ch4 §4.8 pseudocode algorithm to transcribe, so this is this module's own
+  reasonable interpretation), PO creation/approval workflow, monthly
+  budget tracking (over-budget warns rather than blocks, FR9.6), supplier
+  discrepancy flagging.
+- **Module 10**: delivery scheduling seeded from a PO's line items,
+  receipt confirmation that actually updates `Ingredient.current_stock`
+  (closing the loop back to Module 3), deviation-threshold routing to a
+  discrepancy instead of a standard receipt (FR10.5).
+- **Closed both pricing stubs**: FR2.1's profit margin (Sprint 1) and
+  FR6.2's waste cost (Sprint 3) now use real `SupplierPricing` via
+  `app/services/procurement.py::get_unit_price` instead of
+  `None`/`0.00`.
+- 57/57 backend tests passing; migration applied to Supabase.
+
 See `backend/app/` (routers → services → models, one file per module) and
 `frontend/lib/features/` for the code, and each file's module-level
 docstring/comment for which FR(s) it implements.
@@ -114,6 +130,6 @@ docstring/comment for which FR(s) it implements.
 
 1. ~~User & Access Management, Menu & Recipe Management~~
 2. ~~Inventory Management, Demand Forecasting, Kitchen Operations~~
-3. ~~Waste Management, Portion & Forecast Feedback, Staff Scheduling~~ ← we are here
-4. Procurement & Supplier Management, Delivery Management
+3. ~~Waste Management, Portion & Forecast Feedback, Staff Scheduling~~
+4. ~~Procurement & Supplier Management, Delivery Management~~ ← we are here
 5. Reporting & Analytics, push notifications, UI/UX polish
