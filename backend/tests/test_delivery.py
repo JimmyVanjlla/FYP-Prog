@@ -123,3 +123,22 @@ def test_confirm_receipt_rejects_negative_quantity(client):
         headers=auth_headers(delivery_token),
     )
     assert resp.status_code == 422
+
+
+def test_list_delivery_items_shows_what_confirm_receipt_needs(client):
+    """FR10.2 — without this, there's no way to discover the item_id and
+    expected_quantity confirm-receipt's {item_id: quantity} map needs."""
+    officer_token, ingredient, po = _setup_po(client)
+    delivery = client.post(
+        "/deliveries",
+        json={"po_id": po["po_id"], "scheduled_date": "2026-08-15"},
+        headers=auth_headers(officer_token),
+    ).json()
+
+    resp = client.get(f"/deliveries/{delivery['delivery_id']}/items", headers=auth_headers(officer_token))
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) == 1
+    assert items[0]["ingredient_id"] == ingredient["ingredient_id"]
+    assert items[0]["expected_quantity"] == "25.000"
+    assert items[0]["received_quantity"] is None

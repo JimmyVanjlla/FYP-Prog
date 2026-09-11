@@ -101,6 +101,24 @@ def get_schedule(db: Session, schedule_id: int) -> ShiftSchedule:
     return schedule
 
 
+def list_staffing_recommendations(db: Session, schedule_id: int) -> list[StaffingRecommendation]:
+    """FR8.1 — recommendations were previously only ever returned once, at
+    the moment POST .../recommendations was called; reloading the
+    schedule later had no way to see them again."""
+    get_schedule(db, schedule_id)  # 404s if missing
+    return list(
+        db.scalars(select(StaffingRecommendation).where(StaffingRecommendation.schedule_id == schedule_id))
+    )
+
+
+def list_shift_assignments(db: Session, schedule_id: int) -> list[ShiftAssignment]:
+    """FR8.2 — same gap as above: a Shift Supervisor could publish a
+    schedule and assign staff, but there was no way to see "who's on this
+    shift" after the fact without re-reading each POST response."""
+    get_schedule(db, schedule_id)
+    return list(db.scalars(select(ShiftAssignment).where(ShiftAssignment.schedule_id == schedule_id)))
+
+
 def assign_staff(db: Session, *, schedule_id: int, staff_id: int, station: str) -> ShiftAssignment:
     """FR8.2 / FR8.5 — rejects assigning the same staff member to two
     stations on the same shift (an overlapping time slot, since one

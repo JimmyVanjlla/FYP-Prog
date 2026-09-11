@@ -97,6 +97,24 @@ def record_stock_batch(db: Session, data: StockBatchCreate) -> StockBatch:
     return batch
 
 
+def list_stock_batches(db: Session, *, ingredient_id: int | None = None) -> list[StockBatch]:
+    """FR3.2 — batch/expiry tracking needs to be viewable, not just
+    logged; previously the near-expiry Celery task was the only thing
+    that ever looked at StockBatch rows again after creation."""
+    stmt = select(StockBatch).order_by(StockBatch.expiry_date)
+    if ingredient_id is not None:
+        stmt = stmt.where(StockBatch.ingredient_id == ingredient_id)
+    return list(db.scalars(stmt))
+
+
+def list_stock_adjustments(db: Session, *, ingredient_id: int | None = None) -> list[StockAdjustment]:
+    """FR3.4 — adjustment history, viewable rather than write-only."""
+    stmt = select(StockAdjustment).order_by(StockAdjustment.timestamp.desc())
+    if ingredient_id is not None:
+        stmt = stmt.where(StockAdjustment.ingredient_id == ingredient_id)
+    return list(db.scalars(stmt))
+
+
 def create_restocking_request(
     db: Session, requested_by: int, data: RestockingRequestCreate
 ) -> RestockingRequest:

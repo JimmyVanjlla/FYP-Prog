@@ -125,3 +125,37 @@ def test_shift_open_and_close_flow(client):
         headers=auth_headers(token),
     )
     assert duplicate.status_code == 409
+
+
+def test_list_staffing_recommendations_after_generation(client):
+    """FR8.1 — recommendations were previously only ever visible once, in
+    the POST response that created them."""
+    token = _supervisor_token(client)
+    schedule = client.post(
+        "/staffing/schedules", json={"date": "2026-09-01", "meal_period": "Lunch"}, headers=auth_headers(token)
+    ).json()
+    client.post(f"/staffing/schedules/{schedule['schedule_id']}/recommendations", headers=auth_headers(token))
+
+    resp = client.get(f"/staffing/schedules/{schedule['schedule_id']}/recommendations", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2  # Kitchen + Front of House
+
+
+def test_list_shift_assignments_after_assigning(client):
+    """FR8.2 — "who's on this shift", viewable after the fact."""
+    token = _supervisor_token(client)
+    schedule = client.post(
+        "/staffing/schedules", json={"date": "2026-08-22", "meal_period": "Dinner"}, headers=auth_headers(token)
+    ).json()
+    kitchen_token = register_and_login(client, email="kitchen3@restaurant.com", role="Kitchen Staff")
+    kitchen_user_id = client.get("/users/me", headers=auth_headers(kitchen_token)).json()["user_id"]
+    client.post(
+        f"/staffing/schedules/{schedule['schedule_id']}/assignments",
+        json={"staff_id": kitchen_user_id, "station": "Kitchen"},
+        headers=auth_headers(token),
+    )
+
+    resp = client.get(f"/staffing/schedules/{schedule['schedule_id']}/assignments", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["staff_id"] == kitchen_user_id

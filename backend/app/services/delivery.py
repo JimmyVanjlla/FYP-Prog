@@ -58,6 +58,17 @@ def list_deliveries(db: Session, *, status: str | None = None) -> list[Delivery]
     return list(db.scalars(stmt))
 
 
+def list_delivery_items(db: Session, delivery_id: int) -> list[DeliveryItem]:
+    """FR10.2 — without this, confirm_receipt's {item_id: quantity} map
+    is uncallable: there was no way for Delivery/Logistics Staff to ever
+    discover which item_ids exist or what quantity was expected for each."""
+    if db.get(Delivery, delivery_id) is None:
+        raise NotFoundError
+    return list(
+        db.scalars(select(DeliveryItem).where(DeliveryItem.delivery_id == delivery_id))
+    )
+
+
 def confirm_receipt(
     db: Session, *, delivery_id: int, received_by: int, received_quantities: dict[int, Decimal]
 ) -> tuple[Delivery, list[DeliveryDiscrepancy]]:

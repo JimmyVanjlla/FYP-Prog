@@ -51,6 +51,18 @@ def set_supplier_pricing(
     )
 
 
+@router.get("/suppliers/pricing", response_model=list[SupplierPricingOut])
+def list_supplier_pricing(
+    supplier_id: int | None = None,
+    ingredient_id: int | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[SupplierPricingOut]:
+    """FR9.1 — the read side of set_supplier_pricing; a "supplier
+    directory with pricing" needs to be viewable, not just set once."""
+    return procurement_service.list_supplier_pricing(db, supplier_id=supplier_id, ingredient_id=ingredient_id)
+
+
 @router.get("/recommendations", response_model=list[ProcurementRecommendationOut])
 def list_recommendations(
     db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
@@ -130,6 +142,15 @@ def set_budget(
     return procurement_service.set_monthly_budget(
         db, month=data.month, budget_limit=data.budget_limit, set_by=manager.user_id
     )
+
+
+@router.get("/budget", response_model=list[BudgetOut])
+def list_budgets(
+    db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
+) -> list[BudgetOut]:
+    """FR9.4 — "track monthly procurement budget configuration" needs a
+    way to see what's been configured, not just set it once."""
+    return procurement_service.list_budgets(db)
 
 
 @router.post(

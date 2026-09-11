@@ -236,6 +236,15 @@ def record_order(db: Session, data) -> Order:
     return order
 
 
+def list_orders(db: Session, *, menu_item_id: int | None = None) -> list[Order]:
+    """The read side of record_order — historical order data was
+    previously write-only, with no way to review what had been entered."""
+    stmt = select(Order).order_by(Order.order_date.desc())
+    if menu_item_id is not None:
+        stmt = stmt.where(Order.menu_item_id == menu_item_id)
+    return list(db.scalars(stmt))
+
+
 def list_forecasts(
     db: Session, *, menu_item_id: int | None = None, meal_period: str | None = None
 ) -> list[Forecast]:
@@ -244,4 +253,16 @@ def list_forecasts(
         stmt = stmt.where(Forecast.menu_item_id == menu_item_id)
     if meal_period is not None:
         stmt = stmt.where(Forecast.meal_period == meal_period)
+    return list(db.scalars(stmt))
+
+
+def list_forecast_accuracy(db: Session, *, menu_item_id: int | None = None) -> list[ForecastAccuracy]:
+    """FR4.4 — "track forecast accuracy" implies a way to see the tracked
+    records; previously the only place accuracy data surfaced was inside
+    the weekly PDF report, with no direct API access."""
+    stmt = select(ForecastAccuracy)
+    if menu_item_id is not None:
+        stmt = stmt.join(Forecast, ForecastAccuracy.forecast_id == Forecast.forecast_id).where(
+            Forecast.menu_item_id == menu_item_id
+        )
     return list(db.scalars(stmt))

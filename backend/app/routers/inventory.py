@@ -73,6 +73,16 @@ def update_threshold(
     return _ingredient_out(ingredient, db)
 
 
+@router.get("/stock-adjustments", response_model=list[StockAdjustmentOut])
+def list_stock_adjustments(
+    ingredient_id: int | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[StockAdjustmentOut]:
+    """FR3.4 — adjustment history, viewable rather than write-only."""
+    return inventory_service.list_stock_adjustments(db, ingredient_id=ingredient_id)
+
+
 @router.post(
     "/stock-adjustments", response_model=StockAdjustmentOut, status_code=status.HTTP_201_CREATED
 )
@@ -91,6 +101,17 @@ def record_stock_adjustment(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="This adjustment would drive stock below zero.",
         )
+
+
+@router.get("/stock-batches", response_model=list[StockBatchOut])
+def list_stock_batches(
+    ingredient_id: int | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[StockBatchOut]:
+    """FR3.2 — batch/expiry tracking needs to be viewable, not just
+    logged."""
+    return inventory_service.list_stock_batches(db, ingredient_id=ingredient_id)
 
 
 @router.post("/stock-batches", response_model=StockBatchOut, status_code=status.HTTP_201_CREATED)

@@ -7,6 +7,7 @@ from app.models.roles import Role
 from app.models.user import User
 from app.schemas.delivery import (
     DeliveryDiscrepancyOut,
+    DeliveryItemOut,
     DeliveryOut,
     DeliveryScheduleCreate,
     ReceiptConfirmation,
@@ -44,6 +45,20 @@ def schedule_delivery(
         return delivery_service.schedule_delivery(db, po_id=data.po_id, scheduled_date=data.scheduled_date)
     except delivery_service.NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found.")
+
+
+@router.get("/{delivery_id}/items", response_model=list[DeliveryItemOut])
+def list_delivery_items(
+    delivery_id: int,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[DeliveryItemOut]:
+    """FR10.2 — what confirm-receipt actually needs callers to look up
+    first: each item's item_id and expected_quantity."""
+    try:
+        return delivery_service.list_delivery_items(db, delivery_id)
+    except delivery_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery not found.")
 
 
 @router.post("/{delivery_id}/confirm-receipt", response_model=ReceiptConfirmationResult)

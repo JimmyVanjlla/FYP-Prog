@@ -53,6 +53,29 @@ def generate_staffing_recommendation(
     return staffing_service.calculate_staffing_recommendation(db, schedule=schedule)
 
 
+@router.get("/schedules/{schedule_id}/recommendations", response_model=list[StaffingRecommendationOut])
+def list_staffing_recommendations(
+    schedule_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+) -> list[StaffingRecommendationOut]:
+    """FR8.1 — the read side; recommendations were previously only ever
+    visible once, in the POST response that generated them."""
+    try:
+        return staffing_service.list_staffing_recommendations(db, schedule_id)
+    except staffing_service.ScheduleNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found.")
+
+
+@router.get("/schedules/{schedule_id}/assignments", response_model=list[ShiftAssignmentOut])
+def list_shift_assignments(
+    schedule_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+) -> list[ShiftAssignmentOut]:
+    """FR8.2 — "who's on this shift", viewable after the fact."""
+    try:
+        return staffing_service.list_shift_assignments(db, schedule_id)
+    except staffing_service.ScheduleNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found.")
+
+
 @router.post(
     "/schedules/{schedule_id}/assignments",
     response_model=ShiftAssignmentOut,

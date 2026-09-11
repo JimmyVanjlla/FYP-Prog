@@ -160,3 +160,33 @@ def test_menu_profit_margin_uses_real_pricing(client):
     dish = next(m for m in updated if m["menu_item_id"] == item["menu_item_id"])
     # 12.50 - (0.200 * 9.20) = 12.50 - 1.84 = 10.66
     assert dish["profit_margin"] == "10.66"
+
+
+def test_list_supplier_pricing(client):
+    """FR9.1 — "supplier directory with pricing" implies being able to
+    see it, not just set it."""
+    officer_token = _officer_token(client)
+    supplier, ingredient = _create_supplier_and_ingredient(client, officer_token)
+
+    resp = client.get("/procurement/suppliers/pricing", headers=auth_headers(officer_token))
+    assert resp.status_code == 200
+    pricing = resp.json()
+    assert len(pricing) == 1
+    assert pricing[0]["supplier_id"] == supplier["supplier_id"]
+    assert pricing[0]["unit_price"] == "9.20"
+
+
+def test_list_budgets(client):
+    """FR9.4 — "track monthly procurement budget configuration" needs a
+    way to see what's been configured."""
+    manager_token = _manager_token(client)
+    client.post(
+        "/procurement/budget",
+        json={"month": "2026-08-01", "budget_limit": "5000.00"},
+        headers=auth_headers(manager_token),
+    )
+
+    resp = client.get("/procurement/budget", headers=auth_headers(manager_token))
+    assert resp.status_code == 200
+    budgets = resp.json()
+    assert any(b["budget_limit"] == "5000.00" for b in budgets)

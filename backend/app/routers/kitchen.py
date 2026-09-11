@@ -19,6 +19,18 @@ from app.services import kitchen as kitchen_service
 router = APIRouter(prefix="/kitchen", tags=["kitchen"])
 
 
+@router.get("/prep-recommendations", response_model=list[PrepRecommendationOut])
+def list_prep_recommendations(
+    meal_period: str | None = None,
+    menu_item_id: int | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[PrepRecommendationOut]:
+    """FR5.1/FR5.2 — the read side; previously a recommendation was only
+    ever visible in the single POST response that created it."""
+    return kitchen_service.list_prep_recommendations(db, meal_period=meal_period, menu_item_id=menu_item_id)
+
+
 @router.post(
     "/prep-recommendations", response_model=PrepRecommendationOut, status_code=status.HTTP_201_CREATED
 )

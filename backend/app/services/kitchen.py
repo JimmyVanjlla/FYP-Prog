@@ -54,6 +54,20 @@ def generate_prep_recommendation(
     return recommendation
 
 
+def list_prep_recommendations(
+    db: Session, *, meal_period: str | None = None, menu_item_id: int | None = None
+) -> list[PrepRecommendation]:
+    """FR5.1/FR5.2 — Kitchen Staff need to see "today's prep
+    recommendations" as a list; previously a recommendation was only ever
+    visible in the single POST response that created it."""
+    stmt = select(PrepRecommendation).order_by(PrepRecommendation.recommendation_id.desc())
+    if meal_period is not None:
+        stmt = stmt.where(PrepRecommendation.meal_period == meal_period)
+    if menu_item_id is not None:
+        stmt = stmt.where(PrepRecommendation.menu_item_id == menu_item_id)
+    return list(db.scalars(stmt))
+
+
 def confirm_prep(
     db: Session, *, staff_id: int, recommendation_id: int, data: PrepConfirmationCreate
 ) -> PrepConfirmation:

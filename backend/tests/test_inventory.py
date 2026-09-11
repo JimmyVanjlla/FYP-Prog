@@ -177,3 +177,49 @@ def test_record_stock_batch_adds_to_current_stock(client):
     updated = client.get("/inventory/ingredients", headers=auth_headers(token)).json()
     milk = next(i for i in updated if i["ingredient_id"] == ingredient["ingredient_id"])
     assert milk["current_stock"] == "20.000"
+
+
+def test_list_stock_batches(client):
+    """FR3.2 — batch/expiry tracking needs to be viewable, not just
+    logged."""
+    token = _inventory_staff_token(client)
+    ingredient = client.post(
+        "/inventory/ingredients",
+        json={"name": "Yogurt", "unit": "litre", "current_stock": "0"},
+        headers=auth_headers(token),
+    ).json()
+    client.post(
+        "/inventory/stock-batches",
+        json={
+            "ingredient_id": ingredient["ingredient_id"],
+            "quantity": "10",
+            "received_date": "2026-08-10",
+            "expiry_date": "2026-08-17",
+        },
+        headers=auth_headers(token),
+    )
+
+    resp = client.get("/inventory/stock-batches", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["ingredient_id"] == ingredient["ingredient_id"]
+
+
+def test_list_stock_adjustments(client):
+    """FR3.4 — adjustment history, viewable rather than write-only."""
+    token = _inventory_staff_token(client)
+    ingredient = client.post(
+        "/inventory/ingredients",
+        json={"name": "Eggs", "unit": "unit", "current_stock": "50"},
+        headers=auth_headers(token),
+    ).json()
+    client.post(
+        "/inventory/stock-adjustments",
+        json={"ingredient_id": ingredient["ingredient_id"], "adjusted_quantity": "-3", "reason_category": "spoilage"},
+        headers=auth_headers(token),
+    )
+
+    resp = client.get("/inventory/stock-adjustments", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["reason_category"] == "spoilage"

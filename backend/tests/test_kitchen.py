@@ -172,3 +172,21 @@ def test_notification_queued_when_fcm_not_configured(client, db_session):
     assert len(notifications) == 1
     assert notifications[0]["status"] == "queued_for_retry"
     assert notifications[0]["type"] == "prep_update"
+
+
+def test_list_prep_recommendations(client, db_session):
+    """FR5.1/FR5.2 — previously only visible once, in the POST response
+    that created it."""
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+    _seed_forecast(db_session, menu_item_id=item["menu_item_id"])
+    client.post(
+        "/kitchen/prep-recommendations",
+        json={"menu_item_id": item["menu_item_id"], "meal_period": "Lunch", "forecast_date": "2026-08-21"},
+        headers=auth_headers(token),
+    )
+
+    resp = client.get("/kitchen/prep-recommendations", headers=auth_headers(token))
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["menu_item_id"] == item["menu_item_id"]

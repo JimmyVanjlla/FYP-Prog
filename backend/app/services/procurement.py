@@ -85,6 +85,20 @@ def set_supplier_pricing(db: Session, *, supplier_id: int, ingredient_id: int, u
     return pricing
 
 
+def list_supplier_pricing(
+    db: Session, *, supplier_id: int | None = None, ingredient_id: int | None = None
+) -> list[SupplierPricing]:
+    """FR9.1 — "supplier directory with pricing" implies being able to see
+    it, not just set it; there was no way to view what's been priced
+    without a listing endpoint."""
+    stmt = select(SupplierPricing)
+    if supplier_id is not None:
+        stmt = stmt.where(SupplierPricing.supplier_id == supplier_id)
+    if ingredient_id is not None:
+        stmt = stmt.where(SupplierPricing.ingredient_id == ingredient_id)
+    return list(db.scalars(stmt))
+
+
 # --- Procurement recommendations (FR9.2) --------------------------------
 
 
@@ -243,6 +257,12 @@ def set_monthly_budget(db: Session, *, month: date, budget_limit: Decimal, set_b
     db.commit()
     db.refresh(budget)
     return budget
+
+
+def list_budgets(db: Session) -> list[Budget]:
+    """FR9.4 — "track monthly procurement budget configuration" implies
+    being able to see the configured history, not just set it once."""
+    return list(db.scalars(select(Budget).order_by(Budget.month.desc())))
 
 
 # --- Supplier discrepancies (FR9.5) --------------------------------------

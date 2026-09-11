@@ -41,3 +41,12 @@ class ForecastTrainingResult(BaseModel):
     forecasts_created: int
     skipped: list[dict]
     accuracy_records_created: int
+
+
+class ForecastAccuracyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    accuracy_id: int
+    forecast_id: int
+    actual_quantity: Decimal
+    accuracy_error: Decimal

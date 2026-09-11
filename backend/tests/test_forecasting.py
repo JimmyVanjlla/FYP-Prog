@@ -170,3 +170,52 @@ def test_high_leftover_rate_pulls_forecast_down(client, db_session):
     # deterministic) confirms the leftover-rate signal is actually pulling
     # the forecast down, not just present in a docstring.
     assert avg_leftover < avg_normal * 0.85
+
+
+def test_list_orders(client):
+    """The read side of record_order — historical order data was
+    previously write-only."""
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+    client.post(
+        "/forecasting/orders",
+        json={"menu_item_id": item["menu_item_id"], "quantity": 3, "meal_period": "Lunch", "order_date": "2026-08-14"},
+        headers=auth_headers(token),
+    )
+
+    resp = client.get(
+        "/forecasting/orders", params={"menu_item_id": item["menu_item_id"]}, headers=auth_headers(token)
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["quantity"] == 3
+
+
+def test_list_forecast_accuracy(client, db_session):
+    """FR4.4 — "track forecast accuracy" needs direct API access, not
+    just a figure buried inside the weekly PDF report."""
+    from decimal import Decimal
+
+    from app.models.forecasting import Forecast, ForecastAccuracy
+
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+    forecast = Forecast(
+        menu_item_id=item["menu_item_id"],
+        meal_period="Lunch",
+        forecast_date=date(2026, 8, 20),
+        predicted_quantity=Decimal("100.00"),
+    )
+    db_session.add(forecast)
+    db_session.flush()
+    db_session.add(
+        ForecastAccuracy(forecast_id=forecast.forecast_id, actual_quantity=Decimal("95.00"), accuracy_error=Decimal("0.05"))
+    )
+    db_session.commit()
+
+    resp = client.get(
+        "/forecasting/accuracy", params={"menu_item_id": item["menu_item_id"]}, headers=auth_headers(token)
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    assert resp.json()[0]["actual_quantity"] == "95.00"
