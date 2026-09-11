@@ -192,6 +192,40 @@ above, this turned up two more real gaps, both now fixed:
 
 64/64 backend tests passing.
 
+## Post-Sprint-5 fix: the "configurable" thresholds weren't configurable
+
+Kept auditing ("anymore?") and found the biggest gap yet: `SystemConfig`
+(default low-stock threshold, leftover-rate threshold, prep-deviation
+threshold, portions-per-staff ratio, near-expiry window) was **read-only
+everywhere** — every module reads it via `get_or_create_config()`, but
+nothing could ever write to it. This directly contradicts two explicit
+FRs (FR3.3, FR7.5) and Ch3's own Restaurant Manager use-case list, which
+names "configure system settings" outright. Fixed: `GET`/`PATCH /config`
+(read by anyone, write Manager-only), with FR7.5's 0-100% validation on
+`leftover_rate_threshold` and a test proving a config change actually
+changes downstream behavior (not just sits in the database unused).
+71/71 tests passing.
+
+## Post-Sprint-5 fix: 10 missing read endpoints (write-only data)
+
+One more audit pass turned up a systemic pattern, not isolated bugs: for
+several entities, I'd built the mutation endpoint each FR names ("allow X
+to create/confirm/set...") but never the corresponding read endpoint,
+leaving the data write-only. The worst of these was an actual functional
+blocker — `DeliveryItem` had no GET at all, meaning Delivery/Logistics
+Staff had no way to discover what `item_id`s or expected quantities even
+existed before calling `confirm-receipt` (FR10.2). Fixed all 10:
+
+- `GET /deliveries/{id}/items` (the blocker above)
+- `GET /procurement/suppliers/pricing`, `GET /procurement/budget`
+- `GET /staffing/schedules/{id}/recommendations`, `GET
+  /staffing/schedules/{id}/assignments`
+- `GET /kitchen/prep-recommendations`
+- `GET /inventory/stock-batches`, `GET /inventory/stock-adjustments`
+- `GET /forecasting/orders`, `GET /forecasting/accuracy`
+
+81/81 backend tests passing.
+
 ## Known gaps / good next steps
 
 - Flutter screens for Staff Scheduling, full Procurement (supplier/PO

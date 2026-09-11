@@ -2,6 +2,7 @@ from fastapi import FastAPI
 
 from app.routers import (
     auth,
+    config,
     delivery,
     feedback,
     forecasting,
@@ -42,6 +43,7 @@ app.include_router(staffing.router)
 app.include_router(procurement.router)
 app.include_router(delivery.router)
 app.include_router(reporting.router)
+app.include_router(config.router)
 
 
 @app.get("/health", tags=["health"])
