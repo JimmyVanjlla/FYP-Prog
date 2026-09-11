@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.models.kitchen import LeftoverLog, Notification, PrepConfirmation, PrepRecommendation
 from app.schemas.kitchen import LeftoverLogCreate, PrepConfirmationCreate
 from app.services import notifications as notification_service
+from app.services import waste as waste_service
 from app.services.config import get_or_create_config
 from app.services.forecasting import get_latest_forecast
 
@@ -109,6 +110,10 @@ def log_leftover(db: Session, *, staff_id: int, data: LeftoverLogCreate) -> Left
     db.add(log)
     db.commit()
     db.refresh(log)
+
+    # FR6.1 — every leftover log immediately feeds Module 6's waste
+    # aggregation (Algorithm CalculateWasteCost), not on a separate delay.
+    waste_service.record_leftover_waste(db, log)
     return log
 
 

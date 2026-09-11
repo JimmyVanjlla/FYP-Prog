@@ -2,9 +2,9 @@
 
 Implementation of Ng Jim Shen's Final Year Project (see `../` for the FYP1
 report: Chapters 1-4). Built module-by-module following the sprint order in
-Form 2's project schedule. Current status: **Sprint 2 — Module 3 (Inventory
-Management), Module 4 (Demand Forecasting), Module 5 (Kitchen
-Operations)**.
+Form 2's project schedule. Current status: **Sprint 3 — Module 6 (Waste
+Management), Module 7 (Portion & Forecast Feedback), Module 8 (Staff
+Scheduling)**.
 
 ## Stack
 
@@ -88,6 +88,24 @@ Run tests: `flutter test`. Run static analysis: `flutter analyze`.
   Windows toolchain fix — see the Prophet setup section above and
   `app/core/windows_toolchain.py`.
 
+**Sprint 3**
+- **Module 6**: waste aggregation from both leftover logs (Module 5) and
+  expired batches (Module 3), waste cost calculation, period rollups for
+  trend charting. `waste_cost` is currently always 0.00 — it depends on
+  SupplierPricing (Module 9, Sprint 4); see `app/services/waste.py`.
+- **Module 7**: identifies persistently high-leftover dishes (Algorithm 2),
+  Manager-approved portion reductions that scale recipe quantities down
+  directly (FR7.3) — the forecast-refinement effect (FR7.4) comes from the
+  next Prophet training run simply seeing the new, smaller-portion orders,
+  not a separate tag (Ch4's 33-entity dictionary has no column for one).
+- **Module 8**: AI staffing recommendations (portions-per-staff conversion,
+  Algorithm 3), shift creation/publishing, double-booking prevention,
+  shift open/close reporting.
+- No new screens this sprint — Form 2's own schedule reserves "UI/UX
+  refinement" for Sprint 5, so Modules 6-8 are backend-complete and fully
+  tested (46/46) but surfaced through `/docs` for now rather than new
+  Flutter screens.
+
 See `backend/app/` (routers → services → models, one file per module) and
 `frontend/lib/features/` for the code, and each file's module-level
 docstring/comment for which FR(s) it implements.
@@ -95,7 +113,7 @@ docstring/comment for which FR(s) it implements.
 ## Planned sprint order (Form 2)
 
 1. ~~User & Access Management, Menu & Recipe Management~~
-2. ~~Inventory Management, Demand Forecasting, Kitchen Operations~~ ← we are here
-3. Waste Management, Portion & Forecast Feedback, Staff Scheduling
+2. ~~Inventory Management, Demand Forecasting, Kitchen Operations~~
+3. ~~Waste Management, Portion & Forecast Feedback, Staff Scheduling~~ ← we are here
 4. Procurement & Supplier Management, Delivery Management
 5. Reporting & Analytics, push notifications, UI/UX polish

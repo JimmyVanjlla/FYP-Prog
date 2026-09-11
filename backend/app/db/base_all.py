@@ -23,3 +23,11 @@ from app.models.kitchen import (  # noqa: F401
     LeftoverLog,
     Notification,
 )
+from app.models.waste import WasteLog, WasteReductionTrend  # noqa: F401
+from app.models.feedback import PortionRecommendation  # noqa: F401
+from app.models.staffing import (  # noqa: F401
+    ShiftSchedule,
+    StaffingRecommendation,
+    ShiftAssignment,
+    ShiftClosingReport,
+)

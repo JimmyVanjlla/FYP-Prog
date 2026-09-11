@@ -23,6 +23,7 @@ celery_app = Celery(
     include=[
         "app.tasks.forecasting_tasks",
         "app.tasks.inventory_tasks",
+        "app.tasks.feedback_tasks",
     ],
 )
 
@@ -39,9 +40,10 @@ celery_app.conf.update(
 )
 
 # Ch4 §4.1 — Celery Beat triggers: Prophet forecast training, leftover-rate
-# analysis (Sprint 3), waste aggregation (Sprint 3), near-expiry batch
-# scanning, and weekly report generation (Sprint 5). Only the two wired up
-# in this sprint are scheduled here; later sprints add their own entries.
+# analysis, waste aggregation (piggybacks on the near-expiry scan and on
+# leftover logging itself — see app/tasks/inventory_tasks.py and
+# app/services/kitchen.py), near-expiry batch scanning, and weekly report
+# generation (Sprint 5, not yet scheduled here).
 celery_app.conf.beat_schedule = {
     "train-and-generate-forecasts-daily": {
         "task": "app.tasks.forecasting_tasks.train_and_generate_forecasts",
@@ -50,5 +52,9 @@ celery_app.conf.beat_schedule = {
     "check-near-expiry-batches-daily": {
         "task": "app.tasks.inventory_tasks.check_near_expiry_batches",
         "schedule": crontab(hour=5, minute=0),
+    },
+    "identify-high-leftover-dishes-daily": {
+        "task": "app.tasks.feedback_tasks.identify_high_leftover_dishes",
+        "schedule": crontab(hour=6, minute=30),  # after forecast training
     },
 }
