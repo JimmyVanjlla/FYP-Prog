@@ -54,6 +54,6 @@ class MenuItemOut(BaseModel):
     # ingredient cost; None until Sprint 2 wires up real Ingredient pricing
     # (see app/services/menu.py).
     profit_margin: Decimal | None = None
-    # FR2.4 — stock-based availability flag; stubbed True until Sprint 2's
-    # Inventory Management module exists to check real stock levels.
+    # FR2.4 — stock-based availability flag: False the moment any linked
+    # ingredient's on-hand stock can't cover one more serving.
     is_available: bool = True

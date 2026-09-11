@@ -40,13 +40,15 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await context.read<AuthState>().login(
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-          );
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
     } catch (_) {
-      setState(() => _errorText = 'Could not reach the server. Please try again.');
+      setState(
+        () => _errorText = 'Could not reach the server. Please try again.',
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -78,8 +80,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
                       decoration: const InputDecoration(labelText: 'Email'),
-                      validator: (v) =>
-                          (v == null || v.trim().isEmpty) ? 'Enter your email.' : null,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter your email.'
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -87,15 +90,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       obscureText: true,
                       autofillHints: const [AutofillHints.password],
                       decoration: const InputDecoration(labelText: 'Password'),
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? 'Enter your password.' : null,
+                      validator: (v) => (v == null || v.isEmpty)
+                          ? 'Enter your password.'
+                          : null,
                       onFieldSubmitted: (_) => _submit(),
                     ),
                     if (_errorText != null) ...[
                       const SizedBox(height: 12),
                       Text(
                         _errorText!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                     ],
                     const SizedBox(height: 24),
@@ -114,8 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _submitting
                           ? null
                           : () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const RegisterScreen(),
                               ),
+                            ),
                       child: const Text('New staff member? Register'),
                     ),
                   ],

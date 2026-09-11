@@ -17,10 +17,10 @@ from app.services import menu as menu_service
 router = APIRouter(prefix="/menu-items", tags=["menu"])
 
 
-def _to_out(item) -> MenuItemOut:
+def _to_out(item, db: Session) -> MenuItemOut:
     out = MenuItemOut.model_validate(item)
     out.profit_margin = menu_service.compute_profit_margin(item)
-    out.is_available = menu_service.compute_is_available(item)
+    out.is_available = menu_service.compute_is_available(db, item)
     return out
 
 
@@ -29,8 +29,8 @@ def list_menu_items(
     db: Session = Depends(get_db), _user: User = Depends(get_current_user)
 ) -> list[MenuItemOut]:
     """FR2.4 — every authenticated role can view the menu list with its
-    (currently stubbed) availability flag; only Managers can mutate it."""
-    return [_to_out(item) for item in menu_service.list_menu_items(db)]
+    stock-based availability flag; only Managers can mutate it."""
+    return [_to_out(item, db) for item in menu_service.list_menu_items(db)]
 
 
 @router.post("", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)
@@ -41,7 +41,7 @@ def create_menu_item(
 ) -> MenuItemOut:
     """FR2.1 / FR2.5."""
     item = menu_service.create_menu_item(db, data)
-    return _to_out(item)
+    return _to_out(item, db)
 
 
 @router.put("/{menu_item_id}", response_model=MenuItemOut)
@@ -55,7 +55,7 @@ def update_menu_item(
         item = menu_service.update_menu_item(db, menu_item_id, data)
     except menu_service.MenuItemNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Menu item not found.")
-    return _to_out(item)
+    return _to_out(item, db)
 
 
 @router.delete("/{menu_item_id}", response_model=MenuItemOut)
@@ -69,7 +69,7 @@ def deactivate_menu_item(
         item = menu_service.deactivate_menu_item(db, menu_item_id)
     except menu_service.MenuItemNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Menu item not found.")
-    return _to_out(item)
+    return _to_out(item, db)
 
 
 @router.post(

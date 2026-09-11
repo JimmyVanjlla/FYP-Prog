@@ -6,7 +6,8 @@ class MenuItem {
   final String price;
   final String category;
   final bool isActive;
-  final double? profitMargin; // null until Sprint 2 wires real ingredient costing
+  final double?
+  profitMargin; // null until Sprint 2 wires real ingredient costing
   final bool isAvailable; // stubbed true until Sprint 2's stock check exists
 
   MenuItem({

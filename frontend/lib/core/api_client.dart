@@ -27,18 +27,19 @@ class ApiClient {
   String? _token;
 
   ApiClient({String? baseUrl})
-      : baseUrl = baseUrl ??
-            const String.fromEnvironment(
-              'API_BASE_URL',
-              defaultValue: 'http://10.0.2.2:8000',
-            );
+    : baseUrl =
+          baseUrl ??
+          const String.fromEnvironment(
+            'API_BASE_URL',
+            defaultValue: 'http://10.0.2.2:8000',
+          );
 
   void setToken(String? token) => _token = token;
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (_token != null) 'Authorization': 'Bearer $_token',
-      };
+    'Content-Type': 'application/json',
+    if (_token != null) 'Authorization': 'Bearer $_token',
+  };
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
@@ -71,12 +72,20 @@ class ApiClient {
     final resp = await http.post(
       _uri('/auth/register'),
       headers: _headers,
-      body: jsonEncode({'name': name, 'email': email, 'password': password, 'role': role}),
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        'role': role,
+      }),
     );
     return _decode(resp) as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> login({required String email, required String password}) async {
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
     final resp = await http.post(
       _uri('/auth/login'),
       headers: _headers,
@@ -106,7 +115,8 @@ class ApiClient {
       headers: _headers,
       body: jsonEncode({
         'name': name,
-        if (description != null && description.isNotEmpty) 'description': description,
+        if (description != null && description.isNotEmpty)
+          'description': description,
         'price': price,
         'category': category,
       }),
@@ -115,7 +125,130 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> deactivateMenuItem(int menuItemId) async {
-    final resp = await http.delete(_uri('/menu-items/$menuItemId'), headers: _headers);
+    final resp = await http.delete(
+      _uri('/menu-items/$menuItemId'),
+      headers: _headers,
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  // --- Module 3: Inventory Management ---
+
+  Future<List<dynamic>> listIngredients() async {
+    final resp = await http.get(
+      _uri('/inventory/ingredients'),
+      headers: _headers,
+    );
+    return _decode(resp) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createIngredient({
+    required String name,
+    required String unit,
+    required String currentStock,
+  }) async {
+    final resp = await http.post(
+      _uri('/inventory/ingredients'),
+      headers: _headers,
+      body: jsonEncode({
+        'name': name,
+        'unit': unit,
+        'current_stock': currentStock,
+      }),
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> recordStockAdjustment({
+    required int ingredientId,
+    required String adjustedQuantity,
+    required String reasonCategory,
+    String? note,
+  }) async {
+    final resp = await http.post(
+      _uri('/inventory/stock-adjustments'),
+      headers: _headers,
+      body: jsonEncode({
+        'ingredient_id': ingredientId,
+        'adjusted_quantity': adjustedQuantity,
+        'reason_category': reasonCategory,
+        if (note != null && note.isNotEmpty) 'note': note,
+      }),
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> createRestockingRequest({
+    required int ingredientId,
+    required String quantity,
+    bool urgency = false,
+  }) async {
+    final resp = await http.post(
+      _uri('/inventory/restocking-requests'),
+      headers: _headers,
+      body: jsonEncode({
+        'ingredient_id': ingredientId,
+        'quantity': quantity,
+        'urgency': urgency,
+      }),
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  // --- Module 5: Kitchen Operations ---
+
+  Future<Map<String, dynamic>> generatePrepRecommendation({
+    required int menuItemId,
+    required String mealPeriod,
+    required String forecastDate,
+  }) async {
+    final resp = await http.post(
+      _uri('/kitchen/prep-recommendations'),
+      headers: _headers,
+      body: jsonEncode({
+        'menu_item_id': menuItemId,
+        'meal_period': mealPeriod,
+        'forecast_date': forecastDate,
+      }),
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> confirmPrep({
+    required int recommendationId,
+    required String confirmedQuantity,
+    String? deviationReason,
+  }) async {
+    final resp = await http.post(
+      _uri('/kitchen/prep-recommendations/$recommendationId/confirm'),
+      headers: _headers,
+      body: jsonEncode({
+        'confirmed_quantity': confirmedQuantity,
+        if (deviationReason != null && deviationReason.isNotEmpty)
+          'deviation_reason': deviationReason,
+      }),
+    );
+    return _decode(resp) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> logLeftover({
+    required int menuItemId,
+    required String servicePeriodDate,
+    required String preparedQuantity,
+    required String leftoverQuantity,
+    required String leftoverLevel,
+  }) async {
+    final resp = await http.post(
+      _uri('/kitchen/leftover-logs'),
+      headers: _headers,
+      body: jsonEncode({
+        'menu_item_id': menuItemId,
+        'service_period_date': servicePeriodDate,
+        'prepared_quantity': preparedQuantity,
+        'leftover_quantity': leftoverQuantity,
+        'leftover_level': leftoverLevel,
+      }),
+    );
     return _decode(resp) as Map<String, dynamic>;
   }
 }

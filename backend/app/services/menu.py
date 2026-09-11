@@ -2,6 +2,7 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.models.inventory import Ingredient
 from app.models.menu import MenuItem, RecipeIngredientLink
 from app.schemas.menu import MenuItemCreate, MenuItemUpdate, RecipeIngredientLinkCreate
 
@@ -79,8 +80,21 @@ def compute_profit_margin(item: MenuItem) -> None:
     return None
 
 
-def compute_is_available(item: MenuItem) -> bool:
-    """FR2.4 — stock-based availability flag. Stubbed to True until Sprint
-    2's Inventory Management module provides real stock levels to check
-    each linked ingredient against its threshold."""
+def compute_is_available(db: Session, item: MenuItem) -> bool:
+    """FR2.4 — a menu item is flagged unavailable the moment any linked
+    ingredient's on-hand stock can't cover one more serving. Recipe links
+    with no matching Ingredient row yet (shouldn't happen once FK
+    constraints are enforced, but defensively) don't block availability."""
+    if not item.recipe_links:
+        return True  # no recipe defined yet — nothing to be short on
+
+    ingredient_ids = [link.ingredient_id for link in item.recipe_links]
+    stock_by_id = {
+        i.ingredient_id: i.current_stock
+        for i in db.scalars(select(Ingredient).where(Ingredient.ingredient_id.in_(ingredient_ids)))
+    }
+    for link in item.recipe_links:
+        current_stock = stock_by_id.get(link.ingredient_id)
+        if current_stock is None or current_stock < link.quantity_per_serving:
+            return False
     return True

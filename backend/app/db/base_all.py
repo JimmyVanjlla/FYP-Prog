@@ -9,3 +9,17 @@ from app.db.base import Base  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.menu import MenuItem, RecipeIngredientLink  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
+from app.models.config import SystemConfig  # noqa: F401
+from app.models.inventory import (  # noqa: F401
+    Ingredient,
+    StockBatch,
+    StockAdjustment,
+    RestockingRequest,
+)
+from app.models.forecasting import Order, Forecast, ForecastAccuracy  # noqa: F401
+from app.models.kitchen import (  # noqa: F401
+    PrepRecommendation,
+    PrepConfirmation,
+    LeftoverLog,
+    Notification,
+)

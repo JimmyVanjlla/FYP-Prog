@@ -28,6 +28,13 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
+    # Firebase Cloud Messaging — FR5.4 / Ch4 §4.1 "External & Invoked
+    # Services". Unset by default: see app/services/notifications.py, which
+    # falls back to storing Notification rows as queued_for_retry (an
+    # honest status, not a fake "sent") until a real service account is
+    # provided here.
+    fcm_credentials_path: str | None = None
+
 
 @lru_cache
 def get_settings() -> Settings:

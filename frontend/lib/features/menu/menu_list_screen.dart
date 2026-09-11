@@ -30,7 +30,9 @@ class _MenuListScreenState extends State<MenuListScreen> {
   Future<List<MenuItem>> _load() async {
     final api = context.read<AuthState>().api;
     final raw = await api.listMenuItems();
-    return raw.map((e) => MenuItem.fromJson(e as Map<String, dynamic>)).toList();
+    return raw
+        .map((e) => MenuItem.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> _refresh() async {
@@ -42,48 +44,37 @@ class _MenuListScreenState extends State<MenuListScreen> {
   Widget build(BuildContext context) {
     final isManager = context.watch<AuthState>().role == Roles.manager;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Menu'),
-        actions: [
-          IconButton(
-            tooltip: 'Log out',
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthState>().logout(),
+    return FutureBuilder<List<MenuItem>>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          final message = snapshot.error is ApiException
+              ? (snapshot.error as ApiException).message
+              : 'Failed to load menu.';
+          return Center(child: Text(message));
+        }
+        final items = snapshot.data ?? [];
+        return RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: items.length + (isManager ? 1 : 0),
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (context, index) {
+              // Ch4 §4.4.1: the "+ add" row is the same reused pattern
+              // used everywhere else something can be added (e.g. later,
+              // "+ Assign staff" on the Schedule Builder screen).
+              if (isManager && index == items.length) {
+                return _AddMenuItemRow(onAdded: _refresh);
+              }
+              return _MenuItemTile(item: items[index]);
+            },
           ),
-        ],
-      ),
-      body: FutureBuilder<List<MenuItem>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            final message =
-                snapshot.error is ApiException ? (snapshot.error as ApiException).message : 'Failed to load menu.';
-            return Center(child: Text(message));
-          }
-          final items = snapshot.data ?? [];
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: items.length + (isManager ? 1 : 0),
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                // Ch4 §4.4.1: the "+ add" row is the same reused pattern
-                // used everywhere else something can be added (e.g. later,
-                // "+ Assign staff" on the Schedule Builder screen).
-                if (isManager && index == items.length) {
-                  return _AddMenuItemRow(onAdded: _refresh);
-                }
-                return _MenuItemTile(item: items[index]);
-              },
-            ),
-          );
-        },
-      ),
+        );
+      },
     );
   }
 }
@@ -118,9 +109,9 @@ class _AddMenuItemRow extends StatelessWidget {
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () async {
-        final created = await Navigator.of(context).push<bool>(
-          MaterialPageRoute(builder: (_) => const MenuFormScreen()),
-        );
+        final created = await Navigator.of(
+          context,
+        ).push<bool>(MaterialPageRoute(builder: (_) => const MenuFormScreen()));
         if (created == true) await onAdded();
       },
       child: Container(

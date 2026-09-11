@@ -42,11 +42,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
     try {
       await context.read<AuthState>().register(
-            name: _nameController.text.trim(),
-            email: _emailController.text.trim(),
-            password: _passwordController.text,
-            role: _role,
-          );
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        role: _role,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created. You can log in now.')),
@@ -57,7 +57,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // FR1.6 duplicate-email rejection surfaces here verbatim.
       setState(() => _errorText = e.message);
     } catch (_) {
-      setState(() => _errorText = 'Could not reach the server. Please try again.');
+      setState(
+        () => _errorText = 'Could not reach the server. Please try again.',
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -80,23 +82,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(labelText: 'Full name'),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter your name.' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter your name.'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Enter an email address.' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter an email address.'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
                     decoration: const InputDecoration(labelText: 'Password'),
-                    validator: (v) =>
-                        (v == null || v.length < 8) ? 'At least 8 characters.' : null,
+                    validator: (v) => (v == null || v.length < 8)
+                        ? 'At least 8 characters.'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
@@ -111,7 +117,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     const SizedBox(height: 12),
                     Text(
                       _errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 24),

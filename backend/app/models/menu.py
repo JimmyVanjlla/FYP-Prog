@@ -2,16 +2,16 @@
 Module 2: Menu & Recipe Management — MenuItem [M2], RecipeIngredientLink [M2]
 (Ch4 §4.3.1). Backs FR2.1-FR2.5.
 
-RecipeIngredientLink references Ingredient (Module 3: Inventory Management),
-which doesn't exist until Sprint 2 — ingredient_id is a plain FK-shaped
-integer column for now with no ORM relationship or DB-level FK constraint,
-so this module doesn't have to import Sprint-2 code. The FK constraint gets
-added in the Sprint 2 migration once Ingredient exists.
+RecipeIngredientLink.ingredient_id is a real FK to Ingredient.ingredient_id
+(Module 3: Inventory Management, added in Sprint 2). No ORM-level
+relationship() back to Ingredient is declared here, though, to keep Module 2
+from importing Module 3's model module — the FK constraint alone is enough
+for referential integrity and for Module 3's services to query through it.
 """
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -42,8 +42,9 @@ class RecipeIngredientLink(Base):
     menu_item_id: Mapped[int] = mapped_column(
         ForeignKey("menu_items.menu_item_id"), nullable=False
     )
-    # FK to Ingredient.ingredient_id (Module 3) — see module docstring above.
-    ingredient_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    ingredient_id: Mapped[int] = mapped_column(
+        ForeignKey("ingredients.ingredient_id"), nullable=False
+    )
     quantity_per_serving: Mapped[Decimal] = mapped_column(Numeric(10, 3), nullable=False)
 
     menu_item: Mapped["MenuItem"] = relationship(back_populates="recipe_links")

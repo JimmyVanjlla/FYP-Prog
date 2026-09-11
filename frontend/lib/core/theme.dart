@@ -6,8 +6,12 @@ import 'package:flutter/material.dart';
 /// colors rather than inventing its own — and severity is always paired with
 /// a text label, never conveyed by color alone.
 class Severity {
-  static const Color critical = Color(0xFFD32F2F); // e.g. below low-stock threshold
-  static const Color warning = Color(0xFFED8F00); // e.g. approaching a threshold
+  static const Color critical = Color(
+    0xFFD32F2F,
+  ); // e.g. below low-stock threshold
+  static const Color warning = Color(
+    0xFFED8F00,
+  ); // e.g. approaching a threshold
   static const Color ok = Color(0xFF2E7D32); // e.g. on track / within range
 
   const Severity._();
@@ -24,10 +28,14 @@ ThemeData buildAppTheme() {
   return base.copyWith(
     appBarTheme: base.appBarTheme.copyWith(centerTitle: false),
     filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+      style: FilledButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      ),
     ),
   );
 }
@@ -54,7 +62,10 @@ class PrimarySecondaryActions extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton(onPressed: onSecondary, child: Text(secondaryLabel)),
+          child: OutlinedButton(
+            onPressed: onSecondary,
+            child: Text(secondaryLabel),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -83,7 +94,11 @@ class SeverityChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
       ),
     );
   }

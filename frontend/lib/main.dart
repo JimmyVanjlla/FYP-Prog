@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'core/auth_state.dart';
 import 'core/theme.dart';
 import 'features/auth/login_screen.dart';
-import 'features/menu/menu_list_screen.dart';
+import 'features/home_shell.dart';
 
 void main() {
   runApp(const RestaurantOpsApp());
@@ -39,6 +39,6 @@ class _RootRouter extends StatelessWidget {
     if (auth.isRestoring) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    return auth.isAuthenticated ? const MenuListScreen() : const LoginScreen();
+    return auth.isAuthenticated ? const HomeShell() : const LoginScreen();
   }
 }

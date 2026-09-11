@@ -44,8 +44,8 @@ class AuthState extends ChangeNotifier {
   bool _restoring = true;
 
   AuthState({ApiClient? api, FlutterSecureStorage? storage})
-      : api = api ?? ApiClient(),
-        _storage = storage ?? const FlutterSecureStorage();
+    : api = api ?? ApiClient(),
+      _storage = storage ?? const FlutterSecureStorage();
 
   bool get isAuthenticated => _token != null;
   String? get role => _role;
@@ -76,7 +76,12 @@ class AuthState extends ChangeNotifier {
     required String password,
     required String role,
   }) async {
-    await api.register(name: name, email: email, password: password, role: role);
+    await api.register(
+      name: name,
+      email: email,
+      password: password,
+      role: role,
+    );
     // FR1.1 registration doesn't itself log the user in — mirrors the
     // backend, which issues no token from /auth/register.
   }

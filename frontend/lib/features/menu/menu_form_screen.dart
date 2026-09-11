@@ -63,7 +63,9 @@ class _MenuFormScreenState extends State<MenuFormScreen> {
     } on ApiException catch (e) {
       setState(() => _errorText = e.message);
     } catch (_) {
-      setState(() => _errorText = 'Could not reach the server. Please try again.');
+      setState(
+        () => _errorText = 'Could not reach the server. Please try again.',
+      );
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -87,34 +89,45 @@ class _MenuFormScreenState extends State<MenuFormScreen> {
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(labelText: 'Dish name'),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Enter a dish name.' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter a dish name.'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(labelText: 'Description (optional)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Description (optional)',
+                    ),
                     maxLines: 2,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _priceController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Price (RM)', prefixText: 'RM '),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Price (RM)',
+                      prefixText: 'RM ',
+                    ),
                     validator: _validatePrice,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _categoryController,
                     decoration: const InputDecoration(labelText: 'Category'),
-                    validator: (v) =>
-                        (v == null || v.trim().isEmpty) ? 'Enter a category.' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter a category.'
+                        : null,
                   ),
                   if (_errorText != null) ...[
                     const SizedBox(height: 12),
                     Text(
                       _errorText!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                     ),
                   ],
                   const SizedBox(height: 24),
