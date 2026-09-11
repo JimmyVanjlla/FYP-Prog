@@ -104,3 +104,13 @@ class SupplierDiscrepancyOut(BaseModel):
     supplier_id: int
     description: str
     status: str
+
+
+class BudgetUtilisationOut(BaseModel):
+    """UC-PS-06 "View Monthly Budget Utilisation"."""
+
+    month: date
+    budget_limit: Decimal
+    spent: Decimal
+    remaining: Decimal
+    utilisation_pct: Decimal

@@ -25,6 +25,7 @@ from app.models.procurement import (
     SupplierDiscrepancy,
     SupplierPricing,
 )
+from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 
 
@@ -64,6 +65,22 @@ def create_supplier(db: Session, *, name: str, contact_info: str) -> Supplier:
 
 def list_suppliers(db: Session) -> list[Supplier]:
     return list(db.scalars(select(Supplier).order_by(Supplier.name)))
+
+
+def deactivate_supplier(db: Session, supplier_id: int) -> Supplier:
+    """UC-PS-04 Alt Flow 3a — "system retains historical purchase order
+    records linked to that supplier but excludes it from future
+    recommendations." Deactivation rather than deletion, same pattern as
+    User/MenuItem; get_unit_price already filters to Supplier.is_active,
+    so an inactive supplier's pricing is automatically excluded from
+    future cost lookups without any extra work here."""
+    supplier = db.get(Supplier, supplier_id)
+    if supplier is None:
+        raise NotFoundError
+    supplier.is_active = False
+    db.commit()
+    db.refresh(supplier)
+    return supplier
 
 
 def set_supplier_pricing(db: Session, *, supplier_id: int, ingredient_id: int, unit_price: Decimal) -> SupplierPricing:
@@ -213,6 +230,7 @@ def _exceeds_monthly_budget(db: Session, additional_cost: Decimal) -> bool:
 
 
 def approve_purchase_order(db: Session, po_id: int, approved_by: int) -> PurchaseOrder:
+    """UC-PS-01 main flow step 5."""
     po = db.get(PurchaseOrder, po_id)
     if po is None:
         raise NotFoundError
@@ -220,16 +238,30 @@ def approve_purchase_order(db: Session, po_id: int, approved_by: int) -> Purchas
     po.approved_by = approved_by
     db.commit()
     db.refresh(po)
+    notification_service.notify(
+        db,
+        recipient_id=po.created_by,
+        type_="po_approved",
+        message=f"Purchase order #{po.po_id} was approved.",
+    )
     return po
 
 
 def reject_purchase_order(db: Session, po_id: int) -> PurchaseOrder:
+    """UC-PS-01 Alt Flow 4a — "notifies the Procurement Officer for
+    revision.\""""
     po = db.get(PurchaseOrder, po_id)
     if po is None:
         raise NotFoundError
     po.status = "rejected"
     db.commit()
     db.refresh(po)
+    notification_service.notify(
+        db,
+        recipient_id=po.created_by,
+        type_="po_rejected",
+        message=f"Purchase order #{po.po_id} was rejected.",
+    )
     return po
 
 
@@ -278,3 +310,49 @@ def flag_supplier_discrepancy(db: Session, *, po_id: int, supplier_id: int, desc
 
 def list_supplier_discrepancies(db: Session) -> list[SupplierDiscrepancy]:
     return list(db.scalars(select(SupplierDiscrepancy).order_by(SupplierDiscrepancy.discrepancy_id.desc())))
+
+
+def resolve_supplier_discrepancy(db: Session, discrepancy_id: int) -> SupplierDiscrepancy:
+    """UC-PS-07 Alt Flow 3a — "marks a discrepancy as resolved... system
+    updates the status accordingly without affecting the supplier's
+    discrepancy count." DeliveryDiscrepancy already has this
+    (app/services/delivery.py::resolve_discrepancy); this was the
+    inconsistent twin that didn't."""
+    discrepancy = db.get(SupplierDiscrepancy, discrepancy_id)
+    if discrepancy is None:
+        raise NotFoundError
+    discrepancy.status = "resolved"
+    db.commit()
+    db.refresh(discrepancy)
+    return discrepancy
+
+
+# --- Budget utilisation (FR9.4 / UC-PS-06) --------------------------------
+
+
+def get_budget_utilisation(db: Session, *, month: date | None = None) -> dict:
+    """UC-PS-06 "View Monthly Budget Utilisation" — remaining budget and
+    percentage used, which nothing surfaced directly before (only the raw
+    Budget list, and a boolean exceeds_budget flag on new PO creation)."""
+    target_month = (month or date.today()).replace(day=1)
+    budget = db.scalars(select(Budget).where(Budget.month == target_month)).first()
+    limit = budget.budget_limit if budget else get_or_create_config(db).monthly_budget_limit
+
+    month_end = (target_month.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
+    spent_rows = db.scalars(
+        select(PurchaseOrder.total_cost)
+        .where(PurchaseOrder.created_at >= target_month)
+        .where(PurchaseOrder.created_at <= month_end)
+        .where(PurchaseOrder.status != "rejected")
+    ).all()
+    spent = sum(spent_rows, Decimal("0.00"))
+    remaining = limit - spent
+    utilisation_pct = (spent / limit * 100) if limit else Decimal("0")
+
+    return {
+        "month": target_month,
+        "budget_limit": limit,
+        "spent": spent,
+        "remaining": remaining,
+        "utilisation_pct": utilisation_pct.quantize(Decimal("0.01")),
+    }

@@ -190,3 +190,113 @@ def test_list_budgets(client):
     assert resp.status_code == 200
     budgets = resp.json()
     assert any(b["budget_limit"] == "5000.00" for b in budgets)
+
+
+def test_deactivate_supplier(client):
+    """UC-PS-04 Alt Flow 3a — "retains historical purchase order records...
+    but excludes it from future recommendations.\""""
+    officer_token = _officer_token(client)
+    supplier, ingredient = _create_supplier_and_ingredient(client, officer_token)
+
+    resp = client.patch(
+        f"/procurement/suppliers/{supplier['supplier_id']}/deactivate", headers=auth_headers(officer_token)
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_active"] is False
+
+    # Excluded from future pricing lookups (get_unit_price filters to
+    # active suppliers) — falls back to 0.00 with no active supplier left.
+    po = client.post(
+        "/procurement/purchase-orders",
+        json={
+            "supplier_id": supplier["supplier_id"],
+            "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}],
+        },
+        headers=auth_headers(officer_token),
+    ).json()
+    assert po["total_cost"] == "0.00"
+
+
+def test_resolve_supplier_discrepancy(client):
+    """UC-PS-07 Alt Flow 3a."""
+    officer_token = _officer_token(client)
+    supplier, ingredient = _create_supplier_and_ingredient(client, officer_token)
+    po = client.post(
+        "/procurement/purchase-orders",
+        json={"supplier_id": supplier["supplier_id"], "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}]},
+        headers=auth_headers(officer_token),
+    ).json()
+    discrepancy = client.post(
+        "/procurement/discrepancies",
+        json={"po_id": po["po_id"], "supplier_id": supplier["supplier_id"], "description": "Short delivery"},
+        headers=auth_headers(officer_token),
+    ).json()
+
+    resp = client.post(
+        f"/procurement/discrepancies/{discrepancy['discrepancy_id']}/resolve", headers=auth_headers(officer_token)
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "resolved"
+
+
+def test_budget_utilisation_view(client):
+    """UC-PS-06 "View Monthly Budget Utilisation"."""
+    from datetime import date
+
+    officer_token = _officer_token(client)
+    manager_token = _manager_token(client)
+    supplier, ingredient = _create_supplier_and_ingredient(client, officer_token)
+
+    current_month = date.today().replace(day=1).isoformat()
+    client.post(
+        "/procurement/budget",
+        json={"month": current_month, "budget_limit": "1000.00"},
+        headers=auth_headers(manager_token),
+    )
+    client.post(
+        "/procurement/purchase-orders",
+        json={"supplier_id": supplier["supplier_id"], "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}]},
+        headers=auth_headers(officer_token),
+    )
+
+    resp = client.get("/procurement/budget/utilisation", headers=auth_headers(officer_token))
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["budget_limit"] == "1000.00"
+    assert body["spent"] == "46.00"  # 5 * 9.20
+    assert body["remaining"] == "954.00"
+    assert body["utilisation_pct"] == "4.60"
+
+
+def test_po_approve_notifies_procurement_officer(client):
+    """UC-PS-01 main flow step 5."""
+    officer_token = _officer_token(client)
+    manager_token = _manager_token(client)
+    supplier, ingredient = _create_supplier_and_ingredient(client, officer_token)
+    po = client.post(
+        "/procurement/purchase-orders",
+        json={"supplier_id": supplier["supplier_id"], "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}]},
+        headers=auth_headers(officer_token),
+    ).json()
+
+    client.post(f"/procurement/purchase-orders/{po['po_id']}/approve", headers=auth_headers(manager_token))
+
+    notifications = client.get("/kitchen/notifications", headers=auth_headers(officer_token)).json()
+    assert any(n["type"] == "po_approved" for n in notifications)
+
+
+def test_po_reject_notifies_procurement_officer(client):
+    """UC-PS-01 Alt Flow 4a."""
+    officer_token = _officer_token(client)
+    manager_token = _manager_token(client)
+    supplier, ingredient = _create_supplier_and_ingredient(client, officer_token)
+    po = client.post(
+        "/procurement/purchase-orders",
+        json={"supplier_id": supplier["supplier_id"], "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}]},
+        headers=auth_headers(officer_token),
+    ).json()
+
+    client.post(f"/procurement/purchase-orders/{po['po_id']}/reject", headers=auth_headers(manager_token))
+
+    notifications = client.get("/kitchen/notifications", headers=auth_headers(officer_token)).json()
+    assert any(n["type"] == "po_rejected" for n in notifications)

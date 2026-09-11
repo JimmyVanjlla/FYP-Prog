@@ -52,19 +52,23 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
   `GET /menu-items` excludes inactive items by default
   (`include_inactive=true` for a Manager reviewing history), and
   `generate_prep_recommendation` now rejects inactive items.
-- [ ] **B6. UC-PS-04 Alt Flow 3a — no way to deactivate a supplier.**
-  `Supplier.is_active` exists; nothing ever sets it to `False`.
-- [ ] **B7. UC-PS-07 Alt Flow 3a — `SupplierDiscrepancy` has no resolve
-  endpoint.** `DeliveryDiscrepancy` has one; this is the inconsistent twin.
-- [ ] **B8. UC-PS-06 "View Monthly Budget Utilisation" has no dedicated
-  view.** Only the raw `Budget` list (from the earlier audit pass) and a
-  boolean `exceeds_budget` flag on PO creation exist — no endpoint showing
-  remaining budget / % utilised / breakdown by supplier or ingredient.
+- [x] **B6. UC-PS-04 Alt Flow 3a — no way to deactivate a supplier.**
+  Fixed: `PATCH /procurement/suppliers/{id}/deactivate`. `get_unit_price`
+  already filtered to active suppliers, so pricing/recommendation
+  exclusion was automatic once deactivation existed.
+- [x] **B7. UC-PS-07 Alt Flow 3a — `SupplierDiscrepancy` has no resolve
+  endpoint.** Fixed: `POST /procurement/discrepancies/{id}/resolve`,
+  matching `DeliveryDiscrepancy`'s existing one.
+- [x] **B8. UC-PS-06 "View Monthly Budget Utilisation" has no dedicated
+  view.** Fixed: `GET /procurement/budget/utilisation` (limit, spent,
+  remaining, % used for a given month).
 
 ## C. Moderate (notifications / logging gaps on existing flows)
 
-- [ ] **C1. PO approve/reject doesn't notify the Procurement Officer**
-  (UC-PS-01 main flow step 5 / Alt Flow 4a).
+- [x] **C1. PO approve/reject doesn't notify the Procurement Officer**
+  (UC-PS-01 main flow step 5 / Alt Flow 4a). Fixed: both
+  `approve_purchase_order` and `reject_purchase_order` now notify
+  `po.created_by`.
 - [x] **C2. Publishing a schedule / assigning staff doesn't notify anyone**
   (UC-SS-02 main flow step 5). Fixed: `publish_schedule` now notifies every
   assigned staff member.
@@ -110,5 +114,5 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
   create endpoint (it's always system-derived).
 
 ---
-**Progress**: 7/21 actionable items fixed (A-C), 6 noted-not-fixed (D), 5
-accepted-as-is (E).
+**Progress**: 11/21 actionable items fixed (A-C), 6 noted-not-fixed (D), 5
+accepted-as-is (E). Remaining: A1-A3 (the PO/Delivery lifecycle rework).

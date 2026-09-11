@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,7 @@ from app.models.user import User
 from app.schemas.procurement import (
     BudgetOut,
     BudgetSet,
+    BudgetUtilisationOut,
     ProcurementRecommendationOut,
     PurchaseOrderCreate,
     PurchaseOrderOut,
@@ -37,6 +40,19 @@ def create_supplier(
 ) -> SupplierOut:
     """FR9.1."""
     return procurement_service.create_supplier(db, name=data.name, contact_info=data.contact_info)
+
+
+@router.patch("/suppliers/{supplier_id}/deactivate", response_model=SupplierOut)
+def deactivate_supplier(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+) -> SupplierOut:
+    """UC-PS-04 Alt Flow 3a."""
+    try:
+        return procurement_service.deactivate_supplier(db, supplier_id)
+    except procurement_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found.")
 
 
 @router.post("/suppliers/pricing", response_model=SupplierPricingOut, status_code=status.HTTP_201_CREATED)
@@ -153,6 +169,18 @@ def list_budgets(
     return procurement_service.list_budgets(db)
 
 
+@router.get("/budget/utilisation", response_model=BudgetUtilisationOut)
+def get_budget_utilisation(
+    month: date | None = None,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+) -> BudgetUtilisationOut:
+    """UC-PS-06 "View Monthly Budget Utilisation" — remaining budget and
+    % used; previously only the raw Budget list and a boolean flag on new
+    PO creation existed, no dedicated view."""
+    return procurement_service.get_budget_utilisation(db, month=month)
+
+
 @router.post(
     "/discrepancies", response_model=SupplierDiscrepancyOut, status_code=status.HTTP_201_CREATED
 )
@@ -172,3 +200,16 @@ def list_discrepancies(
     db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
 ) -> list[SupplierDiscrepancyOut]:
     return procurement_service.list_supplier_discrepancies(db)
+
+
+@router.post("/discrepancies/{discrepancy_id}/resolve", response_model=SupplierDiscrepancyOut)
+def resolve_discrepancy(
+    discrepancy_id: int,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+) -> SupplierDiscrepancyOut:
+    """UC-PS-07 Alt Flow 3a."""
+    try:
+        return procurement_service.resolve_supplier_discrepancy(db, discrepancy_id)
+    except procurement_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Discrepancy not found.")
