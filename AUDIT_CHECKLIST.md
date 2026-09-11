@@ -10,25 +10,28 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
 
 ## A. Structural (large — touches multiple use cases/modules)
 
-- [ ] **A1. Purchase Order / Delivery status lifecycle doesn't match the report.**
-  Ch3 (UC-PS-05, UC-DM-04) specifies an 8-state lifecycle: `Pending
-  Approval → Approved → Awaiting Delivery → In Transit → Delivered →
-  Discrepancy Flagged / Return Pending → Return Resolved`. Built system has
-  `PurchaseOrder.status` (pending_approval/approved/rejected) and
-  `Delivery.status` (scheduled/received) — a flattened 2-3 state model with
-  no `Delivery`-side discrepancy/return states at all.
-- [ ] **A2. Delivery confirmation skips the Inventory Staff verification gate.**
-  UC-IM-01 describes a *two-step* process: Delivery/Logistics Staff confirms
-  physical receipt (UC-DM-02) *without* touching stock, then Inventory Staff
-  separately verifies the recorded delivery against stock records before
-  `Ingredient.current_stock` is actually updated (with a gate: if the PO is
-  "Discrepancy Flagged" instead of "Delivered," route to discrepancy review
-  first). Built system's `confirm_receipt` updates stock immediately,
-  in one step, with no Inventory Staff gate at all.
-- [ ] **A3. UC-DM-04 "Update Delivery Status" has no endpoint.** No way to
-  manually progress a delivery through its lifecycle, and no guard
-  preventing "Return Resolved" while a discrepancy is still open
-  (Alt Flow 2a).
+- [x] **A1. Purchase Order / Delivery status lifecycle doesn't match the
+  report.** Fixed: both `PurchaseOrder.status` and `Delivery.status` now
+  use UC-DM-04's exact 6-state lifecycle
+  (`awaiting_delivery → in_transit → delivered → discrepancy_flagged /
+  return_pending → return_resolved`), kept in sync by
+  `delivery.py::_sync_po_status` (UC-PS-05 shows the PO tracking the
+  identical values once past approval).
+- [x] **A2. Delivery confirmation skips the Inventory Staff verification
+  gate.** Fixed: `confirm_receipt` (UC-DM-02) no longer touches
+  `Ingredient.current_stock` — it only records receipt and decides
+  delivered/discrepancy_flagged/return_pending. A new `verify_delivery`
+  (UC-IM-01, Inventory Staff only) is the step that actually updates
+  stock, blocked (409) while the delivery isn't in "delivered" status.
+  Added `Delivery.verified_by`/`verified_at` to mark that step distinctly
+  from receipt confirmation.
+- [x] **A3. UC-DM-04 "Update Delivery Status" has no endpoint.** Fixed:
+  `PATCH /deliveries/{id}/status` for the pre-receipt tracking states and
+  post-discrepancy return resolution; blocked (409, Alt Flow 2a) from
+  setting `return_resolved` while any linked `DeliveryDiscrepancy` is
+  still open. `delivered`/`discrepancy_flagged`/`return_pending` stay
+  system-decided (via `confirm_receipt`'s own comparison), not settable
+  through this endpoint.
 
 ## B. Missing use cases / features (medium)
 
@@ -114,5 +117,7 @@ Legend: `[ ]` open · `[x]` fixed & tested · `[-]` deliberately not fixing (rea
   create endpoint (it's always system-derived).
 
 ---
-**Progress**: 11/21 actionable items fixed (A-C), 6 noted-not-fixed (D), 5
-accepted-as-is (E). Remaining: A1-A3 (the PO/Delivery lifecycle rework).
+**Progress**: 21/21 actionable items fixed (A-C). 6 noted-not-fixed (D,
+low-severity, documented in README's Known Gaps), 5 accepted-as-is (E,
+deliberate documented deviations). **All actionable checklist items are
+done.**

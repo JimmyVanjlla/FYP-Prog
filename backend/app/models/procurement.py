@@ -50,7 +50,12 @@ class PurchaseOrder(Base):
     supplier_id: Mapped[int] = mapped_column(ForeignKey("suppliers.supplier_id"), nullable=False)
     created_by: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     approved_by: Mapped[int | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
-    # pending_approval | approved | rejected
+    # UC-PS-05's full lifecycle: pending_approval | approved | rejected |
+    # awaiting_delivery | in_transit | delivered | discrepancy_flagged |
+    # return_pending | return_resolved. The delivery-stage values (from
+    # awaiting_delivery on) are mirrored from the linked Delivery's own
+    # status as it progresses — see
+    # app/services/delivery.py::_sync_po_status.
     status: Mapped[str] = mapped_column(String(30), default="pending_approval", nullable=False)
     total_cost: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     created_at: Mapped[datetime] = mapped_column(

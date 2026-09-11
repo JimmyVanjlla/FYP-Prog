@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -26,6 +26,20 @@ class DeliveryOut(BaseModel):
     scheduled_date: date
     status: str
     received_by: int | None
+    # UC-IM-01 — set only once Inventory Staff has separately verified the
+    # delivery against stock records; None means received but not yet
+    # verified, even when status is already "delivered".
+    verified_by: int | None
+    verified_at: datetime | None
+
+
+class DeliveryStatusUpdate(BaseModel):
+    """UC-DM-04. Only pre-receipt tracking and post-discrepancy return
+    resolution are settable this way — "delivered" and
+    "discrepancy_flagged" are decided by confirm-receipt's own comparison
+    logic, not set directly."""
+
+    status: str = Field(min_length=1, max_length=30)
 
 
 class DeliveryDiscrepancyOut(BaseModel):

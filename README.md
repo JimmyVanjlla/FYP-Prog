@@ -2,9 +2,9 @@
 
 Implementation of Ng Jim Shen's Final Year Project (see `../` for the FYP1
 report: Chapters 1-4). Built module-by-module following the sprint order in
-Form 2's project schedule. Current status: **Sprint 5 (final planned
-sprint) — Module 11 (Reporting & Analytics) + UI/UX polish. All 11 modules
-now have a working, tested backend.**
+Form 2's project schedule. Current status: **all 5 sprints (11 modules)
+built, plus a full audit pass against the report's use-case tables
+(`AUDIT_CHECKLIST.md`) — every actionable gap found there is now fixed.**
 
 ## Stack
 
@@ -225,6 +225,32 @@ existed before calling `confirm-receipt` (FR10.2). Fixed all 10:
 - `GET /forecasting/orders`, `GET /forecasting/accuracy`
 
 81/81 backend tests passing.
+
+## Post-Sprint-5 audit checklist: complete
+
+`AUDIT_CHECKLIST.md` tracks a systematic pass reading every one of
+Chapter 3's 11 full use-case description tables (main flows and alt
+flows) against the actual code, beyond the FR-text/NFR/configurability/
+readability passes documented above. All 21 actionable gaps found are
+now fixed, the largest being a genuine structural one:
+
+- **Purchase Order / Delivery status lifecycle** now matches the report's
+  6-state model (`awaiting_delivery → in_transit → delivered →
+  discrepancy_flagged/return_pending → return_resolved`) across both
+  entities, kept in sync.
+- **Delivery confirmation and inventory verification are properly two
+  separate steps** now (UC-DM-02 vs UC-IM-01) — Delivery/Logistics Staff
+  confirming receipt no longer touches `Ingredient.current_stock`
+  directly; a separate Inventory Staff verification step does, and is
+  blocked while a discrepancy is open.
+- Plus 8 missing use-case features (view-my-schedule, manual prep entry
+  fallback, remove-a-recipe-link, supplier deactivation, discrepancy
+  resolution, budget utilisation view, etc.) and 3 notification/logging
+  gaps on existing flows — see the checklist file for the full list with
+  what was fixed and how.
+
+100+ backend tests passing (see the checklist file's own commit history
+for exact counts per batch).
 
 ## Known gaps / good next steps
 
