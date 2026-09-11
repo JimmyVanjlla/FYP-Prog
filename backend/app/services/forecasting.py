@@ -2,13 +2,19 @@
 Module 4: Demand Forecasting business logic.
 
 Implements Algorithm 1 (Ch4 §4.8.1, "TrainAndGenerateForecast" —
-UC-DF-02 / FR4.1-FR4.4) as close to the pseudocode as SQLAlchemy + pandas +
+UC-DF-02 / FR4.1-FR4.6) as close to the pseudocode as SQLAlchemy + pandas +
 Prophet allow. Forecasts are trained per (menu_item_id, meal_period) pair —
 Ch4's pseudocode says "FOR EACH menu_item", but the Forecast entity itself
 is keyed by (menu_item_id, meal_period, forecast_date) and FR4.1 explicitly
 says orders are "aggregated by menu item, meal period, and date", so a
 separate model is trained per item/meal-period combination (breakfast,
 lunch, and dinner demand for the same dish don't follow the same curve).
+
+FR4.5's leftover-feedback refinement is applied as a post-hoc downward
+scale on Prophet's raw output — see _leftover_adjustment_factor below —
+rather than by feeding leftover data into Prophet itself as a regressor,
+since the leftover signal only exists per dish, not per the date-indexed
+order series Prophet actually fits.
 """
 from datetime import date, timedelta
 
@@ -17,6 +23,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.forecasting import Forecast, ForecastAccuracy, Order
+from app.services.config import get_or_create_config
+from app.services.feedback import compute_leftover_rate
 
 # UC-DF-02 Alt Flow 2a — below this many historical (date, meal_period)
 # data points for an item, Prophet is skipped and the item is flagged
@@ -24,6 +32,33 @@ from app.models.forecasting import Forecast, ForecastAccuracy, Order
 MIN_DATA_POINTS = 14
 # How many days ahead each training run forecasts.
 FORECAST_HORIZON_DAYS = 7
+
+
+def _leftover_adjustment_factor(db: Session, menu_item_id: int, *, today: date) -> float:
+    """FR4.5 — "incorporate leftover feedback data to refine Prophet
+    forecast outputs downward for persistently over-forecasted dishes."
+
+    Reuses Module 7's exact leftover_rate signal (FR7.1) rather than a
+    second metric: when a dish's leftover rate exceeds
+    SystemConfig.leftover_rate_threshold, its raw Prophet prediction is
+    scaled down by that same rate (a dish running 30% leftover gets its
+    forecast cut by 30%), directly pulling the forecast toward what's
+    actually being consumed. Below threshold, or with no leftover data
+    yet, the raw Prophet estimate is used unadjusted (factor of 1.0).
+
+    This is deliberately a separate mechanism from FR7.3's portion-size
+    reduction (RecipeIngredientLink.quantity_per_serving) — that ratio
+    only affects ingredient consumption per order, not the order COUNT
+    this module forecasts, so it can't do FR4.5's job on its own. See
+    app/services/feedback.py::approve_portion_recommendation for the same
+    point made from the other side."""
+    rate = compute_leftover_rate(db, menu_item_id, today=today)
+    if rate is None:
+        return 1.0
+    threshold = get_or_create_config(db).leftover_rate_threshold
+    if rate <= threshold:
+        return 1.0
+    return max(0.0, 1.0 - float(rate) / 100)
 
 
 class InsufficientDataError(Exception):
@@ -99,13 +134,18 @@ def train_and_generate_forecasts(
         # days we already have real order data for.
         future_rows = forecast_df[forecast_df["ds"].dt.date > today]
 
+        # FR4.5 — computed once per (item, meal_period) rather than per
+        # row, since it's the same leftover history regardless of which
+        # future date is being predicted.
+        adjustment = _leftover_adjustment_factor(db, int(menu_item_id), today=today)
+
         # Step 13.
         for _, row in future_rows.iterrows():
             forecast = Forecast(
                 menu_item_id=int(menu_item_id),
                 meal_period=meal_period,
                 forecast_date=row["ds"].date(),
-                predicted_quantity=max(0.0, round(float(row["yhat"]), 2)),
+                predicted_quantity=max(0.0, round(float(row["yhat"]) * adjustment, 2)),
             )
             db.add(forecast)
             created_forecasts.append(forecast)

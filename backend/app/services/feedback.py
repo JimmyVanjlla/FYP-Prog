@@ -30,6 +30,30 @@ class InvalidPortionSizeError(Exception):
     pass
 
 
+def compute_leftover_rate(
+    db: Session, menu_item_id: int, *, today: date | None = None, analysis_window_days: int = DEFAULT_ANALYSIS_WINDOW_DAYS
+) -> Decimal | None:
+    """Steps 1-2 and the per-item ratio from ALGORITHM
+    IdentifyHighLeftoverDishes, factored out so Module 4's forecasting
+    pipeline can reuse the exact same signal for FR4.5 (see
+    app/services/forecasting.py::_leftover_adjustment_factor) instead of
+    duplicating the calculation. Returns None when there's no leftover
+    data for the item in the window (nothing to compute a rate from)."""
+    today = today or date.today()
+    window_start = today - timedelta(days=analysis_window_days)
+    logs = db.scalars(
+        select(LeftoverLog)
+        .where(LeftoverLog.menu_item_id == menu_item_id)
+        .where(LeftoverLog.service_period_date >= window_start)
+        .where(LeftoverLog.service_period_date <= today)
+    ).all()
+    total_prepared = sum((l.prepared_quantity for l in logs), Decimal("0"))
+    if total_prepared == 0:
+        return None
+    total_leftover = sum((l.leftover_quantity for l in logs), Decimal("0"))
+    return (total_leftover / total_prepared) * 100
+
+
 def identify_high_leftover_dishes(
     db: Session, *, today: date | None = None, analysis_window_days: int = DEFAULT_ANALYSIS_WINDOW_DAYS
 ) -> list[PortionRecommendation]:
@@ -123,17 +147,27 @@ def list_portion_recommendations(db: Session, *, status: str | None = None) -> l
 
 
 def approve_portion_recommendation(db: Session, recommendation_id: int) -> PortionRecommendation:
-    """FR7.2/FR7.3 — Manager approval propagates the reduction factor to
-    every ingredient in the dish's recipe (scaling each
+    """FR2.3/FR7.2/FR7.3 — Manager approval propagates the reduction
+    factor to every ingredient in the dish's recipe (scaling each
     quantity_per_serving down, not just the one representative figure
     computed above), so the actual serving really does shrink across the
-    board. FR7.4's forecast refinement isn't a separate write: the next
-    Algorithm 1 training run (Ch4 §4.8.1) simply trains on the fresh Order
-    data that comes in under the new, smaller portions — there's no
-    "portion_adjusted" tag column in Ch4's 33-entity dictionary to set
-    (Order only has order_id/menu_item_id/quantity/meal_period/order_date),
-    so the natural retraining cadence carries the adjustment forward
-    instead of an explicit flag."""
+    board — this is also what satisfies FR2.3's "portion size adjustments
+    approved by the Restaurant Manager... automatically update ingredient
+    quantities per serving across all related modules", just filed under
+    Module 7 rather than Module 2 since that's where the approval action
+    lives.
+
+    FR7.4/FR4.5's forecast refinement is a *separate* mechanism, not a
+    side-effect of this function: quantity_per_serving only affects
+    ingredient consumption per order, not the order COUNT Prophet trains
+    on, so there's no "next training cycle just picks it up for free" the
+    way an earlier version of this comment claimed. The actual downward
+    pull happens in app/services/forecasting.py's
+    _leftover_adjustment_factor, applied at forecast-generation time using
+    the same leftover_rate signal computed here (see
+    compute_leftover_rate) — not by tagging Order rows, since Ch4's
+    33-entity dictionary has no column for that (Order only has
+    order_id/menu_item_id/quantity/meal_period/order_date)."""
     recommendation = db.get(PortionRecommendation, recommendation_id)
     if recommendation is None:
         raise RecommendationNotFoundError

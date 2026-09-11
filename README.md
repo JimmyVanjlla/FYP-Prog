@@ -95,9 +95,9 @@ Run tests: `flutter test`. Run static analysis: `flutter analyze`.
   SupplierPricing (Module 9, Sprint 4); see `app/services/waste.py`.
 - **Module 7**: identifies persistently high-leftover dishes (Algorithm 2),
   Manager-approved portion reductions that scale recipe quantities down
-  directly (FR7.3) — the forecast-refinement effect (FR7.4) comes from the
-  next Prophet training run simply seeing the new, smaller-portion orders,
-  not a separate tag (Ch4's 33-entity dictionary has no column for one).
+  directly (FR7.3). FR7.4/FR4.5's actual forecast-refinement effect was
+  fixed post-Sprint-5 — see that section below; the claim originally here
+  (that the next Prophet cycle would pick it up "for free") was wrong.
 - **Module 8**: AI staffing recommendations (portions-per-staff conversion,
   Algorithm 3), shift creation/publishing, double-booking prevention,
   shift open/close reporting.
@@ -145,8 +145,8 @@ Run tests: `flutter test`. Run static analysis: `flutter analyze`.
   a Reports view that opens the generated PDF in the system viewer. Staff
   Scheduling and full Procurement/Delivery screens are still API-only
   (`/docs`) — the biggest gap remaining if this continues past FYP2.
-- 60/60 backend tests passing; `flutter analyze` clean; migration applied
-  to Supabase.
+- 60/60 backend tests passing at the time (see the FR4.5 fix below for the
+  current count); `flutter analyze` clean; migration applied to Supabase.
 
 See `backend/app/` (routers → services → models, one file per module) and
 `frontend/lib/features/` for the code, and each file's module-level
@@ -159,6 +159,21 @@ docstring/comment for which FR(s) it implements.
 3. ~~Waste Management, Portion & Forecast Feedback, Staff Scheduling~~
 4. ~~Procurement & Supplier Management, Delivery Management~~
 5. ~~Reporting & Analytics, push notifications, UI/UX polish~~ ← we are here
+
+## Post-Sprint-5 fix: FR4.5
+
+A full FR-by-FR audit against the report turned up one real gap: FR4.5
+("incorporate leftover feedback data to refine Prophet forecast outputs
+downward for persistently over-forecasted dishes") was never actually
+implemented — an earlier comment claimed the next Prophet training cycle
+would "naturally" reflect Module 7's portion-size reductions, but that's
+wrong: `quantity_per_serving` only affects ingredient consumption per
+order, not the order *count* Prophet trains on. Fixed by applying a
+direct downward scale to `predicted_quantity` in
+`app/services/forecasting.py::_leftover_adjustment_factor`, reusing
+Module 7's exact `leftover_rate` signal — see that function's docstring,
+and `test_high_leftover_rate_pulls_forecast_down` in
+`tests/test_forecasting.py` for the regression test. 61/61 tests passing.
 
 ## Known gaps / good next steps
 

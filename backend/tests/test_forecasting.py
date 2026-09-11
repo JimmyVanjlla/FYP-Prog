@@ -103,3 +103,70 @@ def test_non_manager_cannot_trigger_training(client):
     token = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")
     resp = client.post("/forecasting/train", headers=auth_headers(token))
     assert resp.status_code == 403
+
+
+def test_high_leftover_rate_pulls_forecast_down(client, db_session):
+    """FR4.5 — a dish with a persistently high leftover rate gets its
+    Prophet forecast scaled down, relative to an identical-demand dish
+    with no leftover problem."""
+    token = _manager_token(client)
+    item_normal = _create_menu_item(client, token)
+    item_high_leftover = client.post(
+        "/menu-items",
+        json={"name": "Roti Canai", "price": "3.00", "category": "Side"},
+        headers=auth_headers(token),
+    ).json()
+
+    base = date.today() - timedelta(days=30)
+    for item in (item_normal, item_high_leftover):
+        for i in range(30):
+            client.post(
+                "/forecasting/orders",
+                json={
+                    "menu_item_id": item["menu_item_id"],
+                    "quantity": 40 + (i % 7),
+                    "meal_period": "Lunch",
+                    "order_date": (base + timedelta(days=i)).isoformat(),
+                },
+                headers=auth_headers(token),
+            )
+
+    # Seed a high leftover rate (40%, well over the 15% default threshold)
+    # for item_high_leftover only, within the analysis window.
+    from app.models.kitchen import LeftoverLog
+    from decimal import Decimal
+
+    kitchen_token = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")
+    staff_id = client.get("/users/me", headers=auth_headers(kitchen_token)).json()["user_id"]
+    db_session.add(
+        LeftoverLog(
+            menu_item_id=item_high_leftover["menu_item_id"],
+            service_period_date=date.today() - timedelta(days=1),
+            prepared_quantity=Decimal("100"),
+            leftover_quantity=Decimal("40"),
+            leftover_level="Mostly Uneaten",
+            staff_id=staff_id,
+        )
+    )
+    db_session.commit()
+
+    client.post("/forecasting/train", headers=auth_headers(token))
+
+    normal_forecasts = client.get(
+        "/forecasting/forecasts", params={"menu_item_id": item_normal["menu_item_id"]}, headers=auth_headers(token)
+    ).json()
+    leftover_forecasts = client.get(
+        "/forecasting/forecasts",
+        params={"menu_item_id": item_high_leftover["menu_item_id"]},
+        headers=auth_headers(token),
+    ).json()
+    assert normal_forecasts and leftover_forecasts
+
+    avg_normal = sum(float(f["predicted_quantity"]) for f in normal_forecasts) / len(normal_forecasts)
+    avg_leftover = sum(float(f["predicted_quantity"]) for f in leftover_forecasts) / len(leftover_forecasts)
+    # Both dishes have identical order history, so without the FR4.5
+    # adjustment their forecasts would be roughly equal; a clear gap here
+    # (not tight equality, since Prophet's fit isn't perfectly
+    # deterministic) confirms the leftover-rate signal is actually pulling
+    # the forecast down, not just present in a docstring.
+    assert avg_leftover < avg_normal * 0.85
