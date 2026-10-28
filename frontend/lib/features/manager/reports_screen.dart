@@ -79,8 +79,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Padding(
+        Container(
           padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainer,
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+              ),
+            ),
+          ),
           child: Row(
             children: [
               Expanded(
@@ -125,7 +133,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
               }
               final reports = snapshot.data ?? [];
               if (reports.isEmpty) {
-                return const Center(child: Text('No reports generated yet.'));
+                return const EmptyState(
+                  icon: Icons.description_outlined,
+                  message: 'No reports generated yet.',
+                  detail: 'Pick a period above and tap Generate.',
+                );
               }
               return RefreshIndicator(
                 onRefresh: _refresh,
@@ -137,6 +149,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     final report = reports[index];
                     return Card(
                       child: ListTile(
+                        leading: IconBadge(
+                          icon: Icons.picture_as_pdf_rounded,
+                          color: report.status == 'generated'
+                              ? Severity.ok
+                              : Severity.critical,
+                        ),
                         title: Text(
                           '${report.periodStart} → ${report.periodEnd}',
                         ),

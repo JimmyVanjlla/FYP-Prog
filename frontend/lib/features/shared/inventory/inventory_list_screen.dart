@@ -58,12 +58,26 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
           return Center(child: Text(message));
         }
         final ingredients = snapshot.data ?? [];
+        if (ingredients.isEmpty && !_canManage) {
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              children: const [
+                SizedBox(height: 120),
+                EmptyState(
+                  icon: Icons.inventory_2_outlined,
+                  message: 'No ingredients tracked yet.',
+                ),
+              ],
+            ),
+          );
+        }
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: ingredients.length + (_canManage ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               if (_canManage && index == ingredients.length) {
                 return _AddIngredientRow(onAdded: _refresh);
@@ -90,6 +104,10 @@ class _IngredientTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
+        leading: IconBadge(
+          icon: Icons.inventory_2_rounded,
+          color: ingredient.isLowStock ? Severity.critical : null,
+        ),
         title: Text(ingredient.name),
         subtitle: Text('${ingredient.currentStock} ${ingredient.unit} on hand'),
         trailing: SeverityChip(
@@ -200,11 +218,26 @@ class _AddIngredientRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
-          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
+          ),
+          borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.center,
-        child: const Text('+ Add ingredient'),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              'Add ingredient',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -230,6 +263,7 @@ class _AddIngredientRow extends StatelessWidget {
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Required.' : null,
               ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: unitController,
                 decoration: const InputDecoration(
@@ -238,6 +272,7 @@ class _AddIngredientRow extends StatelessWidget {
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Required.' : null,
               ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: stockController,
                 keyboardType: const TextInputType.numberWithOptions(

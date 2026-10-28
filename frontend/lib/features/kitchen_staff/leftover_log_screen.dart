@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/theme.dart';
 import '../../models/menu_item.dart';
 
 /// Module 5 — FR5.3: Kitchen Staff log end-of-service leftover quantities.
@@ -102,11 +103,19 @@ class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Log end-of-service leftovers',
-                      style: Theme.of(context).textTheme.titleLarge,
+                    Row(
+                      children: [
+                        const IconBadge(icon: Icons.restaurant_rounded),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Log end-of-service leftovers',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     DropdownButtonFormField<MenuItem>(
                       initialValue: _selectedItem,
                       decoration: const InputDecoration(labelText: 'Dish'),
@@ -119,26 +128,28 @@ class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
                       onChanged: (v) => setState(() => _selectedItem = v),
                     ),
                     const SizedBox(height: 16),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Service date'),
-                      subtitle: Text(
-                        '${_serviceDate.year}-${_serviceDate.month.toString().padLeft(2, '0')}-${_serviceDate.day.toString().padLeft(2, '0')}',
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.calendar_today_rounded),
+                        title: const Text('Service date'),
+                        subtitle: Text(
+                          '${_serviceDate.year}-${_serviceDate.month.toString().padLeft(2, '0')}-${_serviceDate.day.toString().padLeft(2, '0')}',
+                        ),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: _serviceDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setState(() => _serviceDate = picked);
+                          }
+                        },
                       ),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _serviceDate,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() => _serviceDate = picked);
-                        }
-                      },
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _preparedController,
                       keyboardType: const TextInputType.numberWithOptions(

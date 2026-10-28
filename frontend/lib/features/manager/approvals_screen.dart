@@ -71,7 +71,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             child: ListView(
               children: const [
                 SizedBox(height: 120),
-                Center(child: Text('Nothing needs your attention right now.')),
+                EmptyState(
+                  icon: Icons.task_alt_rounded,
+                  message: 'Nothing needs your attention right now.',
+                ),
               ],
             ),
           );
@@ -82,26 +85,30 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               if (data.purchaseOrders.isNotEmpty) ...[
-                Text(
-                  'Pending purchase orders',
-                  style: Theme.of(context).textTheme.titleMedium,
+                SectionHeader(
+                  icon: Icons.local_shipping_outlined,
+                  label: 'Pending purchase orders',
+                  trailing: '${data.purchaseOrders.length}',
                 ),
-                const SizedBox(height: 8),
-                for (final po in data.purchaseOrders)
+                for (final po in data.purchaseOrders) ...[
                   _PurchaseOrderTile(po: po, onChanged: _refresh),
-                const SizedBox(height: 24),
+                  const SizedBox(height: 10),
+                ],
+                const SizedBox(height: 14),
               ],
               if (data.portionRecommendations.isNotEmpty) ...[
-                Text(
-                  'Portion size reviews',
-                  style: Theme.of(context).textTheme.titleMedium,
+                SectionHeader(
+                  icon: Icons.restaurant_menu_outlined,
+                  label: 'Portion size reviews',
+                  trailing: '${data.portionRecommendations.length}',
                 ),
-                const SizedBox(height: 8),
-                for (final r in data.portionRecommendations)
+                for (final r in data.portionRecommendations) ...[
                   _PortionRecommendationTile(
                     recommendation: r,
                     onChanged: _refresh,
                   ),
+                  const SizedBox(height: 10),
+                ],
               ],
             ],
           ),
@@ -131,13 +138,20 @@ class _PurchaseOrderTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Expanded(child: Text('PO #${po.poId} · RM ${po.totalCost}')),
+                Expanded(
+                  child: Text(
+                    'PO #${po.poId} · RM ${po.totalCost}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
                 SeverityChip(label: 'Review', color: Severity.critical),
               ],
             ),
@@ -197,7 +211,7 @@ class _PortionRecommendationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -206,13 +220,19 @@ class _PortionRecommendationTile extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Menu item #${recommendation.menuItemId} · ${recommendation.leftoverRate}% leftover rate',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 SeverityChip(label: 'View', color: Severity.warning),
               ],
             ),
             const SizedBox(height: 4),
-            Text('Suggested portion: ${recommendation.suggestedPortionSize}'),
+            Text(
+              'Suggested portion: ${recommendation.suggestedPortionSize}',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
             const SizedBox(height: 10),
             PrimarySecondaryActions(
               primaryLabel: 'Approve',

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/theme.dart';
 
 /// Module 6 — FR6.1/FR6.3. Read-only waste log + trend view for the
 /// Manager; trend rollups themselves are generated via POST
@@ -56,40 +57,60 @@ class _WasteScreenState extends State<WasteScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Text(
-                'Waste reduction trend',
-                style: Theme.of(context).textTheme.titleMedium,
+              const SectionHeader(
+                icon: Icons.trending_down_rounded,
+                label: 'Waste reduction trend',
               ),
-              const SizedBox(height: 8),
               if (data.trends.isEmpty)
-                const Text('No trend rollups yet.')
+                const EmptyState(
+                  icon: Icons.show_chart_rounded,
+                  message: 'No trend rollups yet.',
+                  detail: 'Rolls up automatically from the weekly job.',
+                )
               else
-                for (final t in data.trends)
+                for (final t in data.trends) ...[
                   Card(
                     child: ListTile(
+                      leading: const IconBadge(icon: Icons.trending_down_rounded),
                       title: Text('${t['period_start']} → ${t['period_end']}'),
-                      trailing: Text('RM ${t['total_waste_cost']}'),
+                      trailing: Text(
+                        'RM ${t['total_waste_cost']}',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ),
-              const SizedBox(height: 24),
-              Text(
-                'Recent waste log',
-                style: Theme.of(context).textTheme.titleMedium,
+                  const SizedBox(height: 8),
+                ],
+              const SizedBox(height: 20),
+              const SectionHeader(
+                icon: Icons.delete_outline_rounded,
+                label: 'Recent waste log',
               ),
-              const SizedBox(height: 8),
               if (data.logs.isEmpty)
-                const Text('No waste logged yet.')
+                const EmptyState(
+                  icon: Icons.delete_sweep_outlined,
+                  message: 'No waste logged yet.',
+                )
               else
-                for (final log in data.logs.take(25))
+                for (final log in data.logs.take(25)) ...[
                   Card(
                     child: ListTile(
+                      leading: const IconBadge(
+                        icon: Icons.delete_outline_rounded,
+                        color: Severity.warning,
+                      ),
                       title: Text(
                         'Ingredient #${log['ingredient_id']} — ${log['source_type']}',
                       ),
                       subtitle: Text('${log['quantity_wasted']} wasted'),
-                      trailing: Text('RM ${log['waste_cost']}'),
+                      trailing: Text(
+                        'RM ${log['waste_cost']}',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                ],
             ],
           ),
         );

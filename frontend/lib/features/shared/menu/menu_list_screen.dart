@@ -57,12 +57,26 @@ class _MenuListScreenState extends State<MenuListScreen> {
           return Center(child: Text(message));
         }
         final items = snapshot.data ?? [];
+        if (items.isEmpty && !isManager) {
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              children: const [
+                SizedBox(height: 120),
+                EmptyState(
+                  icon: Icons.restaurant_menu_outlined,
+                  message: 'No menu items yet.',
+                ),
+              ],
+            ),
+          );
+        }
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: items.length + (isManager ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               // Ch4 §4.4.1: the "+ add" row is the same reused pattern
               // used everywhere else something can be added (e.g. later,
@@ -88,6 +102,7 @@ class _MenuItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
+        leading: const IconBadge(icon: Icons.restaurant_menu_rounded),
         title: Text(item.name),
         subtitle: Text('${item.category} · RM ${item.price}'),
         trailing: SeverityChip(
@@ -118,13 +133,25 @@ class _AddMenuItemRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
-            style: BorderStyle.solid,
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.center,
-        child: const Text('+ Add menu item'),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 6),
+            Text(
+              'Add menu item',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
