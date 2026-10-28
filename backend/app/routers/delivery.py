@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -28,11 +28,13 @@ _SCHEDULING_ROLES = (*_DELIVERY_ROLES, Role.PROCUREMENT_OFFICER)
 @router.get("", response_model=list[DeliveryOut])
 def list_deliveries(
     status_filter: str | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[DeliveryOut]:
     """FR10.1 / FR10.4."""
-    return delivery_service.list_deliveries(db, status=status_filter)
+    return delivery_service.list_deliveries(db, status=status_filter, limit=limit, offset=offset)
 
 
 @router.post("", response_model=DeliveryOut, status_code=status.HTTP_201_CREATED)
@@ -138,11 +140,15 @@ def update_delivery_status(
 @router.get("/discrepancies", response_model=list[DeliveryDiscrepancyOut])
 def list_discrepancies(
     delivery_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[DeliveryDiscrepancyOut]:
     """FR10.3."""
-    return delivery_service.list_delivery_discrepancies(db, delivery_id=delivery_id)
+    return delivery_service.list_delivery_discrepancies(
+        db, delivery_id=delivery_id, limit=limit, offset=offset
+    )
 
 
 @router.post("/discrepancies/{discrepancy_id}/resolve", response_model=DeliveryDiscrepancyOut)

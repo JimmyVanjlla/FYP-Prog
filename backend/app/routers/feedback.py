@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -14,11 +14,15 @@ router = APIRouter(prefix="/portion-feedback", tags=["portion-feedback"])
 @router.get("/recommendations", response_model=list[PortionRecommendationOut])
 def list_recommendations(
     status_filter: str | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> list[PortionRecommendationOut]:
     """FR7.2."""
-    return feedback_service.list_portion_recommendations(db, status=status_filter)
+    return feedback_service.list_portion_recommendations(
+        db, status=status_filter, limit=limit, offset=offset
+    )
 
 
 @router.post("/analyze", response_model=IdentifyHighLeftoverResult)

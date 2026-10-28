@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -27,6 +27,8 @@ def _to_out(item, db: Session) -> MenuItemOut:
 @router.get("", response_model=list[MenuItemOut])
 def list_menu_items(
     include_inactive: bool = False,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[MenuItemOut]:
@@ -35,7 +37,8 @@ def list_menu_items(
     include_inactive is for a Manager reviewing past items (UC-MR-01 Alt
     Flow 3a) — everyone else effectively only ever sees active ones since
     the default excludes deactivated items from ordering/prep screens."""
-    return [_to_out(item, db) for item in menu_service.list_menu_items(db, include_inactive=include_inactive)]
+    items = menu_service.list_menu_items(db, include_inactive=include_inactive, limit=limit, offset=offset)
+    return [_to_out(item, db) for item in items]
 
 
 @router.post("", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)

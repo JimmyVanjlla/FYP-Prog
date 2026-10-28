@@ -91,8 +91,15 @@ def schedule_delivery(db: Session, *, po_id: int, scheduled_date: date) -> Deliv
     return delivery
 
 
-def list_deliveries(db: Session, *, status: str | None = None) -> list[Delivery]:
-    stmt = select(Delivery).order_by(Delivery.scheduled_date.desc())
+def list_deliveries(
+    db: Session, *, status: str | None = None, limit: int = 100, offset: int = 0
+) -> list[Delivery]:
+    stmt = (
+        select(Delivery)
+        .order_by(Delivery.scheduled_date.desc(), Delivery.delivery_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if status is not None:
         stmt = stmt.where(Delivery.status == status)
     return list(db.scalars(stmt))
@@ -253,8 +260,15 @@ def update_delivery_status(db: Session, *, delivery_id: int, new_status: str, up
     return delivery
 
 
-def list_delivery_discrepancies(db: Session, *, delivery_id: int | None = None) -> list[DeliveryDiscrepancy]:
-    stmt = select(DeliveryDiscrepancy).order_by(DeliveryDiscrepancy.discrepancy_id.desc())
+def list_delivery_discrepancies(
+    db: Session, *, delivery_id: int | None = None, limit: int = 100, offset: int = 0
+) -> list[DeliveryDiscrepancy]:
+    stmt = (
+        select(DeliveryDiscrepancy)
+        .order_by(DeliveryDiscrepancy.discrepancy_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if delivery_id is not None:
         stmt = stmt.where(DeliveryDiscrepancy.delivery_id == delivery_id)
     return list(db.scalars(stmt))

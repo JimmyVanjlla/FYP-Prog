@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -22,12 +22,14 @@ router = APIRouter(prefix="/forecasting", tags=["forecasting"])
 @router.get("/orders", response_model=list[OrderOut])
 def list_orders(
     menu_item_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[OrderOut]:
     """The read side of record_order — historical order data was
     previously write-only."""
-    return forecasting_service.list_orders(db, menu_item_id=menu_item_id)
+    return forecasting_service.list_orders(db, menu_item_id=menu_item_id, limit=limit, offset=offset)
 
 
 @router.post("/orders", response_model=OrderOut, status_code=201)
@@ -43,23 +45,31 @@ def record_order(
 def list_forecasts(
     menu_item_id: int | None = None,
     meal_period: str | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[ForecastOut]:
     """FR4.3 — surfaced to any authenticated role; stored forecast rows are
     returned as-is, no reprocessing on query."""
-    return forecasting_service.list_forecasts(db, menu_item_id=menu_item_id, meal_period=meal_period)
+    return forecasting_service.list_forecasts(
+        db, menu_item_id=menu_item_id, meal_period=meal_period, limit=limit, offset=offset
+    )
 
 
 @router.get("/accuracy", response_model=list[ForecastAccuracyOut])
 def list_forecast_accuracy(
     menu_item_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[ForecastAccuracyOut]:
     """FR4.4 — "track forecast accuracy" needs direct API access, not just
     a figure buried inside the weekly PDF report."""
-    return forecasting_service.list_forecast_accuracy(db, menu_item_id=menu_item_id)
+    return forecasting_service.list_forecast_accuracy(
+        db, menu_item_id=menu_item_id, limit=limit, offset=offset
+    )
 
 
 @router.post("/train", response_model=ForecastTrainingResult)

@@ -63,8 +63,8 @@ def create_supplier(db: Session, *, name: str, contact_info: str) -> Supplier:
     return supplier
 
 
-def list_suppliers(db: Session) -> list[Supplier]:
-    return list(db.scalars(select(Supplier).order_by(Supplier.name)))
+def list_suppliers(db: Session, *, limit: int = 100, offset: int = 0) -> list[Supplier]:
+    return list(db.scalars(select(Supplier).order_by(Supplier.name).limit(limit).offset(offset)))
 
 
 def deactivate_supplier(db: Session, supplier_id: int) -> Supplier:
@@ -103,12 +103,22 @@ def set_supplier_pricing(db: Session, *, supplier_id: int, ingredient_id: int, u
 
 
 def list_supplier_pricing(
-    db: Session, *, supplier_id: int | None = None, ingredient_id: int | None = None
+    db: Session,
+    *,
+    supplier_id: int | None = None,
+    ingredient_id: int | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[SupplierPricing]:
     """FR9.1 — "supplier directory with pricing" implies being able to see
     it, not just set it; there was no way to view what's been priced
     without a listing endpoint."""
-    stmt = select(SupplierPricing)
+    stmt = (
+        select(SupplierPricing)
+        .order_by(SupplierPricing.pricing_id)
+        .limit(limit)
+        .offset(offset)
+    )
     if supplier_id is not None:
         stmt = stmt.where(SupplierPricing.supplier_id == supplier_id)
     if ingredient_id is not None:
@@ -170,8 +180,17 @@ def generate_procurement_recommendations(db: Session, *, horizon_days: int = 7) 
     return recommendations
 
 
-def list_procurement_recommendations(db: Session) -> list[ProcurementRecommendation]:
-    return list(db.scalars(select(ProcurementRecommendation).order_by(ProcurementRecommendation.recommendation_id.desc())))
+def list_procurement_recommendations(
+    db: Session, *, limit: int = 100, offset: int = 0
+) -> list[ProcurementRecommendation]:
+    return list(
+        db.scalars(
+            select(ProcurementRecommendation)
+            .order_by(ProcurementRecommendation.recommendation_id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
 
 
 # --- Purchase orders (FR9.3 / FR9.6) ------------------------------------
@@ -265,8 +284,15 @@ def reject_purchase_order(db: Session, po_id: int) -> PurchaseOrder:
     return po
 
 
-def list_purchase_orders(db: Session, *, status: str | None = None) -> list[PurchaseOrder]:
-    stmt = select(PurchaseOrder).order_by(PurchaseOrder.created_at.desc())
+def list_purchase_orders(
+    db: Session, *, status: str | None = None, limit: int = 100, offset: int = 0
+) -> list[PurchaseOrder]:
+    stmt = (
+        select(PurchaseOrder)
+        .order_by(PurchaseOrder.created_at.desc(), PurchaseOrder.po_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if status is not None:
         stmt = stmt.where(PurchaseOrder.status == status)
     return list(db.scalars(stmt))
@@ -291,10 +317,12 @@ def set_monthly_budget(db: Session, *, month: date, budget_limit: Decimal, set_b
     return budget
 
 
-def list_budgets(db: Session) -> list[Budget]:
+def list_budgets(db: Session, *, limit: int = 100, offset: int = 0) -> list[Budget]:
     """FR9.4 — "track monthly procurement budget configuration" implies
     being able to see the configured history, not just set it once."""
-    return list(db.scalars(select(Budget).order_by(Budget.month.desc())))
+    return list(
+        db.scalars(select(Budget).order_by(Budget.month.desc()).limit(limit).offset(offset))
+    )
 
 
 # --- Supplier discrepancies (FR9.5) --------------------------------------
@@ -308,8 +336,17 @@ def flag_supplier_discrepancy(db: Session, *, po_id: int, supplier_id: int, desc
     return discrepancy
 
 
-def list_supplier_discrepancies(db: Session) -> list[SupplierDiscrepancy]:
-    return list(db.scalars(select(SupplierDiscrepancy).order_by(SupplierDiscrepancy.discrepancy_id.desc())))
+def list_supplier_discrepancies(
+    db: Session, *, limit: int = 100, offset: int = 0
+) -> list[SupplierDiscrepancy]:
+    return list(
+        db.scalars(
+            select(SupplierDiscrepancy)
+            .order_by(SupplierDiscrepancy.discrepancy_id.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+    )
 
 
 def resolve_supplier_discrepancy(db: Session, discrepancy_id: int) -> SupplierDiscrepancy:

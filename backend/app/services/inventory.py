@@ -33,8 +33,15 @@ def create_ingredient(db: Session, data: IngredientCreate) -> Ingredient:
     return ingredient
 
 
-def list_ingredients(db: Session) -> list[Ingredient]:
-    return list(db.scalars(select(Ingredient).order_by(Ingredient.name)))
+def list_ingredients(db: Session, *, limit: int | None = None, offset: int = 0) -> list[Ingredient]:
+    """limit=None (the default) returns everything — used internally by
+    list_low_stock_ingredients, which has to scan the full table to filter
+    correctly before paginating its own, separately-sized result. The
+    GET /inventory/ingredients router always passes an explicit limit."""
+    stmt = select(Ingredient).order_by(Ingredient.name).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+    return list(db.scalars(stmt))
 
 
 def get_ingredient(db: Session, ingredient_id: int) -> Ingredient:
@@ -97,19 +104,33 @@ def record_stock_batch(db: Session, data: StockBatchCreate) -> StockBatch:
     return batch
 
 
-def list_stock_batches(db: Session, *, ingredient_id: int | None = None) -> list[StockBatch]:
+def list_stock_batches(
+    db: Session, *, ingredient_id: int | None = None, limit: int = 100, offset: int = 0
+) -> list[StockBatch]:
     """FR3.2 — batch/expiry tracking needs to be viewable, not just
     logged; previously the near-expiry Celery task was the only thing
     that ever looked at StockBatch rows again after creation."""
-    stmt = select(StockBatch).order_by(StockBatch.expiry_date)
+    stmt = (
+        select(StockBatch)
+        .order_by(StockBatch.expiry_date, StockBatch.batch_id)
+        .limit(limit)
+        .offset(offset)
+    )
     if ingredient_id is not None:
         stmt = stmt.where(StockBatch.ingredient_id == ingredient_id)
     return list(db.scalars(stmt))
 
 
-def list_stock_adjustments(db: Session, *, ingredient_id: int | None = None) -> list[StockAdjustment]:
+def list_stock_adjustments(
+    db: Session, *, ingredient_id: int | None = None, limit: int = 100, offset: int = 0
+) -> list[StockAdjustment]:
     """FR3.4 — adjustment history, viewable rather than write-only."""
-    stmt = select(StockAdjustment).order_by(StockAdjustment.timestamp.desc())
+    stmt = (
+        select(StockAdjustment)
+        .order_by(StockAdjustment.timestamp.desc(), StockAdjustment.adjustment_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if ingredient_id is not None:
         stmt = stmt.where(StockAdjustment.ingredient_id == ingredient_id)
     return list(db.scalars(stmt))
@@ -133,8 +154,15 @@ def create_restocking_request(
     return request
 
 
-def list_restocking_requests(db: Session, *, status: str | None = None) -> list[RestockingRequest]:
-    stmt = select(RestockingRequest).order_by(RestockingRequest.urgency.desc())
+def list_restocking_requests(
+    db: Session, *, status: str | None = None, limit: int = 100, offset: int = 0
+) -> list[RestockingRequest]:
+    stmt = (
+        select(RestockingRequest)
+        .order_by(RestockingRequest.urgency.desc(), RestockingRequest.request_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if status is not None:
         stmt = stmt.where(RestockingRequest.status == status)
     return list(db.scalars(stmt))
@@ -162,8 +190,13 @@ def check_low_stock_threshold(db: Session, ingredient: Ingredient) -> bool:
     return ingredient.current_stock < threshold
 
 
-def list_low_stock_ingredients(db: Session) -> list[Ingredient]:
-    return [i for i in list_ingredients(db) if check_low_stock_threshold(db, i)]
+def list_low_stock_ingredients(db: Session, *, limit: int = 100, offset: int = 0) -> list[Ingredient]:
+    # Has to scan every ingredient to filter correctly (the threshold check
+    # itself isn't a simple column comparison — see check_low_stock_threshold)
+    # before paginating the filtered result, so this calls list_ingredients
+    # with no limit rather than the paginated default.
+    flagged = [i for i in list_ingredients(db) if check_low_stock_threshold(db, i)]
+    return flagged[offset : offset + limit]
 
 
 def check_near_expiry_batches(db: Session, *, today: date | None = None) -> dict:

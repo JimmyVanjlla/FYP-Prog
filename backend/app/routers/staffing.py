@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -23,12 +23,15 @@ router = APIRouter(prefix="/staffing", tags=["staffing"])
 
 @router.get("/my-schedule", response_model=list[MyShiftOut])
 def list_my_schedule(
-    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> list[MyShiftOut]:
     """UC-SS-05 "View My Shift Schedule" — any staff member's own
     published shifts, without needing a schedule_id or going through the
     Shift Supervisor."""
-    rows = staffing_service.list_my_assignments(db, user.user_id)
+    rows = staffing_service.list_my_assignments(db, user.user_id, limit=limit, offset=offset)
     return [
         MyShiftOut(
             assignment_id=a.assignment_id,
@@ -44,9 +47,12 @@ def list_my_schedule(
 
 @router.get("/schedules", response_model=list[ShiftScheduleOut])
 def list_schedules(
-    db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ) -> list[ShiftScheduleOut]:
-    return staffing_service.list_schedules(db)
+    return staffing_service.list_schedules(db, limit=limit, offset=offset)
 
 
 @router.post("/schedules", response_model=ShiftScheduleOut, status_code=status.HTTP_201_CREATED)

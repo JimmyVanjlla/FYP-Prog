@@ -32,13 +32,15 @@ def create_menu_item(db: Session, data: MenuItemCreate) -> MenuItem:
     return item
 
 
-def list_menu_items(db: Session, *, include_inactive: bool = False) -> list[MenuItem]:
+def list_menu_items(
+    db: Session, *, include_inactive: bool = False, limit: int = 100, offset: int = 0
+) -> list[MenuItem]:
     """UC-MR-01 Alt Flow 3a — a deactivated item is removed "from active
     ordering and prep recommendation screens while preserving its
     historical order and forecast data for reporting", so listing excludes
     inactive items by default; include_inactive=True is for a Manager
     reviewing/reactivating past items, not the normal menu view."""
-    stmt = select(MenuItem).order_by(MenuItem.name)
+    stmt = select(MenuItem).order_by(MenuItem.name).limit(limit).offset(offset)
     if not include_inactive:
         stmt = stmt.where(MenuItem.is_active.is_(True))
     return list(db.scalars(stmt))

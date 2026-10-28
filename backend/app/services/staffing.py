@@ -92,8 +92,12 @@ def create_schedule(db: Session, *, shift_date: date, meal_period: str, publishe
     return schedule
 
 
-def list_schedules(db: Session) -> list[ShiftSchedule]:
-    return list(db.scalars(select(ShiftSchedule).order_by(ShiftSchedule.date.desc())))
+def list_schedules(db: Session, *, limit: int = 100, offset: int = 0) -> list[ShiftSchedule]:
+    return list(
+        db.scalars(
+            select(ShiftSchedule).order_by(ShiftSchedule.date.desc()).limit(limit).offset(offset)
+        )
+    )
 
 
 def get_schedule(db: Session, schedule_id: int) -> ShiftSchedule:
@@ -103,7 +107,9 @@ def get_schedule(db: Session, schedule_id: int) -> ShiftSchedule:
     return schedule
 
 
-def list_my_assignments(db: Session, staff_id: int) -> list[tuple[ShiftAssignment, ShiftSchedule]]:
+def list_my_assignments(
+    db: Session, staff_id: int, *, limit: int = 100, offset: int = 0
+) -> list[tuple[ShiftAssignment, ShiftSchedule]]:
     """UC-SS-05 "View My Shift Schedule" — an entire use case that was
     missing: any staff member should be able to see their own published
     shifts (date, meal period, role/station) without knowing a
@@ -116,6 +122,8 @@ def list_my_assignments(db: Session, staff_id: int) -> list[tuple[ShiftAssignmen
         .where(ShiftAssignment.staff_id == staff_id)
         .where(ShiftSchedule.status == "published")
         .order_by(ShiftSchedule.date)
+        .limit(limit)
+        .offset(offset)
     ).all()
     return [(a, s) for a, s in rows]
 

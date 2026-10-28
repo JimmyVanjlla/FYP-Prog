@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -7,7 +7,8 @@ from app.deps import get_current_user, require_role
 from app.models.audit import AuditLog
 from app.models.roles import Role
 from app.models.user import User
-from app.schemas.user import AuditLogOut, UserOut, UserUpdate
+from app.schemas.user import AuditLogOut, UserOut, UserRegister, UserUpdate
+from app.services import auth as auth_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -19,10 +20,34 @@ def read_current_user(current_user: User = Depends(get_current_user)) -> UserOut
 
 @router.get("", response_model=list[UserOut])
 def list_users(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> list[UserOut]:
-    return list(db.query(User).order_by(User.name).all())
+    return list(db.query(User).order_by(User.name).limit(limit).offset(offset).all())
+
+
+@router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+def create_staff_account(
+    data: UserRegister,
+    db: Session = Depends(get_db),
+    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+) -> UserOut:
+    """FR1.1/FR1.4 — a Manager provisioning a staff account directly,
+    for any role including another Restaurant Owner/Manager. This is the
+    counterpart to POST /auth/register's self-service path, which only
+    allows Owner/Manager once (see
+    app/services/auth.py::register_user_self_service) — beyond that
+    bootstrap window, an existing Manager has to be the one creating
+    further Manager/Owner accounts."""
+    try:
+        return auth_service.register_user(db, data)
+    except auth_service.DuplicateEmailError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An account with this email address already exists.",
+        )
 
 
 @router.patch("/{user_id}", response_model=UserOut)
@@ -32,9 +57,10 @@ def update_user(
     db: Session = Depends(get_db),
     manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> UserOut:
-    """FR1.4 — Restaurant Manager creates/deactivates/reassigns roles for
-    staff accounts. Creation itself happens via POST /auth/register; this
-    endpoint covers deactivate + role reassignment."""
+    """FR1.4 — Restaurant Manager deactivates/reassigns roles for staff
+    accounts. Creation happens via POST /auth/register (self-service) or
+    POST /users (Manager-provisioned); this endpoint covers deactivate +
+    role reassignment for an account that already exists."""
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")

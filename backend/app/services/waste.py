@@ -77,8 +77,15 @@ def record_expiry_waste(db: Session, expiry_waste_events: list[dict]) -> list[Wa
     return created
 
 
-def list_waste_logs(db: Session, *, ingredient_id: int | None = None) -> list[WasteLog]:
-    stmt = select(WasteLog).order_by(WasteLog.logged_at.desc())
+def list_waste_logs(
+    db: Session, *, ingredient_id: int | None = None, limit: int = 100, offset: int = 0
+) -> list[WasteLog]:
+    stmt = (
+        select(WasteLog)
+        .order_by(WasteLog.logged_at.desc(), WasteLog.waste_log_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if ingredient_id is not None:
         stmt = stmt.where(WasteLog.ingredient_id == ingredient_id)
     return list(db.scalars(stmt))
@@ -104,5 +111,12 @@ def aggregate_waste_reduction_trend(
     return trend
 
 
-def list_waste_trends(db: Session) -> list[WasteReductionTrend]:
-    return list(db.scalars(select(WasteReductionTrend).order_by(WasteReductionTrend.period_start)))
+def list_waste_trends(db: Session, *, limit: int = 100, offset: int = 0) -> list[WasteReductionTrend]:
+    return list(
+        db.scalars(
+            select(WasteReductionTrend)
+            .order_by(WasteReductionTrend.period_start)
+            .limit(limit)
+            .offset(offset)
+        )
+    )

@@ -6,8 +6,16 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.audit import AuditLog
+from app.models.roles import Role
 from app.models.user import User
 from app.schemas.user import UserRegister
+
+# Roles that can't freely self-register once one already exists — see
+# register_user_self_service below. Restaurant Owner/Manager hold the most
+# privileged, system-wide access (RBAC-wise equal to or above everyone
+# else), so an open /auth/register for them would let anyone grant
+# themselves manager-level access with no authorization check at all.
+_PRIVILEGED_ROLES = {Role.RESTAURANT_OWNER, Role.RESTAURANT_MANAGER}
 
 
 class DuplicateEmailError(Exception):
@@ -18,7 +26,15 @@ class InvalidCredentialsError(Exception):
     """FR1.7 — deliberately doesn't say which of email/password was wrong."""
 
 
+class PrivilegedRoleAlreadyProvisionedError(Exception):
+    """Raised by register_user_self_service when someone tries to
+    self-register as Restaurant Owner/Manager and one already exists."""
+
+
 def register_user(db: Session, data: UserRegister) -> User:
+    """The core creation logic, with no role restriction — used directly by
+    the Manager-only POST /users endpoint (app/routers/users.py), and by
+    register_user_self_service below once it's decided the role is allowed."""
     existing = db.scalar(select(User).where(User.email == data.email))
     if existing is not None:
         raise DuplicateEmailError
@@ -36,6 +52,22 @@ def register_user(db: Session, data: UserRegister) -> User:
     db.commit()
     db.refresh(user)
     return user
+
+
+def register_user_self_service(db: Session, data: UserRegister) -> User:
+    """FR1.1's open /auth/register, with one guard: self-registering as
+    Restaurant Owner or Restaurant Manager is only allowed when no account
+    with that exact role exists yet (the system's bootstrap window — the
+    very first Owner/Manager account has to come from somewhere with no
+    Manager yet available to provision it). Once one exists, further
+    Owner/Manager accounts must come from an existing Manager via
+    POST /users, same as any other staff account they create for someone
+    else."""
+    if data.role in _PRIVILEGED_ROLES:
+        already_exists = db.scalar(select(User).where(User.role == data.role.value).limit(1))
+        if already_exists is not None:
+            raise PrivilegedRoleAlreadyProvisionedError
+    return register_user(db, data)
 
 
 def authenticate_user(db: Session, email: str, password: str) -> tuple[str, str]:

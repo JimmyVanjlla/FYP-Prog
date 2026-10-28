@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -23,12 +23,16 @@ router = APIRouter(prefix="/kitchen", tags=["kitchen"])
 def list_prep_recommendations(
     meal_period: str | None = None,
     menu_item_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[PrepRecommendationOut]:
     """FR5.1/FR5.2 — the read side; previously a recommendation was only
     ever visible in the single POST response that created it."""
-    return kitchen_service.list_prep_recommendations(db, meal_period=meal_period, menu_item_id=menu_item_id)
+    return kitchen_service.list_prep_recommendations(
+        db, meal_period=meal_period, menu_item_id=menu_item_id, limit=limit, offset=offset
+    )
 
 
 @router.post(
@@ -97,15 +101,20 @@ def log_leftover(
 @router.get("/leftover-logs", response_model=list[LeftoverLogOut])
 def list_leftover_logs(
     menu_item_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[LeftoverLogOut]:
-    return kitchen_service.list_leftover_logs(db, menu_item_id=menu_item_id)
+    return kitchen_service.list_leftover_logs(db, menu_item_id=menu_item_id, limit=limit, offset=offset)
 
 
 @router.get("/notifications", response_model=list[NotificationOut])
 def list_my_notifications(
-    db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
 ) -> list[NotificationOut]:
     """FR5.4."""
-    return kitchen_service.list_notifications(db, recipient_id=user.user_id)
+    return kitchen_service.list_notifications(db, recipient_id=user.user_id, limit=limit, offset=offset)

@@ -86,6 +86,42 @@ def test_weekly_report_generates_pdf_with_data(client, db_session):
     assert download_via_query.status_code == 200
 
 
+def test_weekly_report_includes_waste_logged_today_when_period_end_is_today(client, db_session):
+    """Regression test: WasteLog.logged_at is a timezone-aware datetime,
+    and period_end is a bare date — comparing `logged_at <= period_end`
+    casts period_end to midnight at the *start* of that day, which used to
+    silently exclude anything logged later the same day. A report whose
+    period_end is today, generated right now, should still include waste
+    logged earlier today (see app/services/reporting.py::_end_of_day)."""
+    token = _manager_token(client)
+    inv_token = register_and_login(client, email="inv2@restaurant.com", role="Inventory Staff")
+    ingredient = client.post(
+        "/inventory/ingredients",
+        json={"name": "Prawns", "unit": "kg", "current_stock": "10"},
+        headers=auth_headers(inv_token),
+    ).json()
+    # No explicit logged_at — defaults to "now" (today), same as a real
+    # WasteLog created by record_leftover_waste earlier today.
+    db_session.add(
+        WasteLog(
+            source_type="leftover",
+            source_ref_id=1,
+            ingredient_id=ingredient["ingredient_id"],
+            quantity_wasted=Decimal("1.000"),
+            waste_cost=Decimal("9.80"),
+        )
+    )
+    db_session.commit()
+
+    today = date.today()
+    resp = client.post(
+        "/reports/weekly",
+        json={"period_start": (today - timedelta(days=6)).isoformat(), "period_end": today.isoformat()},
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+
+
 def test_non_manager_cannot_generate_report(client):
     """FR1.3 RBAC applied to Module 11."""
     token = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")

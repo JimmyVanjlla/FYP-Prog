@@ -139,8 +139,15 @@ def _suggest_portion_size(db: Session, menu_item_id: int) -> Decimal:
     return (link.quantity_per_serving * PORTION_REDUCTION_FACTOR).quantize(Decimal("0.001"))
 
 
-def list_portion_recommendations(db: Session, *, status: str | None = None) -> list[PortionRecommendation]:
-    stmt = select(PortionRecommendation).order_by(PortionRecommendation.created_at.desc())
+def list_portion_recommendations(
+    db: Session, *, status: str | None = None, limit: int = 100, offset: int = 0
+) -> list[PortionRecommendation]:
+    stmt = (
+        select(PortionRecommendation)
+        .order_by(PortionRecommendation.created_at.desc(), PortionRecommendation.recommendation_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if status is not None:
         stmt = stmt.where(PortionRecommendation.status == status)
     return list(db.scalars(stmt))

@@ -100,12 +100,22 @@ def generate_prep_recommendation(
 
 
 def list_prep_recommendations(
-    db: Session, *, meal_period: str | None = None, menu_item_id: int | None = None
+    db: Session,
+    *,
+    meal_period: str | None = None,
+    menu_item_id: int | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[PrepRecommendation]:
     """FR5.1/FR5.2 — Kitchen Staff need to see "today's prep
     recommendations" as a list; previously a recommendation was only ever
     visible in the single POST response that created it."""
-    stmt = select(PrepRecommendation).order_by(PrepRecommendation.recommendation_id.desc())
+    stmt = (
+        select(PrepRecommendation)
+        .order_by(PrepRecommendation.recommendation_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if meal_period is not None:
         stmt = stmt.where(PrepRecommendation.meal_period == meal_period)
     if menu_item_id is not None:
@@ -176,18 +186,29 @@ def log_leftover(db: Session, *, staff_id: int, data: LeftoverLogCreate) -> Left
     return log
 
 
-def list_leftover_logs(db: Session, *, menu_item_id: int | None = None) -> list[LeftoverLog]:
-    stmt = select(LeftoverLog).order_by(LeftoverLog.service_period_date.desc())
+def list_leftover_logs(
+    db: Session, *, menu_item_id: int | None = None, limit: int = 100, offset: int = 0
+) -> list[LeftoverLog]:
+    stmt = (
+        select(LeftoverLog)
+        .order_by(LeftoverLog.service_period_date.desc(), LeftoverLog.log_id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
     if menu_item_id is not None:
         stmt = stmt.where(LeftoverLog.menu_item_id == menu_item_id)
     return list(db.scalars(stmt))
 
 
-def list_notifications(db: Session, *, recipient_id: int) -> list[Notification]:
+def list_notifications(
+    db: Session, *, recipient_id: int, limit: int = 100, offset: int = 0
+) -> list[Notification]:
     return list(
         db.scalars(
             select(Notification)
             .where(Notification.recipient_id == recipient_id)
             .order_by(Notification.created_at.desc())
+            .limit(limit)
+            .offset(offset)
         )
     )

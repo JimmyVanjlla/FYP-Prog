@@ -1,6 +1,6 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -29,9 +29,14 @@ _PROCUREMENT_ROLES = (Role.PROCUREMENT_OFFICER, Role.RESTAURANT_MANAGER)
 
 
 @router.get("/suppliers", response_model=list[SupplierOut])
-def list_suppliers(db: Session = Depends(get_db), _user: User = Depends(get_current_user)) -> list[SupplierOut]:
+def list_suppliers(
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[SupplierOut]:
     """FR9.1."""
-    return procurement_service.list_suppliers(db)
+    return procurement_service.list_suppliers(db, limit=limit, offset=offset)
 
 
 @router.post("/suppliers", response_model=SupplierOut, status_code=status.HTTP_201_CREATED)
@@ -71,20 +76,27 @@ def set_supplier_pricing(
 def list_supplier_pricing(
     supplier_id: int | None = None,
     ingredient_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[SupplierPricingOut]:
     """FR9.1 — the read side of set_supplier_pricing; a "supplier
     directory with pricing" needs to be viewable, not just set once."""
-    return procurement_service.list_supplier_pricing(db, supplier_id=supplier_id, ingredient_id=ingredient_id)
+    return procurement_service.list_supplier_pricing(
+        db, supplier_id=supplier_id, ingredient_id=ingredient_id, limit=limit, offset=offset
+    )
 
 
 @router.get("/recommendations", response_model=list[ProcurementRecommendationOut])
 def list_recommendations(
-    db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
 ) -> list[ProcurementRecommendationOut]:
     """FR9.2."""
-    return procurement_service.list_procurement_recommendations(db)
+    return procurement_service.list_procurement_recommendations(db, limit=limit, offset=offset)
 
 
 @router.post("/recommendations/generate", response_model=list[ProcurementRecommendationOut])
@@ -98,10 +110,12 @@ def generate_recommendations(
 @router.get("/purchase-orders", response_model=list[PurchaseOrderOut])
 def list_purchase_orders(
     status_filter: str | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
 ) -> list[PurchaseOrderOut]:
-    return procurement_service.list_purchase_orders(db, status=status_filter)
+    return procurement_service.list_purchase_orders(db, status=status_filter, limit=limit, offset=offset)
 
 
 @router.post("/purchase-orders", response_model=PurchaseOrderOut, status_code=status.HTTP_201_CREATED)
@@ -162,11 +176,14 @@ def set_budget(
 
 @router.get("/budget", response_model=list[BudgetOut])
 def list_budgets(
-    db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
 ) -> list[BudgetOut]:
     """FR9.4 — "track monthly procurement budget configuration" needs a
     way to see what's been configured, not just set it once."""
-    return procurement_service.list_budgets(db)
+    return procurement_service.list_budgets(db, limit=limit, offset=offset)
 
 
 @router.get("/budget/utilisation", response_model=BudgetUtilisationOut)
@@ -197,9 +214,12 @@ def flag_discrepancy(
 
 @router.get("/discrepancies", response_model=list[SupplierDiscrepancyOut])
 def list_discrepancies(
-    db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
 ) -> list[SupplierDiscrepancyOut]:
-    return procurement_service.list_supplier_discrepancies(db)
+    return procurement_service.list_supplier_discrepancies(db, limit=limit, offset=offset)
 
 
 @router.post("/discrepancies/{discrepancy_id}/resolve", response_model=SupplierDiscrepancyOut)

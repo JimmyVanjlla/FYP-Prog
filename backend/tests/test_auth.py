@@ -1,3 +1,5 @@
+import uuid
+
 from tests.conftest import auth_headers, register_and_login
 
 
@@ -155,3 +157,107 @@ def test_non_manager_cannot_view_audit_log(client):
     token = register_and_login(client, email="kitchen6@restaurant.com", role="Kitchen Staff")
     resp = client.get("/users/audit-logs", headers=auth_headers(token))
     assert resp.status_code == 403
+
+
+def test_self_registering_a_second_manager_is_rejected(client):
+    """NFR-Security — open self-registration for Restaurant Owner/Manager
+    would let anyone grant themselves manager-level access with no
+    authorization check. The very first one is a bootstrap exception
+    (nobody with Manager access exists yet to provision it); once it
+    exists, a second self-registered Manager is rejected."""
+    first = client.post(
+        "/auth/register",
+        json={
+            "name": "First Manager",
+            "email": "first.manager@restaurant.com",
+            "password": "password123",
+            "role": "Restaurant Manager",
+        },
+    )
+    assert first.status_code == 201
+
+    second = client.post(
+        "/auth/register",
+        json={
+            "name": "Second Manager",
+            "email": "second.manager@restaurant.com",
+            "password": "password123",
+            "role": "Restaurant Manager",
+        },
+    )
+    assert second.status_code == 403
+
+
+def test_manager_can_provision_another_manager_account(client):
+    """Beyond the bootstrap window, an existing Manager creates further
+    Manager/Owner accounts via POST /users rather than open self-service."""
+    manager_token = register_and_login(
+        client, email="bootstrap.manager@restaurant.com", role="Restaurant Manager"
+    )
+    resp = client.post(
+        "/users",
+        json={
+            "name": "Second Manager",
+            "email": "provisioned.manager@restaurant.com",
+            "password": "password123",
+            "role": "Restaurant Manager",
+        },
+        headers=auth_headers(manager_token),
+    )
+    assert resp.status_code == 201
+    assert resp.json()["role"] == "Restaurant Manager"
+
+    # And self-registering a third Manager directly is still rejected.
+    blocked = client.post(
+        "/auth/register",
+        json={
+            "name": "Third Manager",
+            "email": "third.manager@restaurant.com",
+            "password": "password123",
+            "role": "Restaurant Manager",
+        },
+    )
+    assert blocked.status_code == 403
+
+
+def test_non_manager_cannot_provision_staff_accounts(client):
+    """FR1.3 — POST /users is Manager-only."""
+    token = register_and_login(client, email="kitchen7@restaurant.com", role="Kitchen Staff")
+    resp = client.post(
+        "/users",
+        json={
+            "name": "New Hire",
+            "email": "newhire@restaurant.com",
+            "password": "password123",
+            "role": "Inventory Staff",
+        },
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 403
+
+
+def test_login_is_rate_limited_after_repeated_failures(client):
+    """NFR-Security — /auth/login previously had no limit on attempts at
+    all. A unique email per test run avoids colliding with leftover
+    counters from a previous run against the same real Redis instance."""
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    email = f"ratelimit-{uuid.uuid4().hex}@restaurant.com"
+    client.post(
+        "/auth/register",
+        json={"name": "Rate Limited", "email": email, "password": "correct-password", "role": "Kitchen Staff"},
+    )
+
+    last_status = None
+    for _ in range(settings.login_rate_limit_attempts + 2):
+        resp = client.post("/auth/login", json={"email": email, "password": "wrong-password"})
+        last_status = resp.status_code
+
+    assert last_status == 429
+
+    # The correct password is also blocked while the window is still open —
+    # the limit is on attempts for the account, not specifically on wrong
+    # passwords.
+    blocked = client.post("/auth/login", json={"email": email, "password": "correct-password"})
+    assert blocked.status_code == 429

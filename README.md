@@ -252,6 +252,55 @@ now fixed, the largest being a genuine structural one:
 100+ backend tests passing (see the checklist file's own commit history
 for exact counts per batch).
 
+## Post-checklist hardening pass: production-readiness gaps
+
+A different kind of audit than the ones above — not "does it match the
+report" but "what would a real deployment need that the report doesn't
+necessarily call out." Found and fixed:
+
+- **No pagination on almost any list endpoint.** `GET /forecasting/orders`,
+  `/inventory/ingredients`, `/procurement/purchase-orders`, `/deliveries`,
+  etc. all returned entire tables unbounded. Every list endpoint across
+  all 9 routers now takes `limit`/`offset` (capped at 500 per page).
+- **Open self-registration to any role, including Manager/Owner.**
+  `/auth/register` let anyone grant themselves manager-level access with
+  no authorization check — a deliberate Sprint 1 stopgap that was still
+  live. Now: self-registering as Restaurant Owner/Manager is only allowed
+  once (the system's bootstrap window); beyond that, an existing Manager
+  provisions further Manager/Owner accounts via the new `POST /users`.
+- **No startup check on `JWT_SECRET`.** It defaulted to a literal string
+  baked into this public repo's source. `Settings` now refuses to
+  construct if `ENVIRONMENT=production` and the secret is still that
+  default — fails loudly at startup instead of silently running forgeable.
+- **No rate limiting on `/auth/login`.** Unlimited password attempts, no
+  backoff. Now rate-limited per email via a Redis fixed-window counter
+  (`app/core/rate_limit.py`, configurable via `LOGIN_RATE_LIMIT_*`), with
+  a fail-open design so a down Redis never takes login down with it.
+- **No centralized logging or error monitoring at the API layer.** Celery
+  tasks logged; routes didn't. Added `app/core/logging_config.py` plus a
+  global unhandled-exception handler in `main.py` that logs the full
+  traceback server-side before returning a generic message to the client.
+- **CORS was simply undecided** — no `CORSMiddleware` at all. Now
+  explicit: empty-by-default (safe, doesn't affect the Flutter mobile
+  app), configurable via `CORS_ALLOWED_ORIGINS` for a future web target.
+- **Bonus bug found while re-seeding dev data**: `_waste_data`/
+  `_budget_data` in `app/services/reporting.py` compared a timezone-aware
+  `datetime` column against a bare `date` upper bound, which Postgres
+  casts to midnight-start-of-day — silently excluding anything logged
+  *later that same day*. A weekly report generated "through today" was
+  quietly missing today's own waste/spend. Fixed via `_end_of_day()`.
+
+All 6 hardening items plus the reporting fix are covered by new tests
+(`tests/test_app_settings.py`, `tests/test_pagination.py`, new cases in
+`tests/test_auth.py` and `tests/test_reporting.py`).
+
+A one-time dev data seeder lives at `backend/scripts/seed_dev_data.py` —
+registers one account per role, a Malaysian-menu set of ingredients/
+suppliers/menu items, 8 weeks of order history, 3 weeks of leftover logs,
+and runs forecasting/portion-feedback/waste-trend training so the app
+isn't staring at empty screens. See its docstring for usage; it's meant
+for a single run against a fresh database, not repeated seeding.
+
 ## Known gaps / good next steps
 
 - Flutter screens for Staff Scheduling, full Procurement (supplier/PO

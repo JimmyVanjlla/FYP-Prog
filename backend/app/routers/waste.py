@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -14,19 +14,24 @@ router = APIRouter(prefix="/waste", tags=["waste"])
 @router.get("/logs", response_model=list[WasteLogOut])
 def list_waste_logs(
     ingredient_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[WasteLogOut]:
     """FR6.1."""
-    return waste_service.list_waste_logs(db, ingredient_id=ingredient_id)
+    return waste_service.list_waste_logs(db, ingredient_id=ingredient_id, limit=limit, offset=offset)
 
 
 @router.get("/trends", response_model=list[WasteReductionTrendOut])
 def list_waste_trends(
-    db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ) -> list[WasteReductionTrendOut]:
     """FR6.3."""
-    return waste_service.list_waste_trends(db)
+    return waste_service.list_waste_trends(db, limit=limit, offset=offset)
 
 
 @router.post("/trends", response_model=WasteReductionTrendOut, status_code=201)

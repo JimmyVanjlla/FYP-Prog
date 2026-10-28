@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -32,19 +32,27 @@ def _ingredient_out(ingredient, db: Session) -> IngredientOut:
 
 @router.get("/ingredients", response_model=list[IngredientOut])
 def list_ingredients(
-    db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ) -> list[IngredientOut]:
-    return [_ingredient_out(i, db) for i in inventory_service.list_ingredients(db)]
+    items = inventory_service.list_ingredients(db, limit=limit, offset=offset)
+    return [_ingredient_out(i, db) for i in items]
 
 
 @router.get("/ingredients/low-stock", response_model=list[IngredientOut])
 def list_low_stock(
-    db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
 ) -> list[IngredientOut]:
     """FR3.3 threshold check, surfaced as its own endpoint since it's the
     one Kitchen/Manager dashboards actually poll (Ch4 §4.4.1 severity-list
     UI pattern)."""
-    return [_ingredient_out(i, db) for i in inventory_service.list_low_stock_ingredients(db)]
+    items = inventory_service.list_low_stock_ingredients(db, limit=limit, offset=offset)
+    return [_ingredient_out(i, db) for i in items]
 
 
 @router.post("/ingredients", response_model=IngredientOut, status_code=status.HTTP_201_CREATED)
@@ -76,11 +84,15 @@ def update_threshold(
 @router.get("/stock-adjustments", response_model=list[StockAdjustmentOut])
 def list_stock_adjustments(
     ingredient_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[StockAdjustmentOut]:
     """FR3.4 — adjustment history, viewable rather than write-only."""
-    return inventory_service.list_stock_adjustments(db, ingredient_id=ingredient_id)
+    return inventory_service.list_stock_adjustments(
+        db, ingredient_id=ingredient_id, limit=limit, offset=offset
+    )
 
 
 @router.post(
@@ -106,12 +118,16 @@ def record_stock_adjustment(
 @router.get("/stock-batches", response_model=list[StockBatchOut])
 def list_stock_batches(
     ingredient_id: int | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[StockBatchOut]:
     """FR3.2 — batch/expiry tracking needs to be viewable, not just
     logged."""
-    return inventory_service.list_stock_batches(db, ingredient_id=ingredient_id)
+    return inventory_service.list_stock_batches(
+        db, ingredient_id=ingredient_id, limit=limit, offset=offset
+    )
 
 
 @router.post("/stock-batches", response_model=StockBatchOut, status_code=status.HTTP_201_CREATED)
@@ -147,10 +163,14 @@ def create_restocking_request(
 @router.get("/restocking-requests", response_model=list[RestockingRequestOut])
 def list_restocking_requests(
     status_filter: str | None = None,
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _staff: User = Depends(require_role(*_INVENTORY_WRITE_ROLES)),
 ) -> list[RestockingRequestOut]:
-    return inventory_service.list_restocking_requests(db, status=status_filter)
+    return inventory_service.list_restocking_requests(
+        db, status=status_filter, limit=limit, offset=offset
+    )
 
 
 @router.patch("/restocking-requests/{request_id}", response_model=RestockingRequestOut)
