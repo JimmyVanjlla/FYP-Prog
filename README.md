@@ -275,3 +275,25 @@ for exact counts per batch).
 - Deployment (Railway/Render per Ch2's feasibility study) hasn't been set
   up — everything so far runs locally against the real Supabase/Redis
   Cloud instances.
+
+## Free-tier cloud gotchas (if you come back after a break)
+
+- **Redis Cloud deletes inactive free databases.** After roughly a month
+  of no traffic, the free-tier Redis database is deleted outright (the
+  hostname starts returning NXDOMAIN, not just a timeout) — this
+  happened once already (2026-10-28), losing the Celery broker/cache
+  (no persistent app data lives there, so nothing important was lost).
+  Fix: create a new free database in the Redis Cloud dashboard and drop
+  its connection string into `backend/.env`'s `REDIS_URL`.
+- **Supabase's direct DB host is IPv6-only.** `db.<ref>.supabase.co`
+  (the "Direct connection" string) only resolves to an IPv6 address on
+  newer projects. If your network/machine has no outbound IPv6 route,
+  connections fail with `getaddrinfo failed` even though the project is
+  very much alive (confirm with `curl https://<ref>.supabase.co/rest/v1/`
+  — a `401` means it's up). Fix: use the **Transaction pooler**
+  connection string instead (Supabase dashboard → Connect → Transaction
+  pooler, port `6543`, host like
+  `aws-0-<region>.pooler.supabase.com`) — same password, just a
+  different host/user (`postgres.<project-ref>` instead of `postgres`).
+  This is what `backend/.env`'s `DATABASE_URL` uses now; no data was
+  lost, this was a connectivity issue only.
