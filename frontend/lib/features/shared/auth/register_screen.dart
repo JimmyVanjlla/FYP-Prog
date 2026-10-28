@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api_client.dart';
-import '../../core/auth_state.dart';
+import '../../../core/api_client.dart';
+import '../../../core/auth_state.dart';
 
 /// FR1.1 — unlike the login screen, registration legitimately needs a role
 /// picker: this is how a new staff account's role gets set in the first

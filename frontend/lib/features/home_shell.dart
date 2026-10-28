@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/auth_state.dart';
-import 'inventory/inventory_list_screen.dart';
-import 'kitchen/leftover_log_screen.dart';
+import 'kitchen_staff/leftover_log_screen.dart';
 import 'manager/approvals_screen.dart';
 import 'manager/reports_screen.dart';
 import 'manager/waste_screen.dart';
-import 'menu/menu_list_screen.dart';
+import 'shared/inventory/inventory_list_screen.dart';
+import 'shared/menu/menu_list_screen.dart';
 
 /// Role-scoped bottom navigation — each tab is a module screen; a role only
 /// sees tabs relevant to it (Ch4 §4.4.1: "presenting each role with only

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api_client.dart';
-import '../../core/auth_state.dart';
+import '../../../core/api_client.dart';
+import '../../../core/auth_state.dart';
 import 'register_screen.dart';
 
 /// Ch4 §4.4.1: "Authentication asks for nothing the system doesn't need" —

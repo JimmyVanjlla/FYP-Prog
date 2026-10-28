@@ -27,6 +27,7 @@ frontend/*.iml
 frontend/.idea/
 
 # --- Editors / OS ---
+.idea/
 .vscode/
 .DS_Store
 Thumbs.db

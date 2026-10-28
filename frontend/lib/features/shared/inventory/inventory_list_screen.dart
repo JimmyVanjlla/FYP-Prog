@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api_client.dart';
-import '../../core/auth_state.dart';
-import '../../core/theme.dart';
-import '../../models/ingredient.dart';
+import '../../../core/api_client.dart';
+import '../../../core/auth_state.dart';
+import '../../../core/theme.dart';
+import '../../../models/ingredient.dart';
 
 /// Module 3 — FR3.1/FR3.3. Every role can view stock levels; only
 /// Inventory Staff and the Restaurant Manager can add ingredients or record

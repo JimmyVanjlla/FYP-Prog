@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 
 import 'package:restaurant_ops/core/auth_state.dart';
 import 'package:restaurant_ops/core/theme.dart';
-import 'package:restaurant_ops/features/auth/login_screen.dart';
+import 'package:restaurant_ops/features/shared/auth/login_screen.dart';
 
 /// In-memory fake so the test never touches a real platform secure-storage
 /// channel (there isn't one available under `flutter test`).

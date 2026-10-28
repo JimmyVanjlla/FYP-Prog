@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'core/auth_state.dart';
 import 'core/theme.dart';
-import 'features/auth/login_screen.dart';
+import 'features/shared/auth/login_screen.dart';
 import 'features/home_shell.dart';
 
 void main() {

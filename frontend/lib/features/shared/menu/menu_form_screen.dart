@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/api_client.dart';
-import '../../core/auth_state.dart';
+import '../../../core/api_client.dart';
+import '../../../core/auth_state.dart';
 
 /// FR2.1 / FR2.5 — create a menu item. Manager-only; reachable only from
 /// the "+ Add menu item" row, which is itself only shown to Managers.
