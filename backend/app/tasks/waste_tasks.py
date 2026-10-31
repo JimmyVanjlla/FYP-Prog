@@ -14,6 +14,7 @@ from datetime import date, timedelta
 
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
+from app.tasks.reliability import retry_or_alert
 from app.services.waste import aggregate_waste_reduction_trend
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,6 @@ def aggregate_weekly_waste_trend_task(self) -> int:
         return trend.trend_id
     except Exception as exc:
         logger.exception("Weekly waste trend aggregation failed")
-        raise self.retry(exc=exc)
+        retry_or_alert(self, exc, db, "weekly waste trend rollup")
     finally:
         db.close()

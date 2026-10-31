@@ -56,6 +56,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.inventory_tasks.check_near_expiry_batches",
         "schedule": crontab(hour=5, minute=0),
     },
+    "apply-forecasted-consumption-daily": {
+        "task": "app.tasks.inventory_tasks.apply_forecasted_consumption",
+        "schedule": crontab(hour=5, minute=10),  # after the near-expiry scan, before forecast training
+    },
     "identify-high-leftover-dishes-daily": {
         "task": "app.tasks.feedback_tasks.identify_high_leftover_dishes",
         "schedule": crontab(hour=6, minute=30),  # after forecast training

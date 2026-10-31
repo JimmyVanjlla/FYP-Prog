@@ -6,12 +6,13 @@ FR1.3 / NFR-Security: role-based access control is enforced here, at the API
 layer, on every protected endpoint — never left to the Flutter UI to hide a
 button and call it secure.
 """
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 from app.core.security import JWTError, decode_access_token
 from app.db.session import get_db
+from app.models.audit import AuditLog
 from app.models.roles import Role
 from app.models.user import User
 
@@ -24,7 +25,11 @@ _CREDENTIALS_ERROR = HTTPException(
 )
 
 
+_READ_ONLY_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
 def get_current_user(
+    request: Request,
     header_token: str | None = Depends(_oauth2_scheme),
     query_token: str | None = Query(default=None, alias="token"),
     db: Session = Depends(get_db),
@@ -47,6 +52,15 @@ def get_current_user(
     user = db.get(User, int(user_id))
     if user is None or not user.is_active:
         raise _CREDENTIALS_ERROR
+
+    # FR1.5 — "log all user actions": every state-changing request by an
+    # authenticated user is recorded here, in the one dependency all
+    # protected endpoints share, so a new endpoint can't forget to log.
+    # It records the attempt (before the handler runs); register, login and
+    # the finer-grained entries services write themselves sit alongside it.
+    if request.method not in _READ_ONLY_METHODS:
+        db.add(AuditLog(user_id=user.user_id, action=f"{request.method} {request.url.path}"[:100]))
+        db.commit()
     return user
 
 

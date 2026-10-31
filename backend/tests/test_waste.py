@@ -58,3 +58,42 @@ def test_waste_trend_aggregation(client):
     )
     assert resp.status_code == 201
     assert "total_waste_cost" in resp.json()
+
+
+def test_waste_trend_includes_waste_logged_on_the_last_day_of_the_period(client, db_session):
+    """Regression: `logged_at <= period_end` compared a datetime against a
+    bare date, so the rollup silently dropped everything logged on the
+    period's final day (after midnight) — including the weekly Celery run,
+    whose window ends yesterday."""
+    from datetime import date
+    from decimal import Decimal
+
+    from app.models.waste import WasteLog
+
+    token = _manager_token(client)
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    ingredient = client.post(
+        "/inventory/ingredients",
+        json={"name": "Prawns", "unit": "kg", "current_stock": "10"},
+        headers=auth_headers(inv_token),
+    ).json()
+    # logged_at defaults to "now", i.e. later on today than today's midnight.
+    db_session.add(
+        WasteLog(
+            source_type="leftover",
+            source_ref_id=1,
+            ingredient_id=ingredient["ingredient_id"],
+            quantity_wasted=Decimal("1.000"),
+            waste_cost=Decimal("9.80"),
+        )
+    )
+    db_session.commit()
+
+    today = date.today().isoformat()
+    resp = client.post(
+        "/waste/trends",
+        json={"period_start": today, "period_end": today},
+        headers=auth_headers(token),
+    )
+    assert resp.status_code == 201
+    assert resp.json()["total_waste_cost"] == "9.80"

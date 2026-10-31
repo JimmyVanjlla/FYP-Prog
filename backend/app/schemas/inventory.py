@@ -97,3 +97,12 @@ class RestockingRequestOut(BaseModel):
 
 class RestockingRequestStatusUpdate(BaseModel):
     status: str = Field(min_length=1, max_length=20)
+
+
+class ConsumptionApplyResult(BaseModel):
+    """FR3.1 — what a run of the stock-consumption job did."""
+
+    initialised: bool
+    days_applied: int
+    ingredients_updated: int
+    low_stock_alerts: int

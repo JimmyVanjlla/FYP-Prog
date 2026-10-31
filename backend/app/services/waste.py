@@ -12,6 +12,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.dates import end_of_day
 from app.models.kitchen import LeftoverLog
 from app.models.menu import RecipeIngredientLink
 from app.models.waste import WasteLog, WasteReductionTrend
@@ -100,7 +101,7 @@ def aggregate_waste_reduction_trend(
     rows = db.scalars(
         select(WasteLog.waste_cost)
         .where(WasteLog.logged_at >= period_start)
-        .where(WasteLog.logged_at <= period_end)
+        .where(WasteLog.logged_at <= end_of_day(period_end))
     ).all()
     total_cost = sum(rows, Decimal("0.00"))
 

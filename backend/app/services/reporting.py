@@ -22,6 +22,7 @@ from reportlab.pdfgen import canvas
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.dates import end_of_day
 from app.models.forecasting import Forecast, ForecastAccuracy
 from app.models.procurement import Budget, PurchaseOrder
 from app.models.report import Report
@@ -63,21 +64,11 @@ def _forecast_accuracy_data(db: Session, period_start: date, period_end: date) -
     ]
 
 
-def _end_of_day(d: date) -> datetime:
-    """logged_at/created_at are timezone-aware datetimes; comparing them
-    directly against a bare date (as `<= period_end` used to) casts the
-    date to midnight at the *start* of that day, silently excluding
-    everything logged later that same day — including a report generated
-    "through today" missing today's own activity. This pins the upper
-    bound to the last instant of period_end instead."""
-    return datetime(d.year, d.month, d.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
-
-
 def _waste_data(db: Session, period_start: date, period_end: date) -> dict:
     logs = db.scalars(
         select(WasteLog)
         .where(WasteLog.logged_at >= period_start)
-        .where(WasteLog.logged_at <= _end_of_day(period_end))
+        .where(WasteLog.logged_at <= end_of_day(period_end))
     ).all()
     leftover_cost = sum((l.waste_cost for l in logs if l.source_type == "leftover"), Decimal("0.00"))
     expiry_cost = sum((l.waste_cost for l in logs if l.source_type == "expiry"), Decimal("0.00"))
@@ -92,7 +83,7 @@ def _budget_data(db: Session, period_start: date, period_end: date) -> dict:
     spent_rows = db.scalars(
         select(PurchaseOrder.total_cost)
         .where(PurchaseOrder.created_at >= period_start)
-        .where(PurchaseOrder.created_at <= _end_of_day(period_end))
+        .where(PurchaseOrder.created_at <= end_of_day(period_end))
         .where(PurchaseOrder.status != "rejected")
     ).all()
     spent = sum(spent_rows, Decimal("0.00"))

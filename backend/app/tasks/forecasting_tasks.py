@@ -5,6 +5,7 @@ import logging
 
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
+from app.tasks.reliability import retry_or_alert
 from app.services.forecasting import train_and_generate_forecasts
 
 logger = logging.getLogger(__name__)
@@ -22,6 +23,6 @@ def train_and_generate_forecasts_task(self) -> dict:
         return train_and_generate_forecasts(db)
     except Exception as exc:
         logger.exception("Forecast training run failed")
-        raise self.retry(exc=exc)
+        retry_or_alert(self, exc, db, "forecast training")
     finally:
         db.close()

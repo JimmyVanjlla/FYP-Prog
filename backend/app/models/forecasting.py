@@ -5,7 +5,7 @@ Module 4: Demand Forecasting — Order, Forecast, ForecastAccuracy [M4]
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -27,6 +27,9 @@ class Forecast(Base):
     """A Prophet prediction for one item/meal_period/date (FR4.2-FR4.3)."""
 
     __tablename__ = "forecasts"
+    __table_args__ = (
+        UniqueConstraint("menu_item_id", "meal_period", "forecast_date", name="uq_forecast_item_period_date"),
+    )
 
     forecast_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     menu_item_id: Mapped[int] = mapped_column(ForeignKey("menu_items.menu_item_id"), nullable=False)

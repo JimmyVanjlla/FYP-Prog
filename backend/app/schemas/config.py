@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -13,6 +14,7 @@ class SystemConfigOut(BaseModel):
     portions_per_staff_ratio: Decimal
     monthly_budget_limit: Decimal
     near_expiry_window_days: int
+    stock_consumption_applied_through: date | None = None
 
 
 class SystemConfigUpdate(BaseModel):

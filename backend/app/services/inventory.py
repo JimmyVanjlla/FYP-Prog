@@ -1,14 +1,17 @@
 """Module 3: Inventory Management business logic. FR3.1-FR3.6, plus
 Algorithm "CheckLowStockThreshold" and "CheckNearExpiryBatches" (Ch4
 §4.8.4)."""
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.models.forecasting import Forecast, Order
 from app.models.inventory import Ingredient, RestockingRequest, StockAdjustment, StockBatch
+from app.models.menu import RecipeIngredientLink
 from app.schemas.inventory import IngredientCreate, RestockingRequestCreate, StockAdjustmentCreate, StockBatchCreate
+from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 
 
@@ -240,3 +243,94 @@ def check_near_expiry_batches(db: Session, *, today: date | None = None) -> dict
 
     db.commit()
     return {"near_expiry_alerts": near_expiry_alerts, "expiry_waste_events": expiry_waste_events}
+
+
+# --- FR3.1: consumption --------------------------------------------------
+
+
+def _portions_consumed(db: Session, start: date, end: date) -> dict[int, Decimal]:
+    """Portions of each menu item consumed between start and end inclusive.
+    For each (item, meal period, day) the actual logged orders are used when
+    there are any, and the forecast stands in where there aren't — FR3.1 /
+    Form 2 describe stock as estimated from "logged deliveries and
+    forecasted consumption", and a real order record is strictly better than
+    the prediction it would otherwise be replaced by."""
+    per_key: dict[tuple[int, str, date], Decimal] = {}
+    for f in db.scalars(select(Forecast).where(Forecast.forecast_date.between(start, end))):
+        per_key[(f.menu_item_id, f.meal_period, f.forecast_date)] = Decimal(f.predicted_quantity)
+
+    for menu_item_id, meal_period, order_date, qty in db.execute(
+        select(Order.menu_item_id, Order.meal_period, Order.order_date, func.sum(Order.quantity))
+        .where(Order.order_date.between(start, end))
+        .group_by(Order.menu_item_id, Order.meal_period, Order.order_date)
+    ):
+        per_key[(menu_item_id, meal_period, order_date)] = Decimal(qty)
+
+    totals: dict[int, Decimal] = {}
+    for (menu_item_id, _period, _day), qty in per_key.items():
+        totals[menu_item_id] = totals.get(menu_item_id, Decimal("0")) + qty
+    return totals
+
+
+def apply_forecasted_consumption(db: Session, *, today: date | None = None) -> dict:
+    """FR3.1 — deducts the ingredients consumed since the last run from
+    current stock. Runs daily (see app/tasks/inventory_tasks.py) and only
+    ever covers days that have fully ended, each exactly once, tracked by
+    SystemConfig.stock_consumption_applied_through. The first ever run just
+    starts the clock at yesterday instead of back-deducting history.
+
+    Stock is floored at zero (a negative on-hand figure would just mean the
+    recipes or order counts are off, and FR3.6 forbids negative stock), and
+    Inventory Staff are alerted for any ingredient this pushes below its
+    low-stock threshold."""
+    today = today or date.today()
+    through = today - timedelta(days=1)
+    config = get_or_create_config(db)
+    last = config.stock_consumption_applied_through
+
+    if last is None:
+        config.stock_consumption_applied_through = through
+        db.commit()
+        return {"initialised": True, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
+    if last >= through:
+        return {"initialised": False, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
+
+    start = last + timedelta(days=1)
+    low_before = {i.ingredient_id for i in list_ingredients(db) if check_low_stock_threshold(db, i)}
+
+    portions = _portions_consumed(db, start, through)
+    used: dict[int, Decimal] = {}
+    if portions:
+        links = db.scalars(select(RecipeIngredientLink).where(RecipeIngredientLink.menu_item_id.in_(portions)))
+        for link in links:
+            used[link.ingredient_id] = (
+                used.get(link.ingredient_id, Decimal("0")) + portions[link.menu_item_id] * link.quantity_per_serving
+            )
+
+    for ingredient_id, quantity in used.items():
+        ingredient = db.get(Ingredient, ingredient_id)
+        if ingredient is None:
+            continue
+        ingredient.current_stock = max(Decimal("0"), ingredient.current_stock - quantity.quantize(Decimal("0.001")))
+
+    config.stock_consumption_applied_through = through
+    db.commit()
+
+    newly_low = [
+        i for i in list_ingredients(db) if i.ingredient_id not in low_before and check_low_stock_threshold(db, i)
+    ]
+    if newly_low:
+        names = ", ".join(i.name for i in newly_low)
+        notification_service.notify(
+            db,
+            recipient_role="Inventory Staff",
+            type_="low_stock_alert",
+            message=f"{len(newly_low)} ingredient(s) dropped below their low-stock threshold: {names}.",
+        )
+
+    return {
+        "initialised": False,
+        "days_applied": (through - last).days,
+        "ingredients_updated": len(used),
+        "low_stock_alerts": len(newly_low),
+    }

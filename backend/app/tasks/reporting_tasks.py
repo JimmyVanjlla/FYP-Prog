@@ -4,6 +4,7 @@ from datetime import date, timedelta
 
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
+from app.tasks.reliability import retry_or_alert
 from app.services.reporting import NoDataForPeriodError, generate_weekly_report
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,6 @@ def generate_weekly_report_task(self) -> int | None:
         return None
     except Exception as exc:
         logger.exception("Weekly report generation failed")
-        raise self.retry(exc=exc)
+        retry_or_alert(self, exc, db, "weekly report generation")
     finally:
         db.close()

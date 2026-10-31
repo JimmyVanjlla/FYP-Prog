@@ -5,9 +5,10 @@ import logging
 
 from app.celery_app import celery_app
 from app.db.session import SessionLocal
+from app.tasks.reliability import retry_or_alert
 from app.services import notifications as notification_service
 from app.services import waste as waste_service
-from app.services.inventory import check_near_expiry_batches
+from app.services.inventory import apply_forecasted_consumption, check_near_expiry_batches
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,25 @@ def check_near_expiry_batches_task(self) -> dict:
         return result
     except Exception as exc:
         logger.exception("Near-expiry batch scan failed")
-        raise self.retry(exc=exc)
+        retry_or_alert(self, exc, db, "near-expiry batch scan")
+    finally:
+        db.close()
+
+
+@celery_app.task(
+    name="app.tasks.inventory_tasks.apply_forecasted_consumption",
+    bind=True,
+    max_retries=3,
+    default_retry_delay=60,
+)
+def apply_forecasted_consumption_task(self) -> dict:
+    """FR3.1 — deducts yesterday's (and any missed days') ingredient
+    consumption from stock."""
+    db = SessionLocal()
+    try:
+        return apply_forecasted_consumption(db)
+    except Exception as exc:
+        logger.exception("Stock consumption run failed")
+        retry_or_alert(self, exc, db, "stock consumption update")
     finally:
         db.close()

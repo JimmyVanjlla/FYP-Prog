@@ -261,3 +261,36 @@ def test_login_is_rate_limited_after_repeated_failures(client):
     # passwords.
     blocked = client.post("/auth/login", json={"email": email, "password": "correct-password"})
     assert blocked.status_code == 429
+
+
+def test_every_state_changing_request_is_audit_logged(client):
+    """FR1.5 — "log all user actions". Previously only register/login/user
+    updates (and a few delivery/staffing events) were recorded, so e.g. a
+    menu edit or stock adjustment left no trace. Writes by an authenticated
+    user are now logged centrally; plain reads are not."""
+    manager_token = register_and_login(client, email="audit.manager@restaurant.com", role="Restaurant Manager")
+    headers = auth_headers(manager_token)
+
+    client.post("/menu-items", json={"name": "Teh Tarik", "price": "2.50", "category": "Beverage"}, headers=headers)
+    client.get("/menu-items", headers=headers)
+
+    actions = [entry["action"] for entry in client.get("/users/audit-logs", headers=headers).json()]
+    assert "POST /menu-items" in actions
+    assert "GET /menu-items" not in actions
+
+
+def test_audit_log_entry_is_attributed_to_the_acting_user(client):
+    manager_token = register_and_login(client, email="audit.manager2@restaurant.com", role="Restaurant Manager")
+    inventory_token = register_and_login(client, email="audit.inventory@restaurant.com", role="Inventory Staff")
+    me = client.get("/users/me", headers=auth_headers(inventory_token)).json()
+
+    client.post(
+        "/inventory/ingredients",
+        json={"name": "Rice", "unit": "kg", "current_stock": "10"},
+        headers=auth_headers(inventory_token),
+    )
+
+    entries = client.get("/users/audit-logs", headers=auth_headers(manager_token)).json()
+    created = [e for e in entries if e["action"] == "POST /inventory/ingredients"]
+    assert len(created) == 1
+    assert created[0]["user_id"] == me["user_id"]

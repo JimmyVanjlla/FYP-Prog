@@ -39,6 +39,7 @@ class ForecastOut(BaseModel):
 
 class ForecastTrainingResult(BaseModel):
     forecasts_created: int
+    forecasts_updated: int = 0
     skipped: list[dict]
     accuracy_records_created: int
 
@@ -50,3 +51,16 @@ class ForecastAccuracyOut(BaseModel):
     forecast_id: int
     actual_quantity: Decimal
     accuracy_error: Decimal
+
+
+class ForecastAvailabilityOut(BaseModel):
+    """FR4.6 — per item/meal period: is a forecast available, and if not,
+    how much history exists against the minimum needed."""
+
+    menu_item_id: int
+    menu_item_name: str
+    meal_period: str | None
+    data_points: int
+    minimum_required: int
+    available: bool
+    message: str | None

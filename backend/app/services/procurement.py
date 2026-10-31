@@ -13,6 +13,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.dates import end_of_day
 from app.models.forecasting import Forecast
 from app.models.inventory import Ingredient
 from app.models.menu import RecipeIngredientLink
@@ -379,7 +380,7 @@ def get_budget_utilisation(db: Session, *, month: date | None = None) -> dict:
     spent_rows = db.scalars(
         select(PurchaseOrder.total_cost)
         .where(PurchaseOrder.created_at >= target_month)
-        .where(PurchaseOrder.created_at <= month_end)
+        .where(PurchaseOrder.created_at <= end_of_day(month_end))
         .where(PurchaseOrder.status != "rejected")
     ).all()
     spent = sum(spent_rows, Decimal("0.00"))

@@ -9,6 +9,7 @@ from app.models.roles import Role
 from app.models.user import User
 from app.schemas.forecasting import (
     ForecastAccuracyOut,
+    ForecastAvailabilityOut,
     ForecastOut,
     ForecastTrainingResult,
     OrderCreate,
@@ -45,16 +46,37 @@ def record_order(
 def list_forecasts(
     menu_item_id: int | None = None,
     meal_period: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[ForecastOut]:
     """FR4.3 — surfaced to any authenticated role; stored forecast rows are
-    returned as-is, no reprocessing on query."""
+    returned as-is, no reprocessing on query. UC-DF-01: filterable by item,
+    meal period and date range."""
     return forecasting_service.list_forecasts(
-        db, menu_item_id=menu_item_id, meal_period=meal_period, limit=limit, offset=offset
+        db,
+        menu_item_id=menu_item_id,
+        meal_period=meal_period,
+        date_from=date_from,
+        date_to=date_to,
+        limit=limit,
+        offset=offset,
     )
+
+
+@router.get("/availability", response_model=list[ForecastAvailabilityOut])
+def forecast_availability(
+    menu_item_id: int | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[ForecastAvailabilityOut]:
+    """FR4.6 / UC-DF-01 Alt Flow 3a — where a forecast isn't available yet,
+    says so (and the minimum history required) instead of just returning
+    nothing."""
+    return forecasting_service.forecast_availability(db, menu_item_id=menu_item_id)
 
 
 @router.get("/accuracy", response_model=list[ForecastAccuracyOut])

@@ -98,6 +98,109 @@ def test_training_generates_forecasts_with_enough_data(client):
     assert all(float(f["predicted_quantity"]) >= 0 for f in forecasts)
 
 
+def test_retraining_updates_forecasts_in_place_instead_of_duplicating(client):
+    """Regression: every run used to append a fresh Forecast for each future
+    date, so the second run doubled everything — and staffing/procurement,
+    which sum forecasts, doubled with it. A re-run must update the existing
+    rows (same forecast_id) and create none."""
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+    base = date.today() - timedelta(days=30)
+    for i in range(30):
+        client.post(
+            "/forecasting/orders",
+            json={
+                "menu_item_id": item["menu_item_id"],
+                "quantity": 40 + (i % 7),
+                "meal_period": "Lunch",
+                "order_date": (base + timedelta(days=i)).isoformat(),
+            },
+            headers=auth_headers(token),
+        )
+
+    first = client.post("/forecasting/train", headers=auth_headers(token)).json()
+    before = client.get("/forecasting/forecasts", headers=auth_headers(token)).json()
+    second = client.post("/forecasting/train", headers=auth_headers(token)).json()
+    after = client.get("/forecasting/forecasts", headers=auth_headers(token)).json()
+
+    assert first["forecasts_created"] > 0
+    assert second["forecasts_created"] == 0
+    assert second["forecasts_updated"] == first["forecasts_created"]
+    assert len(after) == len(before)
+    assert {f["forecast_id"] for f in after} == {f["forecast_id"] for f in before}
+
+
+def test_availability_explains_why_a_forecast_is_missing(client):
+    """FR4.6 / UC-DF-01 Alt Flow 3a — the user is told forecasts aren't
+    available yet, and what the minimum is, rather than just seeing nothing."""
+    token = _manager_token(client)
+    no_history = _create_menu_item(client, token)
+    sparse = client.post(
+        "/menu-items",
+        json={"name": "Mee Goreng", "price": "8.00", "category": "Noodles"},
+        headers=auth_headers(token),
+    ).json()
+    base = date.today() - timedelta(days=10)
+    for i in range(3):
+        client.post(
+            "/forecasting/orders",
+            json={
+                "menu_item_id": sparse["menu_item_id"],
+                "quantity": 5,
+                "meal_period": "Lunch",
+                "order_date": (base + timedelta(days=i)).isoformat(),
+            },
+            headers=auth_headers(token),
+        )
+
+    rows = client.get("/forecasting/availability", headers=auth_headers(token)).json()
+    by_item = {r["menu_item_id"]: r for r in rows}
+
+    assert by_item[no_history["menu_item_id"]]["available"] is False
+    assert by_item[no_history["menu_item_id"]]["data_points"] == 0
+    assert "14" in by_item[no_history["menu_item_id"]]["message"]
+
+    assert by_item[sparse["menu_item_id"]]["available"] is False
+    assert by_item[sparse["menu_item_id"]]["data_points"] == 3
+    assert by_item[sparse["menu_item_id"]]["minimum_required"] == 14
+    assert "3 of the 14" in by_item[sparse["menu_item_id"]]["message"]
+
+
+def test_availability_and_date_filter_once_a_forecast_exists(client):
+    token = _manager_token(client)
+    item = _create_menu_item(client, token)
+    base = date.today() - timedelta(days=30)
+    for i in range(30):
+        client.post(
+            "/forecasting/orders",
+            json={
+                "menu_item_id": item["menu_item_id"],
+                "quantity": 40 + (i % 7),
+                "meal_period": "Lunch",
+                "order_date": (base + timedelta(days=i)).isoformat(),
+            },
+            headers=auth_headers(token),
+        )
+    client.post("/forecasting/train", headers=auth_headers(token))
+
+    row = client.get(
+        "/forecasting/availability", params={"menu_item_id": item["menu_item_id"]}, headers=auth_headers(token)
+    ).json()[0]
+    assert row["available"] is True
+    assert row["message"] is None
+
+    # UC-DF-01 — filtering the dashboard by date range.
+    all_rows = client.get("/forecasting/forecasts", headers=auth_headers(token)).json()
+    first_day = min(f["forecast_date"] for f in all_rows)
+    narrowed = client.get(
+        "/forecasting/forecasts",
+        params={"date_from": first_day, "date_to": first_day},
+        headers=auth_headers(token),
+    ).json()
+    assert 0 < len(narrowed) < len(all_rows)
+    assert all(f["forecast_date"] == first_day for f in narrowed)
+
+
 def test_non_manager_cannot_trigger_training(client):
     """FR1.3 RBAC applied to Module 4."""
     token = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")

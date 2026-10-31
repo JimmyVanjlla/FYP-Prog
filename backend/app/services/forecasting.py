@@ -16,13 +16,14 @@ rather than by feeding leftover data into Prophet itself as a regressor,
 since the leftover signal only exists per dish, not per the date-indexed
 order series Prophet actually fits.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pandas as pd
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.forecasting import Forecast, ForecastAccuracy, Order
+from app.models.menu import MenuItem
 from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 from app.services.feedback import compute_leftover_rate
@@ -114,7 +115,19 @@ def train_and_generate_forecasts(
     today = today or date.today()
     grouped = _load_grouped_orders(db)
 
+    # A Forecast is keyed by (menu_item_id, meal_period, forecast_date). Each
+    # daily run re-predicts the dates still ahead of it, so existing rows are
+    # updated in place rather than appended to — appending left duplicates
+    # that staffing and procurement then double-counted. Updating (not
+    # delete-and-reinsert) also keeps forecast_id stable for the prep,
+    # staffing and procurement rows that reference it.
+    existing_forecasts: dict[tuple[int, str, date], Forecast] = {
+        (f.menu_item_id, f.meal_period, f.forecast_date): f
+        for f in db.scalars(select(Forecast).where(Forecast.forecast_date > today))
+    }
+
     created_forecasts: list[Forecast] = []
+    updated_count = 0
     skipped: list[dict] = []
 
     for (menu_item_id, meal_period), group in grouped.groupby(["menu_item_id", "meal_period"]):
@@ -154,25 +167,43 @@ def train_and_generate_forecasts(
         historical_average = float(group["y"].mean())
 
         # Step 13.
+        high_demand_threshold = historical_average * HIGH_DEMAND_MULTIPLIER
         for _, row in future_rows.iterrows():
             predicted_quantity = max(0.0, round(float(row["yhat"]) * adjustment, 2))
-            forecast = Forecast(
-                menu_item_id=int(menu_item_id),
-                meal_period=meal_period,
-                forecast_date=row["ds"].date(),
-                predicted_quantity=predicted_quantity,
-            )
-            db.add(forecast)
-            created_forecasts.append(forecast)
+            forecast_date = row["ds"].date()
+            key = (int(menu_item_id), meal_period, forecast_date)
 
-            if historical_average > 0 and predicted_quantity > historical_average * HIGH_DEMAND_MULTIPLIER:
+            was_high_demand = False
+            existing = existing_forecasts.get(key)
+            if existing is None:
+                forecast = Forecast(
+                    menu_item_id=int(menu_item_id),
+                    meal_period=meal_period,
+                    forecast_date=forecast_date,
+                    predicted_quantity=predicted_quantity,
+                )
+                db.add(forecast)
+                created_forecasts.append(forecast)
+                existing_forecasts[key] = forecast
+            else:
+                was_high_demand = (
+                    historical_average > 0 and float(existing.predicted_quantity) > high_demand_threshold
+                )
+                existing.predicted_quantity = predicted_quantity
+                existing.generated_at = datetime.now(timezone.utc)
+                updated_count += 1
+
+            # Alert only when a forecast is new or newly crosses the
+            # threshold, so the daily re-run doesn't re-send the same alert
+            # for a date that was already flagged.
+            if historical_average > 0 and predicted_quantity > high_demand_threshold and not was_high_demand:
                 notification_service.notify(
                     db,
                     recipient_role="Kitchen Staff",
                     type_="high_demand_alert",
                     message=(
                         f"High demand forecast for menu item #{int(menu_item_id)} on "
-                        f"{row['ds'].date()} ({meal_period}): {predicted_quantity} portions "
+                        f"{forecast_date} ({meal_period}): {predicted_quantity} portions "
                         f"(usual average: {round(historical_average, 1)})."
                     ),
                 )
@@ -185,6 +216,7 @@ def train_and_generate_forecasts(
 
     return {
         "forecasts_created": len(created_forecasts),
+        "forecasts_updated": updated_count,
         "skipped": skipped,
         "accuracy_records_created": accuracy_created,
     }
@@ -284,6 +316,8 @@ def list_forecasts(
     *,
     menu_item_id: int | None = None,
     meal_period: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> list[Forecast]:
@@ -297,7 +331,88 @@ def list_forecasts(
         stmt = stmt.where(Forecast.menu_item_id == menu_item_id)
     if meal_period is not None:
         stmt = stmt.where(Forecast.meal_period == meal_period)
+    if date_from is not None:
+        stmt = stmt.where(Forecast.forecast_date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(Forecast.forecast_date <= date_to)
     return list(db.scalars(stmt))
+
+
+def forecast_availability(db: Session, *, menu_item_id: int | None = None, today: date | None = None) -> list[dict]:
+    """FR4.6 / UC-DF-01 Alt Flow 3a — for every active menu item (and each
+    meal period it has order history for), says whether a forecast exists
+    and, if not, why, including the minimum data threshold. Previously an
+    item without enough history just had no forecast rows and nothing told
+    the user why."""
+    today = today or date.today()
+
+    items = db.execute(
+        select(MenuItem.menu_item_id, MenuItem.name).where(MenuItem.is_active.is_(True)).order_by(MenuItem.name)
+    ).all()
+    if menu_item_id is not None:
+        items = [i for i in items if i.menu_item_id == menu_item_id]
+
+    history: dict[int, dict[str, int]] = {}
+    for mid, period, days in db.execute(
+        select(Order.menu_item_id, Order.meal_period, func.count(func.distinct(Order.order_date))).group_by(
+            Order.menu_item_id, Order.meal_period
+        )
+    ):
+        history.setdefault(mid, {})[period] = days
+
+    forecasted = {
+        (mid, period)
+        for mid, period in db.execute(
+            select(Forecast.menu_item_id, Forecast.meal_period).where(Forecast.forecast_date > today).distinct()
+        )
+    }
+
+    results: list[dict] = []
+    for mid, name in items:
+        periods = history.get(mid)
+        if not periods:
+            results.append(
+                {
+                    "menu_item_id": mid,
+                    "menu_item_name": name,
+                    "meal_period": None,
+                    "data_points": 0,
+                    "minimum_required": MIN_DATA_POINTS,
+                    "available": False,
+                    "message": (
+                        f"Forecasts are not yet available for {name}: it has no order history yet "
+                        f"(at least {MIN_DATA_POINTS} days of orders are needed)."
+                    ),
+                }
+            )
+            continue
+        for period in sorted(periods):
+            days = periods[period]
+            available = (mid, period) in forecasted
+            if available:
+                message = None
+            elif days < MIN_DATA_POINTS:
+                message = (
+                    f"Forecasts are not yet available for {name} ({period}): {days} of the "
+                    f"{MIN_DATA_POINTS} days of order history needed so far."
+                )
+            else:
+                message = (
+                    f"{name} ({period}) has enough history; its forecast will appear after the "
+                    "next scheduled training run."
+                )
+            results.append(
+                {
+                    "menu_item_id": mid,
+                    "menu_item_name": name,
+                    "meal_period": period,
+                    "data_points": days,
+                    "minimum_required": MIN_DATA_POINTS,
+                    "available": available,
+                    "message": message,
+                }
+            )
+    return results
 
 
 def list_forecast_accuracy(

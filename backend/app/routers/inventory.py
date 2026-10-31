@@ -6,6 +6,7 @@ from app.deps import get_current_user, require_role
 from app.models.roles import Role
 from app.models.user import User
 from app.schemas.inventory import (
+    ConsumptionApplyResult,
     IngredientCreate,
     IngredientOut,
     RestockingRequestCreate,
@@ -184,3 +185,13 @@ def update_restocking_request(
         return inventory_service.update_restocking_request_status(db, request_id, data.status)
     except inventory_service.IngredientNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found.")
+
+
+@router.post("/consumption/apply", response_model=ConsumptionApplyResult)
+def apply_consumption(
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_INVENTORY_WRITE_ROLES)),
+) -> ConsumptionApplyResult:
+    """FR3.1 — manual trigger for the daily stock-consumption job (it runs
+    automatically via Celery Beat; this is for catching up on demand)."""
+    return ConsumptionApplyResult(**inventory_service.apply_forecasted_consumption(db))
