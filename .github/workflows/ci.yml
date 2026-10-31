@@ -83,9 +83,16 @@ jobs:
           logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
           for p in ["prophet", "cmdstanpy", "stanio", "numpy", "pandas", "holidays"]:
               print(p, m.version(p))
+          import os, prophet
+          sm = os.path.join(os.path.dirname(prophet.__file__), "stan_model")
+          print("stan_model dir:", sorted(os.listdir(sm)) if os.path.isdir(sm) else "MISSING")
+          for root, _, files in os.walk(sm):
+              for f in files:
+                  if f.startswith("prophet_model") or f == "stanc" or f == "make":
+                      print("  found", os.path.relpath(os.path.join(root, f), sm))
           try:
               from prophet.models import CmdStanPyBackend
-              CmdStanPyBackend(logging.getLogger("diag"))
+              CmdStanPyBackend()
               print("CmdStanPyBackend OK")
           except Exception:
               traceback.print_exc(file=sys.stdout)
