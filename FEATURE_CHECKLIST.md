@@ -7,8 +7,8 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 ## Summary
 
 - **61 functional requirements** across 11 modules.
-- **Complete end to end: 60 of 61.** The one that isn't is FR5.4 (push notifications), which is built up to the final hop to a real phone and needs a Firebase project you control.
-- Backend: 60 done, 1 partial. App: 54 done, 1 partial, 0 with no screen, 6 needing none.
+- **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
+- Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
 - Tests: 176 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
@@ -16,10 +16,9 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 These need something only you can provide, or a decision from you. None can be closed from the code alone.
 
 1. **Deployment (Chapter 2, every sprint's final step).** `backend/Dockerfile`, `render.yaml` and `DEPLOYMENT.md` are written, but nothing is deployed: it needs a Render or Railway account, and Docker isn't installed on the development machine, so the image has never been built. Until a worker runs, the scheduled jobs (daily training, stock consumption, weekly report) only happen when triggered by hand. HTTPS comes with the platform.
-2. **Push notifications reaching a phone (FR5.4).** Needs a Firebase project: a service-account JSON for the server and four values for the app build (steps in `DEPLOYMENT.md`). One API choice also needs confirming against a real project: firebase_messaging 17 deprecated the token call in favour of a Firebase Installation ID, and the code deliberately stays on the token call that FCM's HTTP v1 API documents.
-3. **iOS.** Pinned to iOS 13.0 as promised, but never built: that needs a Mac.
-4. **Multi-restaurant readiness (Scalability NFR).** No table carries a restaurant/tenant column. Adding one later is additive (a `restaurants` table, a nullable `restaurant_id` on the root entities, and scoping the queries), not a redesign, which is what the report promises, but none of it is built. Decide whether 'designed to accommodate' is enough or you want it built.
-5. **User acceptance testing and supervisor sign-off.** Process milestones I can't judge from here. Form 2 puts UAT at 13 Nov 2026, the draft report at 27 Nov and the final at 11 Dec.
+2. **iOS.** Pinned to iOS 13.0 as promised, but never built: that needs a Mac. Push on iOS would also need an APNs key uploaded to Firebase.
+3. **Multi-restaurant readiness (Scalability NFR).** No table carries a restaurant/tenant column. Adding one later is additive (a `restaurants` table, a nullable `restaurant_id` on the root entities, and scoping the queries), not a redesign, which is what the report promises, but none of it is built. Decide whether 'designed to accommodate' is enough or you want it built.
+4. **User acceptance testing and supervisor sign-off.** Process milestones I can't judge from here. Form 2 puts UAT at 13 Nov 2026, the draft report at 27 Nov and the final at 11 Dec.
 
 ## Fixed since the first check
 
@@ -102,7 +101,7 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 | FR5.1 | Prep quantity recommendations from the forecast | Done | Done | Prep screen, with a manual-entry fallback. |
 | FR5.2 | Kitchen Staff confirm or adjust prep quantities | Done | Done |  |
 | FR5.3 | Log end-of-service leftovers | Done | Done |  |
-| FR5.4 | Push notifications via Firebase Cloud Messaging | Partial | Partial | Everything but the last hop is built and tested: notifications are stored, shown in the in-app inbox, and pushed through FCM when configured, with token registration and retry. It has never been delivered to a real phone, which needs your Firebase project (see DEPLOYMENT.md). |
+| FR5.4 | Push notifications via Firebase Cloud Messaging | Done | Done | Notifications are stored, shown in the in-app inbox, and pushed through FCM with token registration and a 15-minute retry. Verified on 31 Oct 2026 against a real Firebase project: the app registered its token, and a backend push reached the Android emulator while the app was not running. The token call (not the Installation ID) works with the HTTP v1 API. Limits: tested on Android only, and a push is not drawn while the app is open in the foreground (the in-app inbox covers that case). |
 | FR5.5 | Require a justification for large prep deviations | Done | Done | The reason field appears at the quantity as soon as the change is large enough. |
 
 ## Module 6 - Waste Management
@@ -223,6 +222,6 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 | 33-entity data model on PostgreSQL | Done | 35 tables: the 33, an AuditLog (so FR1.5 could be met) and a DeviceToken table (for push). All migrated to Supabase. |
 | Celery + Redis background jobs with a Beat schedule | Built, not running | Seven scheduled jobs, with retries and failure alerts, all tested. No worker process is running anywhere. |
 | Deployment to Railway or Render | Not done | Files written; needs your account. See open item 1. |
-| Firebase Cloud Messaging end to end | Partial | See FR5.4 and open item 2. |
+| Firebase Cloud Messaging end to end | Done | See FR5.4. Android emulator only. |
 | Integration testing across all roles | Done (API level) | 5 cross-role workflow tests. There are no end-to-end tests that drive the app against a live backend; the app was exercised by hand on the emulator and by 25 widget tests. |
 | User acceptance testing and supervisor sign-off | Unknown | See open item 5. |

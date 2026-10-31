@@ -26,7 +26,7 @@ Be clear-eyed about this before relying on it:
 | `Dockerfile` / `render.yaml` | **Written, not built or applied.** The development machine has no Docker, and no Render/Railway account was available. Expect to fix small things on first deploy. |
 | HTTPS | Provided by the platform (Render/Railway terminate TLS). Never exercised, since nothing is deployed. |
 | Celery worker + Beat running the scheduled jobs | The tasks, schedules and retry/alert logic are tested; a live worker process has **not** been run against the hosted Redis in this repo's history. |
-| Push notifications (FCM) | Server and app code written and tested with the FCM call stubbed. **Never delivered to a real phone** (needs your Firebase project). |
+| Push notifications (FCM) | Verified on the Android emulator against a real Firebase project (token registered, backend push received with the app closed). Not yet tried from a deployed server or on a physical phone. |
 | iOS build | Not built (needs a Mac). The deployment target is pinned to iOS 13.0. |
 
 ## 1. Backend (Render)
@@ -87,7 +87,9 @@ local development server.
 ### Push notifications
 
 1. Create a Firebase project and add an Android app with package
-   `com.fyp.restaurantops.restaurant_ops`.
+   `com.fyp.restaurantops.restaurant_ops`. A university Google Workspace
+   account may be blocked from creating Cloud projects; use a personal Google
+   account if so.
 2. **Project settings -> Service accounts -> Generate new private key.** Upload
    the JSON to Render as a Secret File named `firebase-service-account.json`
    (it appears at `/etc/secrets/`, matching `FCM_CREDENTIALS_PATH`).

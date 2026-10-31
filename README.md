@@ -306,7 +306,7 @@ for a single run against a fresh database, not repeated seeding.
 `FEATURE_CHECKLIST.md` lists every requirement the report promises (61 FRs,
 the NFRs, the Chapter 4 screens) against what's built, verified against the
 code, the database and the app running on an emulator. It started the day at
-25 of 61 complete; it ends at **60 of 61**. What changed:
+25 of 61 complete; it ends at **61 of 61**. What changed:
 
 - **Five bugs fixed**: duplicate forecasts (which doubled staffing and
   purchasing recommendations), forecasted consumption never reaching stock, no
@@ -330,8 +330,9 @@ code, the database and the app running on an emulator. It started the day at
 - **Deployment files** (`backend/Dockerfile`, `render.yaml`, `DEPLOYMENT.md`).
   Written but not built or applied; see below.
 - **Push notifications**: device registration, FCM sending over the HTTP v1
-  API, a retry job, and the app-side client, all inert until a Firebase
-  project is supplied.
+  API, a retry job, and the app-side client. Verified end to end against a real
+  Firebase project: the emulator registered its token and received a backend
+  push while the app was closed. Inert without Firebase credentials.
 - **Tests**: 176 backend (including 5 workflows that cross roles) and 25
   Flutter widget tests, which also caught several real layout and state bugs.
 
@@ -341,7 +342,6 @@ See `FEATURE_CHECKLIST.md` ("What is still genuinely open") for detail. In
 short, these need something only the project owner can provide:
 
 - **Deploying** (Render/Railway account; Docker to build the image).
-- **A Firebase project**, so push notifications can reach a real phone.
 - **An iOS build** (needs a Mac).
 - **A decision on multi-restaurant support**: not built; the schema change
   would be additive.
