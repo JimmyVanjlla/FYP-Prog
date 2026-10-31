@@ -14,6 +14,7 @@ class SystemConfigOut(BaseModel):
     portions_per_staff_ratio: Decimal
     monthly_budget_limit: Decimal
     near_expiry_window_days: int
+    delivery_deviation_threshold: Decimal
     stock_consumption_applied_through: date | None = None
 
 
@@ -29,3 +30,4 @@ class SystemConfigUpdate(BaseModel):
     portions_per_staff_ratio: Decimal | None = Field(default=None, gt=0)
     monthly_budget_limit: Decimal | None = Field(default=None, gt=0)
     near_expiry_window_days: int | None = Field(default=None, ge=0)
+    delivery_deviation_threshold: Decimal | None = Field(default=None, ge=0, le=100)

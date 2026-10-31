@@ -26,6 +26,7 @@ celery_app = Celery(
         "app.tasks.feedback_tasks",
         "app.tasks.reporting_tasks",
         "app.tasks.waste_tasks",
+        "app.tasks.notification_tasks",
     ],
 )
 
@@ -67,6 +68,10 @@ celery_app.conf.beat_schedule = {
     "aggregate-weekly-waste-trend": {
         "task": "app.tasks.waste_tasks.aggregate_weekly_waste_trend",
         "schedule": crontab(day_of_week=1, hour=5, minute=30),  # Monday, after the near-expiry scan
+    },
+    "retry-queued-notifications": {
+        "task": "app.tasks.notification_tasks.retry_queued_notifications",
+        "schedule": crontab(minute="*/15"),  # FR5.4 — push anything that couldn't go out first time
     },
     "generate-weekly-report": {
         "task": "app.tasks.reporting_tasks.generate_weekly_report",

@@ -286,3 +286,56 @@ def test_return_resolved_blocked_while_discrepancy_open(client):
     )
     assert allowed.status_code == 200
     assert allowed.json()["status"] == "return_resolved"
+
+
+def test_deviation_threshold_is_configurable(client):
+    """FR10.5 says the threshold is configurable; it used to be a hard-coded
+    10%. A 4% shortfall is fine at the default but a discrepancy once the
+    Manager tightens the threshold to 2%."""
+    officer_token, ingredient, po = _setup_po(client)
+    manager_token = register_and_login(client, email="manager.cfg@restaurant.com", role="Restaurant Manager")
+    delivery = client.post(
+        "/deliveries",
+        json={"po_id": po["po_id"], "scheduled_date": "2026-08-15"},
+        headers=auth_headers(officer_token),
+    ).json()
+    delivery_token = register_and_login(client, email="delivery.cfg@restaurant.com", role="Delivery/Logistics Staff")
+
+    assert client.patch(
+        "/config", json={"delivery_deviation_threshold": "2.00"}, headers=auth_headers(manager_token)
+    ).status_code == 200
+
+    resp = client.post(
+        f"/deliveries/{delivery['delivery_id']}/confirm-receipt",
+        json={"received_quantities": {"1": "24.000"}},  # 4% under the 25 ordered
+        headers=auth_headers(delivery_token),
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()["discrepancies"]) == 1
+
+
+def test_threshold_outside_0_to_100_is_rejected(client):
+    manager_token = register_and_login(client, email="manager.cfg2@restaurant.com", role="Restaurant Manager")
+    resp = client.patch(
+        "/config", json={"delivery_deviation_threshold": "150"}, headers=auth_headers(manager_token)
+    )
+    assert resp.status_code == 422
+
+
+def test_receipt_cannot_be_confirmed_twice(client):
+    """Re-confirming a delivery that's already been received (or verified
+    into stock) would silently rewrite what was recorded."""
+    officer_token, ingredient, po = _setup_po(client)
+    delivery = client.post(
+        "/deliveries",
+        json={"po_id": po["po_id"], "scheduled_date": "2026-08-15"},
+        headers=auth_headers(officer_token),
+    ).json()
+    delivery_token = register_and_login(client, email="delivery.twice@restaurant.com", role="Delivery/Logistics Staff")
+    url = f"/deliveries/{delivery['delivery_id']}/confirm-receipt"
+    body = {"received_quantities": {"1": "25.000"}}
+
+    assert client.post(url, json=body, headers=auth_headers(delivery_token)).status_code == 200
+    again = client.post(url, json={"received_quantities": {"1": "5.000"}}, headers=auth_headers(delivery_token))
+
+    assert again.status_code == 409

@@ -13,6 +13,7 @@ from app.routers import (
     inventory,
     kitchen,
     menu,
+    notifications,
     procurement,
     reporting,
     staffing,
@@ -79,6 +80,7 @@ app.include_router(procurement.router)
 app.include_router(delivery.router)
 app.include_router(reporting.router)
 app.include_router(config.router)
+app.include_router(notifications.router)
 
 
 @app.get("/health", tags=["health"])

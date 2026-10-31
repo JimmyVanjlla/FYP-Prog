@@ -124,6 +124,53 @@ def generate_weekly_report(db: Session, *, period_start: date, period_end: date)
     return report
 
 
+def report_summary(db: Session, report: Report) -> dict:
+    """UC-RA-01 main flow step 4 — "displays the report summary in-app": the
+    same three sections the PDF holds (forecast accuracy, waste, budget),
+    as data, so the app can show it without handing off to a PDF viewer."""
+    forecast_data = _forecast_accuracy_data(db, report.period_start, report.period_end)
+    waste_data = _waste_data(db, report.period_start, report.period_end)
+    budget_data = _budget_data(db, report.period_start, report.period_end)
+    errors = [float(row["error"]) for row in forecast_data]
+    return {
+        "report_id": report.report_id,
+        "type": report.type,
+        "status": report.status,
+        "period_start": report.period_start,
+        "period_end": report.period_end,
+        "forecast_accuracy": {
+            "scored_forecasts": len(forecast_data),
+            "mean_error": (sum(errors) / len(errors)) if errors else None,
+            "rows": forecast_data,
+        },
+        "waste": waste_data,
+        "budget": budget_data,
+    }
+
+
+def regenerate_report(db: Session, report: Report) -> Report:
+    """UC-RA-01 Alt Flow 4a — a report whose PDF generation failed can be
+    regenerated in place (same row, same period) instead of the Manager
+    having to create a second report for it."""
+    forecast_data = _forecast_accuracy_data(db, report.period_start, report.period_end)
+    waste_data = _waste_data(db, report.period_start, report.period_end)
+    budget_data = _budget_data(db, report.period_start, report.period_end)
+    if not _has_any_data(forecast_data, waste_data, budget_data):
+        raise NoDataForPeriodError
+
+    try:
+        report.pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data)
+        report.status = "generated"
+        report.generated_at = datetime.now(timezone.utc)
+    except Exception:
+        report.status = "failed"
+        db.commit()
+        raise
+    db.commit()
+    db.refresh(report)
+    return report
+
+
 def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, budget_data: dict) -> str:
     os.makedirs(REPORTS_DIR, exist_ok=True)
     filename = f"{report.period_end.isoformat()}_weekly_summary.pdf"

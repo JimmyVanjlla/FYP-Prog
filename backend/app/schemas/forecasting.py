@@ -51,6 +51,11 @@ class ForecastAccuracyOut(BaseModel):
     forecast_id: int
     actual_quantity: Decimal
     accuracy_error: Decimal
+    # What was forecast, for display; joined in from the Forecast row.
+    menu_item_id: int | None = None
+    meal_period: str | None = None
+    forecast_date: date | None = None
+    predicted_quantity: Decimal | None = None
 
 
 class ForecastAvailabilityOut(BaseModel):

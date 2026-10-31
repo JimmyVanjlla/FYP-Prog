@@ -73,3 +73,18 @@ class ShiftClosingReportOut(BaseModel):
     actual_order_volume: int
     notes: str | None
     submitted_by: int
+    # FR8.4 "actual vs. forecasted performance": what was forecast for the
+    # shift (None when nothing was) and how far off it was. Filled in by the
+    # router; they aren't stored on the report itself.
+    forecasted_volume: int | None = None
+    variance: int | None = None
+
+
+class StaffMemberOut(BaseModel):
+    """A person a Shift Supervisor can assign to a station."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    name: str
+    role: str

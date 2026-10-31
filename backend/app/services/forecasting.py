@@ -144,7 +144,15 @@ def train_and_generate_forecasts(
             continue
 
         # Steps 8-11.
-        model = Prophet(weekly_seasonality=True, yearly_seasonality=True, daily_seasonality=False)
+        # uncertainty_samples=0: only the point forecast (yhat) is stored, so
+        # skip Prophet's Monte Carlo interval sampling, which costs real time
+        # per model and which nothing reads.
+        model = Prophet(
+            weekly_seasonality=True,
+            yearly_seasonality=True,
+            daily_seasonality=False,
+            uncertainty_samples=0,
+        )
         model.fit(group[["ds", "y"]])
         future = model.make_future_dataframe(periods=FORECAST_HORIZON_DAYS)
         forecast_df = model.predict(future)
@@ -417,13 +425,30 @@ def forecast_availability(db: Session, *, menu_item_id: int | None = None, today
 
 def list_forecast_accuracy(
     db: Session, *, menu_item_id: int | None = None, limit: int = 100, offset: int = 0
-) -> list[ForecastAccuracy]:
+) -> list[dict]:
     """FR4.4 — "track forecast accuracy" implies a way to see the tracked
     records; previously the only place accuracy data surfaced was inside
-    the weekly PDF report, with no direct API access."""
-    stmt = select(ForecastAccuracy).order_by(ForecastAccuracy.accuracy_id).limit(limit).offset(offset)
+    the weekly PDF report, with no direct API access. Each row carries the
+    forecast it scores, so a reader can see what was predicted for what."""
+    stmt = (
+        select(ForecastAccuracy, Forecast)
+        .join(Forecast, ForecastAccuracy.forecast_id == Forecast.forecast_id)
+        .order_by(ForecastAccuracy.accuracy_id)
+        .limit(limit)
+        .offset(offset)
+    )
     if menu_item_id is not None:
-        stmt = stmt.join(Forecast, ForecastAccuracy.forecast_id == Forecast.forecast_id).where(
-            Forecast.menu_item_id == menu_item_id
-        )
-    return list(db.scalars(stmt))
+        stmt = stmt.where(Forecast.menu_item_id == menu_item_id)
+    return [
+        {
+            "accuracy_id": a.accuracy_id,
+            "forecast_id": a.forecast_id,
+            "actual_quantity": a.actual_quantity,
+            "accuracy_error": a.accuracy_error,
+            "menu_item_id": f.menu_item_id,
+            "meal_period": f.meal_period,
+            "forecast_date": f.forecast_date,
+            "predicted_quantity": f.predicted_quantity,
+        }
+        for a, f in db.execute(stmt).all()
+    ]

@@ -31,6 +31,11 @@ class DeliveryOut(BaseModel):
     # verified, even when status is already "delivered".
     verified_by: int | None
     verified_at: datetime | None
+    # Who it's coming from, and the PO's value. Delivery staff can't read
+    # purchase orders, so the list carries these for them. Filled in only by
+    # the list endpoint.
+    supplier_name: str | None = None
+    po_total_cost: Decimal | None = None
 
 
 class DeliveryStatusUpdate(BaseModel):

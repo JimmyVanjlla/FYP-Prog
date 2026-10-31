@@ -15,6 +15,7 @@ from app.schemas.staffing import (
     ShiftScheduleCreate,
     ShiftScheduleOut,
     StaffingRecommendationOut,
+    StaffMemberOut,
 )
 from app.services import staffing as staffing_service
 
@@ -43,6 +44,25 @@ def list_my_schedule(
         )
         for a, s in rows
     ]
+
+
+def _closing_report_out(db: Session, report) -> ShiftClosingReportOut:
+    out = ShiftClosingReportOut.model_validate(report)
+    schedule = staffing_service.get_schedule(db, report.schedule_id)
+    out.forecasted_volume = staffing_service.forecasted_volume(db, schedule)
+    if out.forecasted_volume is not None:
+        out.variance = out.actual_order_volume - out.forecasted_volume
+    return out
+
+
+@router.get("/staff", response_model=list[StaffMemberOut])
+def list_assignable_staff(
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_role(Role.SHIFT_SUPERVISOR, Role.RESTAURANT_MANAGER)),
+) -> list[StaffMemberOut]:
+    """FR8.2 — who a Shift Supervisor can assign. GET /users is Manager-only,
+    so without this the supervisor had no way to pick a staff_id."""
+    return staffing_service.list_assignable_staff(db)
 
 
 @router.get("/schedules", response_model=list[ShiftScheduleOut])
@@ -172,16 +192,31 @@ def submit_closing_report(
 ) -> ShiftClosingReportOut:
     """FR8.4."""
     try:
-        return staffing_service.submit_closing_report(
+        report = staffing_service.submit_closing_report(
             db,
             schedule_id=schedule_id,
             actual_order_volume=data.actual_order_volume,
             notes=data.notes,
             submitted_by=supervisor.user_id,
         )
+        return _closing_report_out(db, report)
     except staffing_service.ScheduleNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found.")
     except staffing_service.ClosingReportAlreadyExistsError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="A closing report already exists for this shift."
         )
+
+
+@router.get("/schedules/{schedule_id}/closing-report", response_model=ShiftClosingReportOut)
+def get_closing_report(
+    schedule_id: int, db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+) -> ShiftClosingReportOut:
+    """FR8.4 — the submitted shift summary with the forecast comparison."""
+    try:
+        report = staffing_service.get_closing_report(db, schedule_id)
+    except staffing_service.ScheduleNotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found.")
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No closing report yet for this shift.")
+    return _closing_report_out(db, report)

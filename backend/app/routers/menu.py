@@ -17,10 +17,11 @@ from app.services import menu as menu_service
 router = APIRouter(prefix="/menu-items", tags=["menu"])
 
 
-def _to_out(item, db: Session) -> MenuItemOut:
+def _to_out(item, db: Session, ctx: menu_service.MenuContext | None = None) -> MenuItemOut:
     out = MenuItemOut.model_validate(item)
-    out.profit_margin = menu_service.compute_profit_margin(db, item)
-    out.is_available = menu_service.compute_is_available(db, item)
+    out.profit_margin = menu_service.compute_profit_margin(db, item, ctx)
+    out.is_available = menu_service.compute_is_available(db, item, ctx)
+    out.has_low_stock_ingredient = menu_service.has_low_stock_ingredient(db, item, ctx)
     return out
 
 
@@ -38,7 +39,8 @@ def list_menu_items(
     Flow 3a) — everyone else effectively only ever sees active ones since
     the default excludes deactivated items from ordering/prep screens."""
     items = menu_service.list_menu_items(db, include_inactive=include_inactive, limit=limit, offset=offset)
-    return [_to_out(item, db) for item in items]
+    ctx = menu_service.build_menu_context(db)  # one set of lookups for the whole list
+    return [_to_out(item, db, ctx) for item in items]
 
 
 @router.post("", response_model=MenuItemOut, status_code=status.HTTP_201_CREATED)

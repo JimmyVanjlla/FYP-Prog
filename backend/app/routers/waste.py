@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.deps import get_current_user, require_role
 from app.models.roles import Role
 from app.models.user import User
-from app.schemas.waste import WasteLogOut, WasteReductionTrendOut, WasteTrendRequest
+from app.schemas.waste import WasteLogCreate, WasteLogOut, WasteReductionTrendOut, WasteTrendRequest
 from app.services import waste as waste_service
 
 router = APIRouter(prefix="/waste", tags=["waste"])
@@ -21,6 +21,23 @@ def list_waste_logs(
 ) -> list[WasteLogOut]:
     """FR6.1."""
     return waste_service.list_waste_logs(db, ingredient_id=ingredient_id, limit=limit, offset=offset)
+
+
+@router.post("/logs", response_model=WasteLogOut, status_code=status.HTTP_201_CREATED)
+def create_waste_log(
+    data: WasteLogCreate,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(
+        require_role(Role.KITCHEN_STAFF, Role.INVENTORY_STAFF, Role.RESTAURANT_MANAGER)
+    ),
+) -> WasteLogOut:
+    """FR6.1 / FR6.5 — Kitchen Staff log leftover waste and Inventory Staff
+    log expiry waste; entries are validated against what was prepared or
+    delivered."""
+    try:
+        return waste_service.create_manual_waste_log(db, data)
+    except waste_service.InvalidWasteEntryError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
 
 
 @router.get("/trends", response_model=list[WasteReductionTrendOut])

@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -28,13 +30,26 @@ _SCHEDULING_ROLES = (*_DELIVERY_ROLES, Role.PROCUREMENT_OFFICER)
 @router.get("", response_model=list[DeliveryOut])
 def list_deliveries(
     status_filter: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[DeliveryOut]:
-    """FR10.1 / FR10.4."""
-    return delivery_service.list_deliveries(db, status=status_filter, limit=limit, offset=offset)
+    """FR10.1 / FR10.4 — the delivery calendar and history. date_from/date_to
+    narrow it to a window; each row carries its supplier and PO value."""
+    deliveries = delivery_service.list_deliveries(
+        db, status=status_filter, date_from=date_from, date_to=date_to, limit=limit, offset=offset
+    )
+    info = delivery_service.supplier_info_by_delivery(db, deliveries)
+    out: list[DeliveryOut] = []
+    for d in deliveries:
+        item = DeliveryOut.model_validate(d)
+        if d.delivery_id in info:
+            item.supplier_name, item.po_total_cost = info[d.delivery_id]
+        out.append(item)
+    return out
 
 
 @router.post("", response_model=DeliveryOut, status_code=status.HTTP_201_CREATED)
@@ -84,6 +99,11 @@ def confirm_receipt(
         )
     except delivery_service.NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Delivery not found.")
+    except delivery_service.NotAwaitingReceiptError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This delivery's receipt has already been recorded.",
+        )
     except delivery_service.NegativeReceivedQuantityError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

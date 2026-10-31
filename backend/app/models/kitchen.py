@@ -23,6 +23,10 @@ class PrepRecommendation(Base):
     # in that case. See app/services/kitchen.py::generate_prep_recommendation.
     forecast_id: Mapped[int | None] = mapped_column(ForeignKey("forecasts.forecast_id"), nullable=True)
     meal_period: Mapped[str] = mapped_column(String(20), nullable=False)
+    # The service date this recommendation is for. Set for forecast-backed
+    # and manual rows alike (a manual row has no forecast to read it from),
+    # so a recommendation can be found again by item + meal period + date.
+    forecast_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     recommended_quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 
 
@@ -63,5 +67,22 @@ class Notification(Base):
     # sent | queued_for_retry | failed
     status: Mapped[str] = mapped_column(String(20), default="queued_for_retry", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+    )
+
+
+class DeviceToken(Base):
+    """A phone registered to receive push notifications (FR5.4). One user
+    can have several devices; a token belongs to whoever registered it most
+    recently (a shared tablet moving between staff must not keep notifying
+    the previous person)."""
+
+    __tablename__ = "device_tokens"
+
+    device_token_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    token: Mapped[str] = mapped_column(String(512), unique=True, nullable=False)
+    platform: Mapped[str] = mapped_column(String(20), default="android", nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

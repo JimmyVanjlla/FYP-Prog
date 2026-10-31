@@ -13,9 +13,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.dates import end_of_day
+from app.models.inventory import StockBatch
 from app.models.kitchen import LeftoverLog
 from app.models.menu import RecipeIngredientLink
 from app.models.waste import WasteLog, WasteReductionTrend
+from app.schemas.waste import WasteLogCreate
 from app.services.procurement import get_unit_price as _get_unit_price
 
 
@@ -121,3 +123,57 @@ def list_waste_trends(db: Session, *, limit: int = 100, offset: int = 0) -> list
             .offset(offset)
         )
     )
+
+
+class InvalidWasteEntryError(Exception):
+    """FR6.5 — carries the validation message to show the user."""
+
+
+def create_manual_waste_log(db: Session, data: WasteLogCreate) -> WasteLog:
+    """FR6.5 — a waste entry typed in by staff (rather than derived
+    automatically from a leftover log or the expiry scan). Rejects anything
+    that couldn't have been wasted: a negative/zero quantity (the schema
+    already refuses those), or more than was originally prepared (leftover)
+    or delivered (expiry batch).
+
+    Records the waste and its cost only; the matching stock change is a
+    separate stock adjustment (FR3.4), so the two aren't double-applied."""
+    if data.source_type == "expiry":
+        batch = db.get(StockBatch, data.source_ref_id)
+        if batch is None:
+            raise InvalidWasteEntryError("That stock batch does not exist.")
+        if batch.ingredient_id != data.ingredient_id:
+            raise InvalidWasteEntryError("That batch is not a batch of this ingredient.")
+        if data.quantity_wasted > batch.quantity:
+            raise InvalidWasteEntryError(
+                f"Quantity wasted exceeds the {batch.quantity} delivered in that batch."
+            )
+    else:
+        log = db.get(LeftoverLog, data.source_ref_id)
+        if log is None:
+            raise InvalidWasteEntryError("That leftover log does not exist.")
+        link = db.scalars(
+            select(RecipeIngredientLink)
+            .where(RecipeIngredientLink.menu_item_id == log.menu_item_id)
+            .where(RecipeIngredientLink.ingredient_id == data.ingredient_id)
+        ).first()
+        if link is None:
+            raise InvalidWasteEntryError("That ingredient is not part of the dish's recipe.")
+        prepared = (log.prepared_quantity * link.quantity_per_serving).quantize(Decimal("0.001"))
+        if data.quantity_wasted > prepared:
+            raise InvalidWasteEntryError(
+                f"Quantity wasted exceeds the {prepared} originally prepared."
+            )
+
+    cost = (data.quantity_wasted * _get_unit_price(db, data.ingredient_id)).quantize(Decimal("0.01"))
+    waste_log = WasteLog(
+        source_type=data.source_type,
+        source_ref_id=data.source_ref_id,
+        ingredient_id=data.ingredient_id,
+        quantity_wasted=data.quantity_wasted,
+        waste_cost=cost,
+    )
+    db.add(waste_log)
+    db.commit()
+    db.refresh(waste_log)
+    return waste_log

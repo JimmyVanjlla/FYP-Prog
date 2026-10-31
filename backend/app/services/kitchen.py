@@ -32,6 +32,11 @@ class DeviationReasonRequiredError(Exception):
     """FR5.5."""
 
 
+class AlreadyConfirmedError(Exception):
+    """A recommendation is confirmed once; confirming again would otherwise
+    have hit the unique constraint and surfaced as a 500."""
+
+
 def generate_prep_recommendation(
     db: Session,
     *,
@@ -54,6 +59,35 @@ def generate_prep_recommendation(
     forecast = get_latest_forecast(
         db, menu_item_id=menu_item_id, meal_period=meal_period, forecast_date=forecast_date
     )
+
+    existing = db.scalars(
+        select(PrepRecommendation)
+        .where(PrepRecommendation.menu_item_id == menu_item_id)
+        .where(PrepRecommendation.meal_period == meal_period)
+        .where(PrepRecommendation.forecast_date == forecast_date)
+    ).first()
+    if existing is not None:
+        # Forecasts are updated in place by each daily training run, and a
+        # manual figure can be corrected, so an unconfirmed recommendation
+        # follows whichever is current; once Kitchen Staff have confirmed
+        # it, it's a record of what was shown and stays put.
+        already_confirmed = (
+            db.scalars(
+                select(PrepConfirmation).where(PrepConfirmation.recommendation_id == existing.recommendation_id)
+            ).first()
+            is not None
+        )
+        if not already_confirmed:
+            if forecast is not None:
+                existing.forecast_id = forecast.forecast_id
+                existing.recommended_quantity = forecast.predicted_quantity
+            elif manual_quantity is not None:
+                existing.forecast_id = None
+                existing.recommended_quantity = manual_quantity
+            db.commit()
+            db.refresh(existing)
+        return existing
+
     if forecast is None:
         if manual_quantity is None:
             raise NoForecastAvailableError
@@ -61,6 +95,7 @@ def generate_prep_recommendation(
             menu_item_id=menu_item_id,
             forecast_id=None,
             meal_period=meal_period,
+            forecast_date=forecast_date,
             recommended_quantity=manual_quantity,
         )
         db.add(recommendation)
@@ -68,16 +103,11 @@ def generate_prep_recommendation(
         db.refresh(recommendation)
         return recommendation
 
-    existing_reco = db.scalars(
-        select(PrepRecommendation).where(PrepRecommendation.forecast_id == forecast.forecast_id)
-    ).first()
-    if existing_reco is not None:
-        return existing_reco
-
     recommendation = PrepRecommendation(
         menu_item_id=menu_item_id,
         forecast_id=forecast.forecast_id,
         meal_period=meal_period,
+        forecast_date=forecast_date,
         recommended_quantity=forecast.predicted_quantity,
     )
     db.add(recommendation)
@@ -104,6 +134,7 @@ def list_prep_recommendations(
     *,
     meal_period: str | None = None,
     menu_item_id: int | None = None,
+    forecast_date: date | None = None,
     limit: int = 100,
     offset: int = 0,
 ) -> list[PrepRecommendation]:
@@ -120,7 +151,21 @@ def list_prep_recommendations(
         stmt = stmt.where(PrepRecommendation.meal_period == meal_period)
     if menu_item_id is not None:
         stmt = stmt.where(PrepRecommendation.menu_item_id == menu_item_id)
+    if forecast_date is not None:
+        stmt = stmt.where(PrepRecommendation.forecast_date == forecast_date)
     return list(db.scalars(stmt))
+
+
+def confirmations_by_recommendation(
+    db: Session, recommendation_ids: list[int]
+) -> dict[int, PrepConfirmation]:
+    """One query for all the confirmations a page of recommendations needs."""
+    if not recommendation_ids:
+        return {}
+    rows = db.scalars(
+        select(PrepConfirmation).where(PrepConfirmation.recommendation_id.in_(recommendation_ids))
+    )
+    return {c.recommendation_id: c for c in rows}
 
 
 def confirm_prep(
@@ -132,6 +177,10 @@ def confirm_prep(
     recommendation = db.get(PrepRecommendation, recommendation_id)
     if recommendation is None:
         raise RecommendationNotFoundError
+    if db.scalars(
+        select(PrepConfirmation).where(PrepConfirmation.recommendation_id == recommendation_id)
+    ).first() is not None:
+        raise AlreadyConfirmedError
 
     recommended = recommendation.recommended_quantity
     deviation_pct = (

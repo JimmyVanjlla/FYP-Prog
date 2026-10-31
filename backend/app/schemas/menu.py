@@ -57,3 +57,5 @@ class MenuItemOut(BaseModel):
     # FR2.4 — stock-based availability flag: False the moment any linked
     # ingredient's on-hand stock can't cover one more serving.
     is_available: bool = True
+    # FR2.4 — an ingredient in the recipe is under its low-stock threshold.
+    has_low_stock_ingredient: bool = False

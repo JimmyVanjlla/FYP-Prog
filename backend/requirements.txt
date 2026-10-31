@@ -25,3 +25,7 @@ prophet==1.1.6
 # Sprint 5: Reporting & Analytics (Ch4 §4.1 "External & Invoked Services")
 reportlab==4.2.5
 
+
+# FCM push delivery (app/services/fcm.py) - service-account auth for the HTTP v1 API
+google-auth==2.62.0
+requests==2.34.2

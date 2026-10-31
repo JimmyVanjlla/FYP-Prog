@@ -13,6 +13,7 @@ from app.schemas.procurement import (
     BudgetUtilisationOut,
     ProcurementRecommendationOut,
     PurchaseOrderCreate,
+    PurchaseOrderItemOut,
     PurchaseOrderOut,
     SupplierCreate,
     SupplierDiscrepancyCreate,
@@ -116,6 +117,19 @@ def list_purchase_orders(
     _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
 ) -> list[PurchaseOrderOut]:
     return procurement_service.list_purchase_orders(db, status=status_filter, limit=limit, offset=offset)
+
+
+@router.get("/purchase-orders/{po_id}/items", response_model=list[PurchaseOrderItemOut])
+def list_purchase_order_items(
+    po_id: int,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+) -> list[PurchaseOrderItemOut]:
+    """FR9.3 — the line items behind a purchase order."""
+    try:
+        return procurement_service.list_purchase_order_items(db, po_id)
+    except procurement_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found.")
 
 
 @router.post("/purchase-orders", response_model=PurchaseOrderOut, status_code=status.HTTP_201_CREATED)

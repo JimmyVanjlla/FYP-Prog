@@ -19,16 +19,23 @@ from app.schemas.inventory import (
     ThresholdUpdate,
 )
 from app.services import inventory as inventory_service
+from app.services.config import get_or_create_config
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
 _INVENTORY_WRITE_ROLES = (Role.INVENTORY_STAFF, Role.RESTAURANT_MANAGER)
 
 
-def _ingredient_out(ingredient, db: Session) -> IngredientOut:
+def _ingredient_out(ingredient, db: Session, default_threshold=None) -> IngredientOut:
     out = IngredientOut.model_validate(ingredient)
-    out.is_low_stock = inventory_service.check_low_stock_threshold(db, ingredient)
+    out.is_low_stock = inventory_service.check_low_stock_threshold(db, ingredient, default_threshold)
     return out
+
+
+def _ingredients_out(ingredients, db: Session) -> list[IngredientOut]:
+    """One lookup of the system default for the whole list, not one per row."""
+    default_threshold = get_or_create_config(db).default_low_stock_threshold
+    return [_ingredient_out(i, db, default_threshold) for i in ingredients]
 
 
 @router.get("/ingredients", response_model=list[IngredientOut])
@@ -38,8 +45,7 @@ def list_ingredients(
     db: Session = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> list[IngredientOut]:
-    items = inventory_service.list_ingredients(db, limit=limit, offset=offset)
-    return [_ingredient_out(i, db) for i in items]
+    return _ingredients_out(inventory_service.list_ingredients(db, limit=limit, offset=offset), db)
 
 
 @router.get("/ingredients/low-stock", response_model=list[IngredientOut])
@@ -52,8 +58,7 @@ def list_low_stock(
     """FR3.3 threshold check, surfaced as its own endpoint since it's the
     one Kitchen/Manager dashboards actually poll (Ch4 §4.4.1 severity-list
     UI pattern)."""
-    items = inventory_service.list_low_stock_ingredients(db, limit=limit, offset=offset)
-    return [_ingredient_out(i, db) for i in items]
+    return _ingredients_out(inventory_service.list_low_stock_ingredients(db, limit=limit, offset=offset), db)
 
 
 @router.post("/ingredients", response_model=IngredientOut, status_code=status.HTTP_201_CREATED)

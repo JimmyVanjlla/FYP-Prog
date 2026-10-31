@@ -33,6 +33,11 @@ class SystemConfig(Base):
         Numeric(10, 2), default=Decimal("8000.00"), nullable=False
     )
     near_expiry_window_days: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+    # FR10.5 — how far a received quantity may differ from what was ordered
+    # before it's routed to the discrepancy flow instead of being accepted.
+    delivery_deviation_threshold: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), default=Decimal("10.00"), nullable=False
+    )
     # Day through which forecasted/actual consumption has already been
     # deducted from ingredient stock (FR3.1) — makes the daily job
     # idempotent. Null until its first run, which starts counting from

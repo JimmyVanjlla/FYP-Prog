@@ -27,7 +27,12 @@ class PrepRecommendationOut(BaseModel):
     menu_item_id: int
     forecast_id: int | None
     meal_period: str
+    forecast_date: date | None = None
     recommended_quantity: Decimal
+    # Filled in by the router from the matching PrepConfirmation, if any.
+    confirmed: bool = False
+    confirmed_quantity: Decimal | None = None
+    deviation_reason: str | None = None
 
 
 class PrepConfirmationCreate(BaseModel):

@@ -8,7 +8,7 @@ from app.db.session import get_db
 from app.deps import require_role
 from app.models.roles import Role
 from app.models.user import User
-from app.schemas.reporting import ReportOut, WeeklyReportRequest
+from app.schemas.reporting import ReportOut, ReportSummaryOut, WeeklyReportRequest
 from app.services import reporting as reporting_service
 
 router = APIRouter(prefix="/reports", tags=["reports"])
@@ -34,6 +34,38 @@ def generate_weekly_report(
         return reporting_service.generate_weekly_report(
             db, period_start=data.period_start, period_end=data.period_end
         )
+    except reporting_service.NoDataForPeriodError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No data is available for this date range.",
+        )
+
+
+@router.get("/{report_id}/summary", response_model=ReportSummaryOut)
+def report_summary(
+    report_id: int,
+    db: Session = Depends(get_db),
+    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+) -> ReportSummaryOut:
+    """UC-RA-01 — the report's figures for in-app viewing."""
+    report = reporting_service.get_report(db, report_id)
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+    return reporting_service.report_summary(db, report)
+
+
+@router.post("/{report_id}/regenerate", response_model=ReportOut)
+def regenerate_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+) -> ReportOut:
+    """UC-RA-01 Alt Flow 4a — retry a report whose PDF generation failed."""
+    report = reporting_service.get_report(db, report_id)
+    if report is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+    try:
+        return reporting_service.regenerate_report(db, report)
     except reporting_service.NoDataForPeriodError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

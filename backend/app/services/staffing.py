@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.models.audit import AuditLog
 from app.models.forecasting import Forecast
 from app.models.staffing import ShiftAssignment, ShiftClosingReport, ShiftSchedule, StaffingRecommendation
+from app.models.user import User
 from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 
@@ -63,6 +64,13 @@ def calculate_staffing_recommendation(
             .order_by(ShiftSchedule.date.desc())
         ).first()
         total_forecasted_portions = Decimal(fallback.actual_order_volume) if fallback else Decimal("0")
+
+    # Re-generating (the forecast may have been refreshed since) replaces the
+    # earlier set rather than stacking a second one beside it.
+    for stale in db.scalars(
+        select(StaffingRecommendation).where(StaffingRecommendation.schedule_id == schedule.schedule_id)
+    ).all():
+        db.delete(stale)
 
     station_count = len(stations)
     recommendations: list[StaffingRecommendation] = []
@@ -245,3 +253,34 @@ def submit_closing_report(
     db.commit()
     db.refresh(report)
     return report
+
+
+def list_assignable_staff(db: Session) -> list[User]:
+    """Everyone a Shift Supervisor can put on a shift: active accounts,
+    excluding the Owner (who doesn't work a station)."""
+    return list(
+        db.scalars(
+            select(User)
+            .where(User.is_active.is_(True))
+            .where(User.role != "Restaurant Owner")
+            .order_by(User.name)
+        )
+    )
+
+
+def forecasted_volume(db: Session, schedule: ShiftSchedule) -> int | None:
+    """Total forecasted portions for this shift's date and meal period, or
+    None when nothing was forecast for it."""
+    forecasts = db.scalars(
+        select(Forecast)
+        .where(Forecast.forecast_date == schedule.date)
+        .where(Forecast.meal_period == schedule.meal_period)
+    ).all()
+    if not forecasts:
+        return None
+    return int(round(float(sum((f.predicted_quantity for f in forecasts), Decimal("0")))))
+
+
+def get_closing_report(db: Session, schedule_id: int) -> ShiftClosingReport | None:
+    get_schedule(db, schedule_id)  # 404s if missing
+    return db.scalars(select(ShiftClosingReport).where(ShiftClosingReport.schedule_id == schedule_id)).first()

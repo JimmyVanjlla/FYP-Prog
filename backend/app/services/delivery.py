@@ -21,14 +21,8 @@ from sqlalchemy.orm import Session
 from app.models.audit import AuditLog
 from app.models.delivery import Delivery, DeliveryDiscrepancy, DeliveryItem
 from app.models.inventory import Ingredient
-from app.models.procurement import PurchaseOrder, PurchaseOrderItem
-
-# How far a received quantity can deviate from expected before it's routed
-# to the discrepancy flow instead of accepted as a standard receipt
-# (FR10.5) — Ch4's data dictionary doesn't name this in SystemConfig, so
-# it's a module-local constant rather than misusing an unrelated threshold
-# (e.g. prep_deviation_threshold, which is Module 5's).
-DEVIATION_THRESHOLD_PCT = Decimal("10.00")
+from app.models.procurement import PurchaseOrder, PurchaseOrderItem, Supplier
+from app.services.config import get_or_create_config
 
 # UC-DM-04's exact lifecycle. Also used as PurchaseOrder.status once a PO
 # moves past approval (UC-PS-05).
@@ -54,6 +48,12 @@ class NotFoundError(Exception):
 
 class NegativeReceivedQuantityError(Exception):
     """FR10.5."""
+
+
+class NotAwaitingReceiptError(Exception):
+    """Receipt can only be confirmed while the delivery is still on its way.
+    Re-confirming one that has been received (or already verified into
+    stock) would silently rewrite what was recorded."""
 
 
 class InvalidStatusError(Exception):
@@ -92,7 +92,13 @@ def schedule_delivery(db: Session, *, po_id: int, scheduled_date: date) -> Deliv
 
 
 def list_deliveries(
-    db: Session, *, status: str | None = None, limit: int = 100, offset: int = 0
+    db: Session,
+    *,
+    status: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    limit: int = 100,
+    offset: int = 0,
 ) -> list[Delivery]:
     stmt = (
         select(Delivery)
@@ -102,7 +108,25 @@ def list_deliveries(
     )
     if status is not None:
         stmt = stmt.where(Delivery.status == status)
+    # FR10.1 calendar management: deliveries falling in a date window.
+    if date_from is not None:
+        stmt = stmt.where(Delivery.scheduled_date >= date_from)
+    if date_to is not None:
+        stmt = stmt.where(Delivery.scheduled_date <= date_to)
     return list(db.scalars(stmt))
+
+
+def supplier_info_by_delivery(db: Session, deliveries: list[Delivery]) -> dict[int, tuple[str, Decimal]]:
+    """delivery_id -> (supplier name, PO total) in one query."""
+    if not deliveries:
+        return {}
+    rows = db.execute(
+        select(Delivery.delivery_id, Supplier.name, PurchaseOrder.total_cost)
+        .join(PurchaseOrder, PurchaseOrder.po_id == Delivery.po_id)
+        .join(Supplier, Supplier.supplier_id == PurchaseOrder.supplier_id)
+        .where(Delivery.delivery_id.in_([d.delivery_id for d in deliveries]))
+    ).all()
+    return {delivery_id: (name, total) for delivery_id, name, total in rows}
 
 
 def list_delivery_items(db: Session, delivery_id: int) -> list[DeliveryItem]:
@@ -141,9 +165,11 @@ def confirm_receipt(
     delivery = db.get(Delivery, delivery_id)
     if delivery is None:
         raise NotFoundError
+    if delivery.status not in ("awaiting_delivery", "in_transit"):
+        raise NotAwaitingReceiptError
 
     items = db.scalars(select(DeliveryItem).where(DeliveryItem.delivery_id == delivery_id)).all()
-    threshold = DEVIATION_THRESHOLD_PCT
+    threshold = get_or_create_config(db).delivery_deviation_threshold
     discrepancies: list[DeliveryDiscrepancy] = []
 
     for item in items:

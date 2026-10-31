@@ -394,3 +394,15 @@ def get_budget_utilisation(db: Session, *, month: date | None = None) -> dict:
         "remaining": remaining,
         "utilisation_pct": utilisation_pct.quantize(Decimal("0.01")),
     }
+
+
+def list_purchase_order_items(db: Session, po_id: int) -> list[PurchaseOrderItem]:
+    """The line items of one PO, so a Manager can see what they're being
+    asked to approve and the Officer can review a past order."""
+    if db.get(PurchaseOrder, po_id) is None:
+        raise NotFoundError
+    return list(
+        db.scalars(
+            select(PurchaseOrderItem).where(PurchaseOrderItem.po_id == po_id).order_by(PurchaseOrderItem.item_id)
+        )
+    )

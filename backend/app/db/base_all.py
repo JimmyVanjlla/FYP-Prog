@@ -22,6 +22,7 @@ from app.models.kitchen import (  # noqa: F401
     PrepConfirmation,
     LeftoverLog,
     Notification,
+    DeviceToken,
 )
 from app.models.waste import WasteLog, WasteReductionTrend  # noqa: F401
 from app.models.feedback import PortionRecommendation  # noqa: F401

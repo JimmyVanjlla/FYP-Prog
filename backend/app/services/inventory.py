@@ -184,12 +184,19 @@ def update_restocking_request_status(db: Session, request_id: int, status: str) 
 # --- Ch4 §4.8.4 algorithms -------------------------------------------------
 
 
-def check_low_stock_threshold(db: Session, ingredient: Ingredient) -> bool:
+def check_low_stock_threshold(
+    db: Session, ingredient: Ingredient, default_threshold: Decimal | None = None
+) -> bool:
     """ALGORITHM CheckLowStockThreshold (UC-IM-03). Returns True if an
-    alert should fire for this ingredient right now."""
+    alert should fire for this ingredient right now.
+
+    default_threshold lets a caller checking many ingredients look the
+    system default up once instead of once per ingredient."""
     threshold = ingredient.low_stock_threshold
     if threshold is None:
-        threshold = get_or_create_config(db).default_low_stock_threshold
+        threshold = default_threshold
+        if threshold is None:
+            threshold = get_or_create_config(db).default_low_stock_threshold
     return ingredient.current_stock < threshold
 
 
@@ -198,7 +205,8 @@ def list_low_stock_ingredients(db: Session, *, limit: int = 100, offset: int = 0
     # itself isn't a simple column comparison — see check_low_stock_threshold)
     # before paginating the filtered result, so this calls list_ingredients
     # with no limit rather than the paginated default.
-    flagged = [i for i in list_ingredients(db) if check_low_stock_threshold(db, i)]
+    default_threshold = get_or_create_config(db).default_low_stock_threshold
+    flagged = [i for i in list_ingredients(db) if check_low_stock_threshold(db, i, default_threshold)]
     return flagged[offset : offset + limit]
 
 
@@ -296,7 +304,8 @@ def apply_forecasted_consumption(db: Session, *, today: date | None = None) -> d
         return {"initialised": False, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
 
     start = last + timedelta(days=1)
-    low_before = {i.ingredient_id for i in list_ingredients(db) if check_low_stock_threshold(db, i)}
+    default_threshold = config.default_low_stock_threshold
+    low_before = {i.ingredient_id for i in list_ingredients(db) if check_low_stock_threshold(db, i, default_threshold)}
 
     portions = _portions_consumed(db, start, through)
     used: dict[int, Decimal] = {}
@@ -317,7 +326,9 @@ def apply_forecasted_consumption(db: Session, *, today: date | None = None) -> d
     db.commit()
 
     newly_low = [
-        i for i in list_ingredients(db) if i.ingredient_id not in low_before and check_low_stock_threshold(db, i)
+        i
+        for i in list_ingredients(db)
+        if i.ingredient_id not in low_before and check_low_stock_threshold(db, i, default_threshold)
     ]
     if newly_low:
         names = ", ".join(i.name for i in newly_low)

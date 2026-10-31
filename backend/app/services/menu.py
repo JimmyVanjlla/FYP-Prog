@@ -1,13 +1,47 @@
 """Module 2 business logic. FR2.1-FR2.5."""
+from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.inventory import Ingredient
 from app.models.menu import MenuItem, RecipeIngredientLink
+from app.models.procurement import Supplier, SupplierPricing
 from app.schemas.menu import MenuItemCreate, MenuItemUpdate, RecipeIngredientLinkCreate
+from app.services.config import get_or_create_config
 from app.services.procurement import get_unit_price
+
+
+@dataclass
+class MenuContext:
+    """Everything the per-item figures (margin, availability, low-ingredient
+    flag) need, loaded once per request. Computing them item by item issued
+    several queries per menu item — fine locally, but against a hosted
+    database each round trip costs real time, and the menu list took ~8
+    seconds against a 2 second target. Three queries now cover the lot."""
+
+    prices: dict[int, Decimal]  # ingredient_id -> cheapest active supplier's unit price
+    ingredients: dict[int, Ingredient]
+    default_low_stock_threshold: Decimal
+
+    def unit_price(self, ingredient_id: int) -> Decimal:
+        # Same fallback as procurement.get_unit_price: 0.00 when nobody prices it.
+        return self.prices.get(ingredient_id, Decimal("0.00"))
+
+
+def build_menu_context(db: Session) -> MenuContext:
+    prices = {
+        ingredient_id: price
+        for ingredient_id, price in db.execute(
+            select(SupplierPricing.ingredient_id, func.min(SupplierPricing.unit_price))
+            .join(Supplier, SupplierPricing.supplier_id == Supplier.supplier_id)
+            .where(Supplier.is_active.is_(True))
+            .group_by(SupplierPricing.ingredient_id)
+        )
+    }
+    ingredients = {i.ingredient_id: i for i in db.scalars(select(Ingredient))}
+    return MenuContext(prices, ingredients, get_or_create_config(db).default_low_stock_threshold)
 
 
 class MenuItemNotFoundError(Exception):
@@ -40,7 +74,13 @@ def list_menu_items(
     historical order and forecast data for reporting", so listing excludes
     inactive items by default; include_inactive=True is for a Manager
     reviewing/reactivating past items, not the normal menu view."""
-    stmt = select(MenuItem).order_by(MenuItem.name).limit(limit).offset(offset)
+    stmt = (
+        select(MenuItem)
+        .options(selectinload(MenuItem.recipe_links))
+        .order_by(MenuItem.name)
+        .limit(limit)
+        .offset(offset)
+    )
     if not include_inactive:
         stmt = stmt.where(MenuItem.is_active.is_(True))
     return list(db.scalars(stmt))
@@ -106,7 +146,7 @@ def remove_recipe_link(db: Session, menu_item_id: int, link_id: int) -> None:
     db.commit()
 
 
-def compute_profit_margin(db: Session, item: MenuItem) -> Decimal | None:
+def compute_profit_margin(db: Session, item: MenuItem, ctx: MenuContext | None = None) -> Decimal | None:
     """FR2.1 — profit margin = price minus recipe ingredient cost, now
     that Module 9's SupplierPricing exists (Sprint 4) to cost each linked
     ingredient against. Still None for an item with no recipe defined yet
@@ -114,8 +154,14 @@ def compute_profit_margin(db: Session, item: MenuItem) -> Decimal | None:
     if not item.recipe_links:
         return None
 
+    if ctx is not None:
+        prices = ctx.unit_price
+    else:
+        def prices(ingredient_id: int) -> Decimal:
+            return get_unit_price(db, ingredient_id)
+
     ingredient_cost = sum(
-        (link.quantity_per_serving * get_unit_price(db, link.ingredient_id) for link in item.recipe_links),
+        (link.quantity_per_serving * prices(link.ingredient_id) for link in item.recipe_links),
         Decimal("0.00"),
     )
     # Quantized to 2dp to match MenuItem.price's DECIMAL(10,2) — the raw
@@ -124,7 +170,17 @@ def compute_profit_margin(db: Session, item: MenuItem) -> Decimal | None:
     return (item.price - ingredient_cost).quantize(Decimal("0.01"))
 
 
-def compute_is_available(db: Session, item: MenuItem) -> bool:
+def _stock_by_ingredient(db: Session, item: MenuItem, ctx: MenuContext | None) -> dict[int, Decimal]:
+    if ctx is not None:
+        return {i: ctx.ingredients[i].current_stock for i in (l.ingredient_id for l in item.recipe_links) if i in ctx.ingredients}
+    ingredient_ids = [link.ingredient_id for link in item.recipe_links]
+    return {
+        i.ingredient_id: i.current_stock
+        for i in db.scalars(select(Ingredient).where(Ingredient.ingredient_id.in_(ingredient_ids)))
+    }
+
+
+def compute_is_available(db: Session, item: MenuItem, ctx: MenuContext | None = None) -> bool:
     """FR2.4 — a menu item is flagged unavailable the moment any linked
     ingredient's on-hand stock can't cover one more serving. Recipe links
     with no matching Ingredient row yet (shouldn't happen once FK
@@ -132,13 +188,32 @@ def compute_is_available(db: Session, item: MenuItem) -> bool:
     if not item.recipe_links:
         return True  # no recipe defined yet — nothing to be short on
 
-    ingredient_ids = [link.ingredient_id for link in item.recipe_links]
-    stock_by_id = {
-        i.ingredient_id: i.current_stock
-        for i in db.scalars(select(Ingredient).where(Ingredient.ingredient_id.in_(ingredient_ids)))
-    }
+    stock_by_id = _stock_by_ingredient(db, item, ctx)
     for link in item.recipe_links:
         current_stock = stock_by_id.get(link.ingredient_id)
         if current_stock is None or current_stock < link.quantity_per_serving:
             return False
     return True
+
+
+def has_low_stock_ingredient(db: Session, item: MenuItem, ctx: MenuContext | None = None) -> bool:
+    """FR2.4 — "automatically flagging items whose ingredients fall below
+    threshold". Separate from compute_is_available: an item can still be
+    served (stock covers a serving) while one of its ingredients is under
+    its low-stock threshold, which is the early warning this surfaces.
+    Uses the ingredient's own threshold, else the system default (FR3.3)."""
+    if not item.recipe_links:
+        return False
+
+    if ctx is None:
+        ctx = build_menu_context(db)
+    for link in item.recipe_links:
+        ingredient = ctx.ingredients.get(link.ingredient_id)
+        if ingredient is None:
+            continue
+        threshold = ingredient.low_stock_threshold
+        if threshold is None:
+            threshold = ctx.default_low_stock_threshold
+        if ingredient.current_stock < threshold:
+            return True
+    return False
