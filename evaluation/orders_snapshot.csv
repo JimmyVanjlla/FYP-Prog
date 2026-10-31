@@ -1,0 +1,1345 @@
+menu_item_id,meal_period,ds,y,item_name
+1,Dinner,2026-09-02,14,Nasi Lemak
+1,Dinner,2026-09-03,19,Nasi Lemak
+1,Dinner,2026-09-04,7,Nasi Lemak
+1,Dinner,2026-09-05,25,Nasi Lemak
+1,Dinner,2026-09-06,23,Nasi Lemak
+1,Dinner,2026-09-07,19,Nasi Lemak
+1,Dinner,2026-09-08,19,Nasi Lemak
+1,Dinner,2026-09-09,17,Nasi Lemak
+1,Dinner,2026-09-10,15,Nasi Lemak
+1,Dinner,2026-09-11,17,Nasi Lemak
+1,Dinner,2026-09-12,22,Nasi Lemak
+1,Dinner,2026-09-13,22,Nasi Lemak
+1,Dinner,2026-09-14,16,Nasi Lemak
+1,Dinner,2026-09-15,16,Nasi Lemak
+1,Dinner,2026-09-16,23,Nasi Lemak
+1,Dinner,2026-09-17,16,Nasi Lemak
+1,Dinner,2026-09-18,21,Nasi Lemak
+1,Dinner,2026-09-19,24,Nasi Lemak
+1,Dinner,2026-09-20,25,Nasi Lemak
+1,Dinner,2026-09-21,15,Nasi Lemak
+1,Dinner,2026-09-22,22,Nasi Lemak
+1,Dinner,2026-09-23,19,Nasi Lemak
+1,Dinner,2026-09-24,16,Nasi Lemak
+1,Dinner,2026-09-25,24,Nasi Lemak
+1,Dinner,2026-09-26,24,Nasi Lemak
+1,Dinner,2026-09-27,24,Nasi Lemak
+1,Dinner,2026-09-28,19,Nasi Lemak
+1,Dinner,2026-09-29,14,Nasi Lemak
+1,Dinner,2026-09-30,16,Nasi Lemak
+1,Dinner,2026-10-01,20,Nasi Lemak
+1,Dinner,2026-10-02,22,Nasi Lemak
+1,Dinner,2026-10-03,26,Nasi Lemak
+1,Dinner,2026-10-04,19,Nasi Lemak
+1,Dinner,2026-10-05,19,Nasi Lemak
+1,Dinner,2026-10-06,19,Nasi Lemak
+1,Dinner,2026-10-07,23,Nasi Lemak
+1,Dinner,2026-10-08,21,Nasi Lemak
+1,Dinner,2026-10-09,14,Nasi Lemak
+1,Dinner,2026-10-10,35,Nasi Lemak
+1,Dinner,2026-10-11,24,Nasi Lemak
+1,Dinner,2026-10-12,23,Nasi Lemak
+1,Dinner,2026-10-13,19,Nasi Lemak
+1,Dinner,2026-10-14,26,Nasi Lemak
+1,Dinner,2026-10-15,19,Nasi Lemak
+1,Dinner,2026-10-16,16,Nasi Lemak
+1,Dinner,2026-10-17,27,Nasi Lemak
+1,Dinner,2026-10-18,17,Nasi Lemak
+1,Dinner,2026-10-19,21,Nasi Lemak
+1,Dinner,2026-10-20,22,Nasi Lemak
+1,Dinner,2026-10-21,23,Nasi Lemak
+1,Dinner,2026-10-22,27,Nasi Lemak
+1,Dinner,2026-10-23,17,Nasi Lemak
+1,Dinner,2026-10-24,23,Nasi Lemak
+1,Dinner,2026-10-25,23,Nasi Lemak
+1,Dinner,2026-10-26,17,Nasi Lemak
+1,Dinner,2026-10-27,16,Nasi Lemak
+1,Lunch,2026-09-02,21,Nasi Lemak
+1,Lunch,2026-09-03,17,Nasi Lemak
+1,Lunch,2026-09-04,27,Nasi Lemak
+1,Lunch,2026-09-05,21,Nasi Lemak
+1,Lunch,2026-09-06,34,Nasi Lemak
+1,Lunch,2026-09-07,25,Nasi Lemak
+1,Lunch,2026-09-08,17,Nasi Lemak
+1,Lunch,2026-09-09,19,Nasi Lemak
+1,Lunch,2026-09-10,20,Nasi Lemak
+1,Lunch,2026-09-11,16,Nasi Lemak
+1,Lunch,2026-09-12,27,Nasi Lemak
+1,Lunch,2026-09-13,37,Nasi Lemak
+1,Lunch,2026-09-14,18,Nasi Lemak
+1,Lunch,2026-09-15,22,Nasi Lemak
+1,Lunch,2026-09-16,26,Nasi Lemak
+1,Lunch,2026-09-17,23,Nasi Lemak
+1,Lunch,2026-09-18,20,Nasi Lemak
+1,Lunch,2026-09-19,37,Nasi Lemak
+1,Lunch,2026-09-20,31,Nasi Lemak
+1,Lunch,2026-09-21,19,Nasi Lemak
+1,Lunch,2026-09-22,23,Nasi Lemak
+1,Lunch,2026-09-23,24,Nasi Lemak
+1,Lunch,2026-09-24,18,Nasi Lemak
+1,Lunch,2026-09-25,15,Nasi Lemak
+1,Lunch,2026-09-26,40,Nasi Lemak
+1,Lunch,2026-09-27,34,Nasi Lemak
+1,Lunch,2026-09-28,24,Nasi Lemak
+1,Lunch,2026-09-29,25,Nasi Lemak
+1,Lunch,2026-09-30,24,Nasi Lemak
+1,Lunch,2026-10-01,20,Nasi Lemak
+1,Lunch,2026-10-02,22,Nasi Lemak
+1,Lunch,2026-10-03,30,Nasi Lemak
+1,Lunch,2026-10-04,30,Nasi Lemak
+1,Lunch,2026-10-05,19,Nasi Lemak
+1,Lunch,2026-10-06,27,Nasi Lemak
+1,Lunch,2026-10-07,19,Nasi Lemak
+1,Lunch,2026-10-08,26,Nasi Lemak
+1,Lunch,2026-10-09,24,Nasi Lemak
+1,Lunch,2026-10-10,38,Nasi Lemak
+1,Lunch,2026-10-11,31,Nasi Lemak
+1,Lunch,2026-10-12,23,Nasi Lemak
+1,Lunch,2026-10-13,23,Nasi Lemak
+1,Lunch,2026-10-14,25,Nasi Lemak
+1,Lunch,2026-10-15,26,Nasi Lemak
+1,Lunch,2026-10-16,23,Nasi Lemak
+1,Lunch,2026-10-17,25,Nasi Lemak
+1,Lunch,2026-10-18,35,Nasi Lemak
+1,Lunch,2026-10-19,26,Nasi Lemak
+1,Lunch,2026-10-20,20,Nasi Lemak
+1,Lunch,2026-10-21,22,Nasi Lemak
+1,Lunch,2026-10-22,22,Nasi Lemak
+1,Lunch,2026-10-23,21,Nasi Lemak
+1,Lunch,2026-10-24,26,Nasi Lemak
+1,Lunch,2026-10-25,31,Nasi Lemak
+1,Lunch,2026-10-26,25,Nasi Lemak
+1,Lunch,2026-10-27,19,Nasi Lemak
+2,Dinner,2026-09-02,10,Nasi Goreng Kampung
+2,Dinner,2026-09-03,9,Nasi Goreng Kampung
+2,Dinner,2026-09-04,9,Nasi Goreng Kampung
+2,Dinner,2026-09-05,16,Nasi Goreng Kampung
+2,Dinner,2026-09-06,17,Nasi Goreng Kampung
+2,Dinner,2026-09-07,11,Nasi Goreng Kampung
+2,Dinner,2026-09-08,9,Nasi Goreng Kampung
+2,Dinner,2026-09-09,7,Nasi Goreng Kampung
+2,Dinner,2026-09-10,9,Nasi Goreng Kampung
+2,Dinner,2026-09-11,11,Nasi Goreng Kampung
+2,Dinner,2026-09-12,14,Nasi Goreng Kampung
+2,Dinner,2026-09-13,14,Nasi Goreng Kampung
+2,Dinner,2026-09-14,12,Nasi Goreng Kampung
+2,Dinner,2026-09-15,7,Nasi Goreng Kampung
+2,Dinner,2026-09-16,9,Nasi Goreng Kampung
+2,Dinner,2026-09-17,13,Nasi Goreng Kampung
+2,Dinner,2026-09-18,9,Nasi Goreng Kampung
+2,Dinner,2026-09-19,12,Nasi Goreng Kampung
+2,Dinner,2026-09-20,15,Nasi Goreng Kampung
+2,Dinner,2026-09-21,11,Nasi Goreng Kampung
+2,Dinner,2026-09-22,9,Nasi Goreng Kampung
+2,Dinner,2026-09-23,9,Nasi Goreng Kampung
+2,Dinner,2026-09-24,9,Nasi Goreng Kampung
+2,Dinner,2026-09-25,12,Nasi Goreng Kampung
+2,Dinner,2026-09-26,16,Nasi Goreng Kampung
+2,Dinner,2026-09-27,11,Nasi Goreng Kampung
+2,Dinner,2026-09-28,13,Nasi Goreng Kampung
+2,Dinner,2026-09-29,9,Nasi Goreng Kampung
+2,Dinner,2026-09-30,11,Nasi Goreng Kampung
+2,Dinner,2026-10-01,10,Nasi Goreng Kampung
+2,Dinner,2026-10-02,11,Nasi Goreng Kampung
+2,Dinner,2026-10-03,16,Nasi Goreng Kampung
+2,Dinner,2026-10-04,13,Nasi Goreng Kampung
+2,Dinner,2026-10-05,14,Nasi Goreng Kampung
+2,Dinner,2026-10-06,10,Nasi Goreng Kampung
+2,Dinner,2026-10-07,7,Nasi Goreng Kampung
+2,Dinner,2026-10-08,12,Nasi Goreng Kampung
+2,Dinner,2026-10-09,11,Nasi Goreng Kampung
+2,Dinner,2026-10-10,16,Nasi Goreng Kampung
+2,Dinner,2026-10-11,10,Nasi Goreng Kampung
+2,Dinner,2026-10-12,10,Nasi Goreng Kampung
+2,Dinner,2026-10-13,11,Nasi Goreng Kampung
+2,Dinner,2026-10-14,10,Nasi Goreng Kampung
+2,Dinner,2026-10-15,10,Nasi Goreng Kampung
+2,Dinner,2026-10-16,10,Nasi Goreng Kampung
+2,Dinner,2026-10-17,13,Nasi Goreng Kampung
+2,Dinner,2026-10-18,15,Nasi Goreng Kampung
+2,Dinner,2026-10-19,10,Nasi Goreng Kampung
+2,Dinner,2026-10-20,14,Nasi Goreng Kampung
+2,Dinner,2026-10-21,13,Nasi Goreng Kampung
+2,Dinner,2026-10-22,9,Nasi Goreng Kampung
+2,Dinner,2026-10-23,13,Nasi Goreng Kampung
+2,Dinner,2026-10-24,14,Nasi Goreng Kampung
+2,Dinner,2026-10-25,16,Nasi Goreng Kampung
+2,Dinner,2026-10-26,12,Nasi Goreng Kampung
+2,Dinner,2026-10-27,12,Nasi Goreng Kampung
+2,Lunch,2026-09-02,13,Nasi Goreng Kampung
+2,Lunch,2026-09-03,12,Nasi Goreng Kampung
+2,Lunch,2026-09-04,12,Nasi Goreng Kampung
+2,Lunch,2026-09-05,16,Nasi Goreng Kampung
+2,Lunch,2026-09-06,15,Nasi Goreng Kampung
+2,Lunch,2026-09-07,10,Nasi Goreng Kampung
+2,Lunch,2026-09-08,11,Nasi Goreng Kampung
+2,Lunch,2026-09-09,13,Nasi Goreng Kampung
+2,Lunch,2026-09-10,11,Nasi Goreng Kampung
+2,Lunch,2026-09-11,12,Nasi Goreng Kampung
+2,Lunch,2026-09-12,12,Nasi Goreng Kampung
+2,Lunch,2026-09-13,9,Nasi Goreng Kampung
+2,Lunch,2026-09-14,10,Nasi Goreng Kampung
+2,Lunch,2026-09-15,13,Nasi Goreng Kampung
+2,Lunch,2026-09-16,16,Nasi Goreng Kampung
+2,Lunch,2026-09-17,15,Nasi Goreng Kampung
+2,Lunch,2026-09-18,16,Nasi Goreng Kampung
+2,Lunch,2026-09-19,21,Nasi Goreng Kampung
+2,Lunch,2026-09-20,22,Nasi Goreng Kampung
+2,Lunch,2026-09-21,11,Nasi Goreng Kampung
+2,Lunch,2026-09-22,13,Nasi Goreng Kampung
+2,Lunch,2026-09-23,12,Nasi Goreng Kampung
+2,Lunch,2026-09-24,14,Nasi Goreng Kampung
+2,Lunch,2026-09-25,12,Nasi Goreng Kampung
+2,Lunch,2026-09-26,16,Nasi Goreng Kampung
+2,Lunch,2026-09-27,15,Nasi Goreng Kampung
+2,Lunch,2026-09-28,11,Nasi Goreng Kampung
+2,Lunch,2026-09-29,11,Nasi Goreng Kampung
+2,Lunch,2026-09-30,12,Nasi Goreng Kampung
+2,Lunch,2026-10-01,12,Nasi Goreng Kampung
+2,Lunch,2026-10-02,11,Nasi Goreng Kampung
+2,Lunch,2026-10-03,18,Nasi Goreng Kampung
+2,Lunch,2026-10-04,12,Nasi Goreng Kampung
+2,Lunch,2026-10-05,11,Nasi Goreng Kampung
+2,Lunch,2026-10-06,17,Nasi Goreng Kampung
+2,Lunch,2026-10-07,10,Nasi Goreng Kampung
+2,Lunch,2026-10-08,14,Nasi Goreng Kampung
+2,Lunch,2026-10-09,8,Nasi Goreng Kampung
+2,Lunch,2026-10-10,16,Nasi Goreng Kampung
+2,Lunch,2026-10-11,17,Nasi Goreng Kampung
+2,Lunch,2026-10-12,13,Nasi Goreng Kampung
+2,Lunch,2026-10-13,14,Nasi Goreng Kampung
+2,Lunch,2026-10-14,17,Nasi Goreng Kampung
+2,Lunch,2026-10-15,12,Nasi Goreng Kampung
+2,Lunch,2026-10-16,12,Nasi Goreng Kampung
+2,Lunch,2026-10-17,17,Nasi Goreng Kampung
+2,Lunch,2026-10-18,15,Nasi Goreng Kampung
+2,Lunch,2026-10-19,12,Nasi Goreng Kampung
+2,Lunch,2026-10-20,11,Nasi Goreng Kampung
+2,Lunch,2026-10-21,15,Nasi Goreng Kampung
+2,Lunch,2026-10-22,12,Nasi Goreng Kampung
+2,Lunch,2026-10-23,14,Nasi Goreng Kampung
+2,Lunch,2026-10-24,18,Nasi Goreng Kampung
+2,Lunch,2026-10-25,16,Nasi Goreng Kampung
+2,Lunch,2026-10-26,14,Nasi Goreng Kampung
+2,Lunch,2026-10-27,12,Nasi Goreng Kampung
+3,Dinner,2026-09-02,14,Mee Goreng Mamak
+3,Dinner,2026-09-03,11,Mee Goreng Mamak
+3,Dinner,2026-09-04,14,Mee Goreng Mamak
+3,Dinner,2026-09-05,16,Mee Goreng Mamak
+3,Dinner,2026-09-06,15,Mee Goreng Mamak
+3,Dinner,2026-09-07,9,Mee Goreng Mamak
+3,Dinner,2026-09-08,10,Mee Goreng Mamak
+3,Dinner,2026-09-09,11,Mee Goreng Mamak
+3,Dinner,2026-09-10,12,Mee Goreng Mamak
+3,Dinner,2026-09-11,14,Mee Goreng Mamak
+3,Dinner,2026-09-12,17,Mee Goreng Mamak
+3,Dinner,2026-09-13,13,Mee Goreng Mamak
+3,Dinner,2026-09-14,11,Mee Goreng Mamak
+3,Dinner,2026-09-15,13,Mee Goreng Mamak
+3,Dinner,2026-09-16,10,Mee Goreng Mamak
+3,Dinner,2026-09-17,12,Mee Goreng Mamak
+3,Dinner,2026-09-18,12,Mee Goreng Mamak
+3,Dinner,2026-09-19,15,Mee Goreng Mamak
+3,Dinner,2026-09-20,19,Mee Goreng Mamak
+3,Dinner,2026-09-21,11,Mee Goreng Mamak
+3,Dinner,2026-09-22,8,Mee Goreng Mamak
+3,Dinner,2026-09-23,12,Mee Goreng Mamak
+3,Dinner,2026-09-24,12,Mee Goreng Mamak
+3,Dinner,2026-09-25,12,Mee Goreng Mamak
+3,Dinner,2026-09-26,14,Mee Goreng Mamak
+3,Dinner,2026-09-27,16,Mee Goreng Mamak
+3,Dinner,2026-09-28,14,Mee Goreng Mamak
+3,Dinner,2026-09-29,10,Mee Goreng Mamak
+3,Dinner,2026-09-30,11,Mee Goreng Mamak
+3,Dinner,2026-10-01,7,Mee Goreng Mamak
+3,Dinner,2026-10-02,13,Mee Goreng Mamak
+3,Dinner,2026-10-03,14,Mee Goreng Mamak
+3,Dinner,2026-10-04,15,Mee Goreng Mamak
+3,Dinner,2026-10-05,14,Mee Goreng Mamak
+3,Dinner,2026-10-06,14,Mee Goreng Mamak
+3,Dinner,2026-10-07,15,Mee Goreng Mamak
+3,Dinner,2026-10-08,11,Mee Goreng Mamak
+3,Dinner,2026-10-09,14,Mee Goreng Mamak
+3,Dinner,2026-10-10,16,Mee Goreng Mamak
+3,Dinner,2026-10-11,15,Mee Goreng Mamak
+3,Dinner,2026-10-12,13,Mee Goreng Mamak
+3,Dinner,2026-10-13,13,Mee Goreng Mamak
+3,Dinner,2026-10-14,14,Mee Goreng Mamak
+3,Dinner,2026-10-15,14,Mee Goreng Mamak
+3,Dinner,2026-10-16,11,Mee Goreng Mamak
+3,Dinner,2026-10-17,15,Mee Goreng Mamak
+3,Dinner,2026-10-18,16,Mee Goreng Mamak
+3,Dinner,2026-10-19,15,Mee Goreng Mamak
+3,Dinner,2026-10-20,12,Mee Goreng Mamak
+3,Dinner,2026-10-21,13,Mee Goreng Mamak
+3,Dinner,2026-10-22,12,Mee Goreng Mamak
+3,Dinner,2026-10-23,15,Mee Goreng Mamak
+3,Dinner,2026-10-24,16,Mee Goreng Mamak
+3,Dinner,2026-10-25,17,Mee Goreng Mamak
+3,Dinner,2026-10-26,15,Mee Goreng Mamak
+3,Dinner,2026-10-27,14,Mee Goreng Mamak
+3,Lunch,2026-09-02,13,Mee Goreng Mamak
+3,Lunch,2026-09-03,18,Mee Goreng Mamak
+3,Lunch,2026-09-04,17,Mee Goreng Mamak
+3,Lunch,2026-09-05,22,Mee Goreng Mamak
+3,Lunch,2026-09-06,21,Mee Goreng Mamak
+3,Lunch,2026-09-07,16,Mee Goreng Mamak
+3,Lunch,2026-09-08,12,Mee Goreng Mamak
+3,Lunch,2026-09-09,12,Mee Goreng Mamak
+3,Lunch,2026-09-10,10,Mee Goreng Mamak
+3,Lunch,2026-09-11,18,Mee Goreng Mamak
+3,Lunch,2026-09-12,20,Mee Goreng Mamak
+3,Lunch,2026-09-13,21,Mee Goreng Mamak
+3,Lunch,2026-09-14,12,Mee Goreng Mamak
+3,Lunch,2026-09-15,16,Mee Goreng Mamak
+3,Lunch,2026-09-16,11,Mee Goreng Mamak
+3,Lunch,2026-09-17,11,Mee Goreng Mamak
+3,Lunch,2026-09-18,16,Mee Goreng Mamak
+3,Lunch,2026-09-19,18,Mee Goreng Mamak
+3,Lunch,2026-09-20,21,Mee Goreng Mamak
+3,Lunch,2026-09-21,13,Mee Goreng Mamak
+3,Lunch,2026-09-22,18,Mee Goreng Mamak
+3,Lunch,2026-09-23,17,Mee Goreng Mamak
+3,Lunch,2026-09-24,13,Mee Goreng Mamak
+3,Lunch,2026-09-25,15,Mee Goreng Mamak
+3,Lunch,2026-09-26,15,Mee Goreng Mamak
+3,Lunch,2026-09-27,18,Mee Goreng Mamak
+3,Lunch,2026-09-28,15,Mee Goreng Mamak
+3,Lunch,2026-09-29,17,Mee Goreng Mamak
+3,Lunch,2026-09-30,14,Mee Goreng Mamak
+3,Lunch,2026-10-01,14,Mee Goreng Mamak
+3,Lunch,2026-10-02,12,Mee Goreng Mamak
+3,Lunch,2026-10-03,19,Mee Goreng Mamak
+3,Lunch,2026-10-04,16,Mee Goreng Mamak
+3,Lunch,2026-10-05,15,Mee Goreng Mamak
+3,Lunch,2026-10-06,13,Mee Goreng Mamak
+3,Lunch,2026-10-07,15,Mee Goreng Mamak
+3,Lunch,2026-10-08,15,Mee Goreng Mamak
+3,Lunch,2026-10-09,15,Mee Goreng Mamak
+3,Lunch,2026-10-10,21,Mee Goreng Mamak
+3,Lunch,2026-10-11,21,Mee Goreng Mamak
+3,Lunch,2026-10-12,12,Mee Goreng Mamak
+3,Lunch,2026-10-13,16,Mee Goreng Mamak
+3,Lunch,2026-10-14,12,Mee Goreng Mamak
+3,Lunch,2026-10-15,15,Mee Goreng Mamak
+3,Lunch,2026-10-16,16,Mee Goreng Mamak
+3,Lunch,2026-10-17,20,Mee Goreng Mamak
+3,Lunch,2026-10-18,19,Mee Goreng Mamak
+3,Lunch,2026-10-19,15,Mee Goreng Mamak
+3,Lunch,2026-10-20,19,Mee Goreng Mamak
+3,Lunch,2026-10-21,16,Mee Goreng Mamak
+3,Lunch,2026-10-22,12,Mee Goreng Mamak
+3,Lunch,2026-10-23,18,Mee Goreng Mamak
+3,Lunch,2026-10-24,18,Mee Goreng Mamak
+3,Lunch,2026-10-25,21,Mee Goreng Mamak
+3,Lunch,2026-10-26,19,Mee Goreng Mamak
+3,Lunch,2026-10-27,16,Mee Goreng Mamak
+4,Dinner,2026-09-02,17,Char Kuey Teow
+4,Dinner,2026-09-03,15,Char Kuey Teow
+4,Dinner,2026-09-04,14,Char Kuey Teow
+4,Dinner,2026-09-05,19,Char Kuey Teow
+4,Dinner,2026-09-06,15,Char Kuey Teow
+4,Dinner,2026-09-07,13,Char Kuey Teow
+4,Dinner,2026-09-08,14,Char Kuey Teow
+4,Dinner,2026-09-09,10,Char Kuey Teow
+4,Dinner,2026-09-10,12,Char Kuey Teow
+4,Dinner,2026-09-11,12,Char Kuey Teow
+4,Dinner,2026-09-12,21,Char Kuey Teow
+4,Dinner,2026-09-13,15,Char Kuey Teow
+4,Dinner,2026-09-14,14,Char Kuey Teow
+4,Dinner,2026-09-15,14,Char Kuey Teow
+4,Dinner,2026-09-16,18,Char Kuey Teow
+4,Dinner,2026-09-17,15,Char Kuey Teow
+4,Dinner,2026-09-18,15,Char Kuey Teow
+4,Dinner,2026-09-19,19,Char Kuey Teow
+4,Dinner,2026-09-20,21,Char Kuey Teow
+4,Dinner,2026-09-21,14,Char Kuey Teow
+4,Dinner,2026-09-22,17,Char Kuey Teow
+4,Dinner,2026-09-23,15,Char Kuey Teow
+4,Dinner,2026-09-24,15,Char Kuey Teow
+4,Dinner,2026-09-25,12,Char Kuey Teow
+4,Dinner,2026-09-26,21,Char Kuey Teow
+4,Dinner,2026-09-27,22,Char Kuey Teow
+4,Dinner,2026-09-28,17,Char Kuey Teow
+4,Dinner,2026-09-29,16,Char Kuey Teow
+4,Dinner,2026-09-30,14,Char Kuey Teow
+4,Dinner,2026-10-01,15,Char Kuey Teow
+4,Dinner,2026-10-02,13,Char Kuey Teow
+4,Dinner,2026-10-03,20,Char Kuey Teow
+4,Dinner,2026-10-04,20,Char Kuey Teow
+4,Dinner,2026-10-05,16,Char Kuey Teow
+4,Dinner,2026-10-06,15,Char Kuey Teow
+4,Dinner,2026-10-07,17,Char Kuey Teow
+4,Dinner,2026-10-08,17,Char Kuey Teow
+4,Dinner,2026-10-09,13,Char Kuey Teow
+4,Dinner,2026-10-10,17,Char Kuey Teow
+4,Dinner,2026-10-11,19,Char Kuey Teow
+4,Dinner,2026-10-12,16,Char Kuey Teow
+4,Dinner,2026-10-13,13,Char Kuey Teow
+4,Dinner,2026-10-14,15,Char Kuey Teow
+4,Dinner,2026-10-15,13,Char Kuey Teow
+4,Dinner,2026-10-16,16,Char Kuey Teow
+4,Dinner,2026-10-17,20,Char Kuey Teow
+4,Dinner,2026-10-18,23,Char Kuey Teow
+4,Dinner,2026-10-19,16,Char Kuey Teow
+4,Dinner,2026-10-20,16,Char Kuey Teow
+4,Dinner,2026-10-21,16,Char Kuey Teow
+4,Dinner,2026-10-22,12,Char Kuey Teow
+4,Dinner,2026-10-23,13,Char Kuey Teow
+4,Dinner,2026-10-24,25,Char Kuey Teow
+4,Dinner,2026-10-25,19,Char Kuey Teow
+4,Dinner,2026-10-26,15,Char Kuey Teow
+4,Dinner,2026-10-27,13,Char Kuey Teow
+4,Lunch,2026-09-02,18,Char Kuey Teow
+4,Lunch,2026-09-03,17,Char Kuey Teow
+4,Lunch,2026-09-04,18,Char Kuey Teow
+4,Lunch,2026-09-05,25,Char Kuey Teow
+4,Lunch,2026-09-06,30,Char Kuey Teow
+4,Lunch,2026-09-07,15,Char Kuey Teow
+4,Lunch,2026-09-08,17,Char Kuey Teow
+4,Lunch,2026-09-09,15,Char Kuey Teow
+4,Lunch,2026-09-10,15,Char Kuey Teow
+4,Lunch,2026-09-11,15,Char Kuey Teow
+4,Lunch,2026-09-12,20,Char Kuey Teow
+4,Lunch,2026-09-13,18,Char Kuey Teow
+4,Lunch,2026-09-14,17,Char Kuey Teow
+4,Lunch,2026-09-15,14,Char Kuey Teow
+4,Lunch,2026-09-16,16,Char Kuey Teow
+4,Lunch,2026-09-17,14,Char Kuey Teow
+4,Lunch,2026-09-18,20,Char Kuey Teow
+4,Lunch,2026-09-19,25,Char Kuey Teow
+4,Lunch,2026-09-20,19,Char Kuey Teow
+4,Lunch,2026-09-21,20,Char Kuey Teow
+4,Lunch,2026-09-22,16,Char Kuey Teow
+4,Lunch,2026-09-23,17,Char Kuey Teow
+4,Lunch,2026-09-24,20,Char Kuey Teow
+4,Lunch,2026-09-25,19,Char Kuey Teow
+4,Lunch,2026-09-26,24,Char Kuey Teow
+4,Lunch,2026-09-27,22,Char Kuey Teow
+4,Lunch,2026-09-28,18,Char Kuey Teow
+4,Lunch,2026-09-29,15,Char Kuey Teow
+4,Lunch,2026-09-30,16,Char Kuey Teow
+4,Lunch,2026-10-01,14,Char Kuey Teow
+4,Lunch,2026-10-02,18,Char Kuey Teow
+4,Lunch,2026-10-03,30,Char Kuey Teow
+4,Lunch,2026-10-04,37,Char Kuey Teow
+4,Lunch,2026-10-05,15,Char Kuey Teow
+4,Lunch,2026-10-06,15,Char Kuey Teow
+4,Lunch,2026-10-07,20,Char Kuey Teow
+4,Lunch,2026-10-08,19,Char Kuey Teow
+4,Lunch,2026-10-09,19,Char Kuey Teow
+4,Lunch,2026-10-10,23,Char Kuey Teow
+4,Lunch,2026-10-11,23,Char Kuey Teow
+4,Lunch,2026-10-12,15,Char Kuey Teow
+4,Lunch,2026-10-13,15,Char Kuey Teow
+4,Lunch,2026-10-14,25,Char Kuey Teow
+4,Lunch,2026-10-15,20,Char Kuey Teow
+4,Lunch,2026-10-16,17,Char Kuey Teow
+4,Lunch,2026-10-17,23,Char Kuey Teow
+4,Lunch,2026-10-18,20,Char Kuey Teow
+4,Lunch,2026-10-19,19,Char Kuey Teow
+4,Lunch,2026-10-20,23,Char Kuey Teow
+4,Lunch,2026-10-21,18,Char Kuey Teow
+4,Lunch,2026-10-22,18,Char Kuey Teow
+4,Lunch,2026-10-23,21,Char Kuey Teow
+4,Lunch,2026-10-24,31,Char Kuey Teow
+4,Lunch,2026-10-25,23,Char Kuey Teow
+4,Lunch,2026-10-26,17,Char Kuey Teow
+4,Lunch,2026-10-27,19,Char Kuey Teow
+5,Dinner,2026-09-02,19,Roti Canai
+5,Dinner,2026-09-03,18,Roti Canai
+5,Dinner,2026-09-04,19,Roti Canai
+5,Dinner,2026-09-05,28,Roti Canai
+5,Dinner,2026-09-06,25,Roti Canai
+5,Dinner,2026-09-07,21,Roti Canai
+5,Dinner,2026-09-08,20,Roti Canai
+5,Dinner,2026-09-09,16,Roti Canai
+5,Dinner,2026-09-10,22,Roti Canai
+5,Dinner,2026-09-11,23,Roti Canai
+5,Dinner,2026-09-12,30,Roti Canai
+5,Dinner,2026-09-13,23,Roti Canai
+5,Dinner,2026-09-14,17,Roti Canai
+5,Dinner,2026-09-15,16,Roti Canai
+5,Dinner,2026-09-16,25,Roti Canai
+5,Dinner,2026-09-17,18,Roti Canai
+5,Dinner,2026-09-18,18,Roti Canai
+5,Dinner,2026-09-19,27,Roti Canai
+5,Dinner,2026-09-20,24,Roti Canai
+5,Dinner,2026-09-21,21,Roti Canai
+5,Dinner,2026-09-22,19,Roti Canai
+5,Dinner,2026-09-23,23,Roti Canai
+5,Dinner,2026-09-24,20,Roti Canai
+5,Dinner,2026-09-25,22,Roti Canai
+5,Dinner,2026-09-26,30,Roti Canai
+5,Dinner,2026-09-27,25,Roti Canai
+5,Dinner,2026-09-28,19,Roti Canai
+5,Dinner,2026-09-29,17,Roti Canai
+5,Dinner,2026-09-30,24,Roti Canai
+5,Dinner,2026-10-01,19,Roti Canai
+5,Dinner,2026-10-02,24,Roti Canai
+5,Dinner,2026-10-03,27,Roti Canai
+5,Dinner,2026-10-04,34,Roti Canai
+5,Dinner,2026-10-05,23,Roti Canai
+5,Dinner,2026-10-06,24,Roti Canai
+5,Dinner,2026-10-07,23,Roti Canai
+5,Dinner,2026-10-08,23,Roti Canai
+5,Dinner,2026-10-09,25,Roti Canai
+5,Dinner,2026-10-10,32,Roti Canai
+5,Dinner,2026-10-11,36,Roti Canai
+5,Dinner,2026-10-12,29,Roti Canai
+5,Dinner,2026-10-13,21,Roti Canai
+5,Dinner,2026-10-14,27,Roti Canai
+5,Dinner,2026-10-15,24,Roti Canai
+5,Dinner,2026-10-16,21,Roti Canai
+5,Dinner,2026-10-17,34,Roti Canai
+5,Dinner,2026-10-18,25,Roti Canai
+5,Dinner,2026-10-19,25,Roti Canai
+5,Dinner,2026-10-20,15,Roti Canai
+5,Dinner,2026-10-21,25,Roti Canai
+5,Dinner,2026-10-22,19,Roti Canai
+5,Dinner,2026-10-23,21,Roti Canai
+5,Dinner,2026-10-24,24,Roti Canai
+5,Dinner,2026-10-25,31,Roti Canai
+5,Dinner,2026-10-26,18,Roti Canai
+5,Dinner,2026-10-27,22,Roti Canai
+5,Lunch,2026-09-02,25,Roti Canai
+5,Lunch,2026-09-03,25,Roti Canai
+5,Lunch,2026-09-04,29,Roti Canai
+5,Lunch,2026-09-05,33,Roti Canai
+5,Lunch,2026-09-06,30,Roti Canai
+5,Lunch,2026-09-07,28,Roti Canai
+5,Lunch,2026-09-08,27,Roti Canai
+5,Lunch,2026-09-09,28,Roti Canai
+5,Lunch,2026-09-10,15,Roti Canai
+5,Lunch,2026-09-11,19,Roti Canai
+5,Lunch,2026-09-12,25,Roti Canai
+5,Lunch,2026-09-13,30,Roti Canai
+5,Lunch,2026-09-14,26,Roti Canai
+5,Lunch,2026-09-15,19,Roti Canai
+5,Lunch,2026-09-16,26,Roti Canai
+5,Lunch,2026-09-17,24,Roti Canai
+5,Lunch,2026-09-18,26,Roti Canai
+5,Lunch,2026-09-19,29,Roti Canai
+5,Lunch,2026-09-20,33,Roti Canai
+5,Lunch,2026-09-21,23,Roti Canai
+5,Lunch,2026-09-22,29,Roti Canai
+5,Lunch,2026-09-23,29,Roti Canai
+5,Lunch,2026-09-24,25,Roti Canai
+5,Lunch,2026-09-25,21,Roti Canai
+5,Lunch,2026-09-26,32,Roti Canai
+5,Lunch,2026-09-27,38,Roti Canai
+5,Lunch,2026-09-28,26,Roti Canai
+5,Lunch,2026-09-29,28,Roti Canai
+5,Lunch,2026-09-30,31,Roti Canai
+5,Lunch,2026-10-01,28,Roti Canai
+5,Lunch,2026-10-02,33,Roti Canai
+5,Lunch,2026-10-03,42,Roti Canai
+5,Lunch,2026-10-04,40,Roti Canai
+5,Lunch,2026-10-05,26,Roti Canai
+5,Lunch,2026-10-06,33,Roti Canai
+5,Lunch,2026-10-07,27,Roti Canai
+5,Lunch,2026-10-08,28,Roti Canai
+5,Lunch,2026-10-09,22,Roti Canai
+5,Lunch,2026-10-10,42,Roti Canai
+5,Lunch,2026-10-11,36,Roti Canai
+5,Lunch,2026-10-12,29,Roti Canai
+5,Lunch,2026-10-13,26,Roti Canai
+5,Lunch,2026-10-14,24,Roti Canai
+5,Lunch,2026-10-15,21,Roti Canai
+5,Lunch,2026-10-16,29,Roti Canai
+5,Lunch,2026-10-17,36,Roti Canai
+5,Lunch,2026-10-18,30,Roti Canai
+5,Lunch,2026-10-19,30,Roti Canai
+5,Lunch,2026-10-20,36,Roti Canai
+5,Lunch,2026-10-21,23,Roti Canai
+5,Lunch,2026-10-22,32,Roti Canai
+5,Lunch,2026-10-23,25,Roti Canai
+5,Lunch,2026-10-24,34,Roti Canai
+5,Lunch,2026-10-25,31,Roti Canai
+5,Lunch,2026-10-26,25,Roti Canai
+5,Lunch,2026-10-27,34,Roti Canai
+6,Dinner,2026-09-02,9,Roti Telur
+6,Dinner,2026-09-03,11,Roti Telur
+6,Dinner,2026-09-04,11,Roti Telur
+6,Dinner,2026-09-05,12,Roti Telur
+6,Dinner,2026-09-06,10,Roti Telur
+6,Dinner,2026-09-07,9,Roti Telur
+6,Dinner,2026-09-08,9,Roti Telur
+6,Dinner,2026-09-09,8,Roti Telur
+6,Dinner,2026-09-10,11,Roti Telur
+6,Dinner,2026-09-11,11,Roti Telur
+6,Dinner,2026-09-12,12,Roti Telur
+6,Dinner,2026-09-13,14,Roti Telur
+6,Dinner,2026-09-14,10,Roti Telur
+6,Dinner,2026-09-15,10,Roti Telur
+6,Dinner,2026-09-16,8,Roti Telur
+6,Dinner,2026-09-17,10,Roti Telur
+6,Dinner,2026-09-18,11,Roti Telur
+6,Dinner,2026-09-19,9,Roti Telur
+6,Dinner,2026-09-20,12,Roti Telur
+6,Dinner,2026-09-21,9,Roti Telur
+6,Dinner,2026-09-22,9,Roti Telur
+6,Dinner,2026-09-23,12,Roti Telur
+6,Dinner,2026-09-24,9,Roti Telur
+6,Dinner,2026-09-25,11,Roti Telur
+6,Dinner,2026-09-26,13,Roti Telur
+6,Dinner,2026-09-27,11,Roti Telur
+6,Dinner,2026-09-28,8,Roti Telur
+6,Dinner,2026-09-29,10,Roti Telur
+6,Dinner,2026-09-30,9,Roti Telur
+6,Dinner,2026-10-01,10,Roti Telur
+6,Dinner,2026-10-02,8,Roti Telur
+6,Dinner,2026-10-03,13,Roti Telur
+6,Dinner,2026-10-04,15,Roti Telur
+6,Dinner,2026-10-05,9,Roti Telur
+6,Dinner,2026-10-06,10,Roti Telur
+6,Dinner,2026-10-07,9,Roti Telur
+6,Dinner,2026-10-08,10,Roti Telur
+6,Dinner,2026-10-09,11,Roti Telur
+6,Dinner,2026-10-10,16,Roti Telur
+6,Dinner,2026-10-11,13,Roti Telur
+6,Dinner,2026-10-12,10,Roti Telur
+6,Dinner,2026-10-13,12,Roti Telur
+6,Dinner,2026-10-14,10,Roti Telur
+6,Dinner,2026-10-15,9,Roti Telur
+6,Dinner,2026-10-16,12,Roti Telur
+6,Dinner,2026-10-17,14,Roti Telur
+6,Dinner,2026-10-18,13,Roti Telur
+6,Dinner,2026-10-19,8,Roti Telur
+6,Dinner,2026-10-20,8,Roti Telur
+6,Dinner,2026-10-21,11,Roti Telur
+6,Dinner,2026-10-22,8,Roti Telur
+6,Dinner,2026-10-23,11,Roti Telur
+6,Dinner,2026-10-24,16,Roti Telur
+6,Dinner,2026-10-25,12,Roti Telur
+6,Dinner,2026-10-26,9,Roti Telur
+6,Dinner,2026-10-27,9,Roti Telur
+6,Lunch,2026-09-02,9,Roti Telur
+6,Lunch,2026-09-03,8,Roti Telur
+6,Lunch,2026-09-04,10,Roti Telur
+6,Lunch,2026-09-05,15,Roti Telur
+6,Lunch,2026-09-06,18,Roti Telur
+6,Lunch,2026-09-07,15,Roti Telur
+6,Lunch,2026-09-08,11,Roti Telur
+6,Lunch,2026-09-09,10,Roti Telur
+6,Lunch,2026-09-10,13,Roti Telur
+6,Lunch,2026-09-11,11,Roti Telur
+6,Lunch,2026-09-12,11,Roti Telur
+6,Lunch,2026-09-13,17,Roti Telur
+6,Lunch,2026-09-14,11,Roti Telur
+6,Lunch,2026-09-15,14,Roti Telur
+6,Lunch,2026-09-16,12,Roti Telur
+6,Lunch,2026-09-17,14,Roti Telur
+6,Lunch,2026-09-18,11,Roti Telur
+6,Lunch,2026-09-19,18,Roti Telur
+6,Lunch,2026-09-20,17,Roti Telur
+6,Lunch,2026-09-21,12,Roti Telur
+6,Lunch,2026-09-22,11,Roti Telur
+6,Lunch,2026-09-23,8,Roti Telur
+6,Lunch,2026-09-24,13,Roti Telur
+6,Lunch,2026-09-25,10,Roti Telur
+6,Lunch,2026-09-26,14,Roti Telur
+6,Lunch,2026-09-27,19,Roti Telur
+6,Lunch,2026-09-28,10,Roti Telur
+6,Lunch,2026-09-29,12,Roti Telur
+6,Lunch,2026-09-30,10,Roti Telur
+6,Lunch,2026-10-01,9,Roti Telur
+6,Lunch,2026-10-02,11,Roti Telur
+6,Lunch,2026-10-03,13,Roti Telur
+6,Lunch,2026-10-04,15,Roti Telur
+6,Lunch,2026-10-05,16,Roti Telur
+6,Lunch,2026-10-06,15,Roti Telur
+6,Lunch,2026-10-07,14,Roti Telur
+6,Lunch,2026-10-08,12,Roti Telur
+6,Lunch,2026-10-09,11,Roti Telur
+6,Lunch,2026-10-10,14,Roti Telur
+6,Lunch,2026-10-11,13,Roti Telur
+6,Lunch,2026-10-12,13,Roti Telur
+6,Lunch,2026-10-13,12,Roti Telur
+6,Lunch,2026-10-14,13,Roti Telur
+6,Lunch,2026-10-15,13,Roti Telur
+6,Lunch,2026-10-16,13,Roti Telur
+6,Lunch,2026-10-17,17,Roti Telur
+6,Lunch,2026-10-18,20,Roti Telur
+6,Lunch,2026-10-19,16,Roti Telur
+6,Lunch,2026-10-20,12,Roti Telur
+6,Lunch,2026-10-21,11,Roti Telur
+6,Lunch,2026-10-22,8,Roti Telur
+6,Lunch,2026-10-23,14,Roti Telur
+6,Lunch,2026-10-24,15,Roti Telur
+6,Lunch,2026-10-25,18,Roti Telur
+6,Lunch,2026-10-26,11,Roti Telur
+6,Lunch,2026-10-27,15,Roti Telur
+7,Dinner,2026-09-02,17,Chicken Rice
+7,Dinner,2026-09-03,15,Chicken Rice
+7,Dinner,2026-09-04,14,Chicken Rice
+7,Dinner,2026-09-05,16,Chicken Rice
+7,Dinner,2026-09-06,24,Chicken Rice
+7,Dinner,2026-09-07,13,Chicken Rice
+7,Dinner,2026-09-08,14,Chicken Rice
+7,Dinner,2026-09-09,14,Chicken Rice
+7,Dinner,2026-09-10,19,Chicken Rice
+7,Dinner,2026-09-11,17,Chicken Rice
+7,Dinner,2026-09-12,14,Chicken Rice
+7,Dinner,2026-09-13,23,Chicken Rice
+7,Dinner,2026-09-14,17,Chicken Rice
+7,Dinner,2026-09-15,16,Chicken Rice
+7,Dinner,2026-09-16,15,Chicken Rice
+7,Dinner,2026-09-17,17,Chicken Rice
+7,Dinner,2026-09-18,19,Chicken Rice
+7,Dinner,2026-09-19,21,Chicken Rice
+7,Dinner,2026-09-20,21,Chicken Rice
+7,Dinner,2026-09-21,17,Chicken Rice
+7,Dinner,2026-09-22,16,Chicken Rice
+7,Dinner,2026-09-23,17,Chicken Rice
+7,Dinner,2026-09-24,19,Chicken Rice
+7,Dinner,2026-09-25,19,Chicken Rice
+7,Dinner,2026-09-26,22,Chicken Rice
+7,Dinner,2026-09-27,20,Chicken Rice
+7,Dinner,2026-09-28,17,Chicken Rice
+7,Dinner,2026-09-29,14,Chicken Rice
+7,Dinner,2026-09-30,15,Chicken Rice
+7,Dinner,2026-10-01,21,Chicken Rice
+7,Dinner,2026-10-02,16,Chicken Rice
+7,Dinner,2026-10-03,15,Chicken Rice
+7,Dinner,2026-10-04,19,Chicken Rice
+7,Dinner,2026-10-05,20,Chicken Rice
+7,Dinner,2026-10-06,14,Chicken Rice
+7,Dinner,2026-10-07,18,Chicken Rice
+7,Dinner,2026-10-08,17,Chicken Rice
+7,Dinner,2026-10-09,20,Chicken Rice
+7,Dinner,2026-10-10,23,Chicken Rice
+7,Dinner,2026-10-11,32,Chicken Rice
+7,Dinner,2026-10-12,21,Chicken Rice
+7,Dinner,2026-10-13,19,Chicken Rice
+7,Dinner,2026-10-14,20,Chicken Rice
+7,Dinner,2026-10-15,18,Chicken Rice
+7,Dinner,2026-10-16,16,Chicken Rice
+7,Dinner,2026-10-17,23,Chicken Rice
+7,Dinner,2026-10-18,21,Chicken Rice
+7,Dinner,2026-10-19,24,Chicken Rice
+7,Dinner,2026-10-20,22,Chicken Rice
+7,Dinner,2026-10-21,10,Chicken Rice
+7,Dinner,2026-10-22,15,Chicken Rice
+7,Dinner,2026-10-23,14,Chicken Rice
+7,Dinner,2026-10-24,28,Chicken Rice
+7,Dinner,2026-10-25,19,Chicken Rice
+7,Dinner,2026-10-26,16,Chicken Rice
+7,Dinner,2026-10-27,15,Chicken Rice
+7,Lunch,2026-09-02,19,Chicken Rice
+7,Lunch,2026-09-03,19,Chicken Rice
+7,Lunch,2026-09-04,19,Chicken Rice
+7,Lunch,2026-09-05,19,Chicken Rice
+7,Lunch,2026-09-06,25,Chicken Rice
+7,Lunch,2026-09-07,23,Chicken Rice
+7,Lunch,2026-09-08,24,Chicken Rice
+7,Lunch,2026-09-09,17,Chicken Rice
+7,Lunch,2026-09-10,19,Chicken Rice
+7,Lunch,2026-09-11,17,Chicken Rice
+7,Lunch,2026-09-12,26,Chicken Rice
+7,Lunch,2026-09-13,30,Chicken Rice
+7,Lunch,2026-09-14,18,Chicken Rice
+7,Lunch,2026-09-15,20,Chicken Rice
+7,Lunch,2026-09-16,16,Chicken Rice
+7,Lunch,2026-09-17,25,Chicken Rice
+7,Lunch,2026-09-18,28,Chicken Rice
+7,Lunch,2026-09-19,30,Chicken Rice
+7,Lunch,2026-09-20,32,Chicken Rice
+7,Lunch,2026-09-21,22,Chicken Rice
+7,Lunch,2026-09-22,21,Chicken Rice
+7,Lunch,2026-09-23,16,Chicken Rice
+7,Lunch,2026-09-24,13,Chicken Rice
+7,Lunch,2026-09-25,19,Chicken Rice
+7,Lunch,2026-09-26,30,Chicken Rice
+7,Lunch,2026-09-27,20,Chicken Rice
+7,Lunch,2026-09-28,16,Chicken Rice
+7,Lunch,2026-09-29,21,Chicken Rice
+7,Lunch,2026-09-30,19,Chicken Rice
+7,Lunch,2026-10-01,19,Chicken Rice
+7,Lunch,2026-10-02,25,Chicken Rice
+7,Lunch,2026-10-03,30,Chicken Rice
+7,Lunch,2026-10-04,19,Chicken Rice
+7,Lunch,2026-10-05,20,Chicken Rice
+7,Lunch,2026-10-06,20,Chicken Rice
+7,Lunch,2026-10-07,28,Chicken Rice
+7,Lunch,2026-10-08,24,Chicken Rice
+7,Lunch,2026-10-09,18,Chicken Rice
+7,Lunch,2026-10-10,27,Chicken Rice
+7,Lunch,2026-10-11,25,Chicken Rice
+7,Lunch,2026-10-12,27,Chicken Rice
+7,Lunch,2026-10-13,18,Chicken Rice
+7,Lunch,2026-10-14,17,Chicken Rice
+7,Lunch,2026-10-15,18,Chicken Rice
+7,Lunch,2026-10-16,16,Chicken Rice
+7,Lunch,2026-10-17,34,Chicken Rice
+7,Lunch,2026-10-18,24,Chicken Rice
+7,Lunch,2026-10-19,26,Chicken Rice
+7,Lunch,2026-10-20,27,Chicken Rice
+7,Lunch,2026-10-21,25,Chicken Rice
+7,Lunch,2026-10-22,17,Chicken Rice
+7,Lunch,2026-10-23,23,Chicken Rice
+7,Lunch,2026-10-24,25,Chicken Rice
+7,Lunch,2026-10-25,34,Chicken Rice
+7,Lunch,2026-10-26,22,Chicken Rice
+7,Lunch,2026-10-27,27,Chicken Rice
+8,Dinner,2026-09-02,9,Curry Laksa
+8,Dinner,2026-09-03,7,Curry Laksa
+8,Dinner,2026-09-04,8,Curry Laksa
+8,Dinner,2026-09-05,10,Curry Laksa
+8,Dinner,2026-09-06,13,Curry Laksa
+8,Dinner,2026-09-07,6,Curry Laksa
+8,Dinner,2026-09-08,7,Curry Laksa
+8,Dinner,2026-09-09,8,Curry Laksa
+8,Dinner,2026-09-10,7,Curry Laksa
+8,Dinner,2026-09-11,10,Curry Laksa
+8,Dinner,2026-09-12,12,Curry Laksa
+8,Dinner,2026-09-13,8,Curry Laksa
+8,Dinner,2026-09-14,7,Curry Laksa
+8,Dinner,2026-09-15,8,Curry Laksa
+8,Dinner,2026-09-16,9,Curry Laksa
+8,Dinner,2026-09-17,11,Curry Laksa
+8,Dinner,2026-09-18,8,Curry Laksa
+8,Dinner,2026-09-19,12,Curry Laksa
+8,Dinner,2026-09-20,10,Curry Laksa
+8,Dinner,2026-09-21,10,Curry Laksa
+8,Dinner,2026-09-22,6,Curry Laksa
+8,Dinner,2026-09-23,8,Curry Laksa
+8,Dinner,2026-09-24,9,Curry Laksa
+8,Dinner,2026-09-25,8,Curry Laksa
+8,Dinner,2026-09-26,10,Curry Laksa
+8,Dinner,2026-09-27,10,Curry Laksa
+8,Dinner,2026-09-28,7,Curry Laksa
+8,Dinner,2026-09-29,9,Curry Laksa
+8,Dinner,2026-09-30,8,Curry Laksa
+8,Dinner,2026-10-01,9,Curry Laksa
+8,Dinner,2026-10-02,9,Curry Laksa
+8,Dinner,2026-10-03,9,Curry Laksa
+8,Dinner,2026-10-04,12,Curry Laksa
+8,Dinner,2026-10-05,10,Curry Laksa
+8,Dinner,2026-10-06,7,Curry Laksa
+8,Dinner,2026-10-07,9,Curry Laksa
+8,Dinner,2026-10-08,8,Curry Laksa
+8,Dinner,2026-10-09,9,Curry Laksa
+8,Dinner,2026-10-10,9,Curry Laksa
+8,Dinner,2026-10-11,13,Curry Laksa
+8,Dinner,2026-10-12,12,Curry Laksa
+8,Dinner,2026-10-13,9,Curry Laksa
+8,Dinner,2026-10-14,9,Curry Laksa
+8,Dinner,2026-10-15,8,Curry Laksa
+8,Dinner,2026-10-16,6,Curry Laksa
+8,Dinner,2026-10-17,12,Curry Laksa
+8,Dinner,2026-10-18,16,Curry Laksa
+8,Dinner,2026-10-19,12,Curry Laksa
+8,Dinner,2026-10-20,9,Curry Laksa
+8,Dinner,2026-10-21,10,Curry Laksa
+8,Dinner,2026-10-22,9,Curry Laksa
+8,Dinner,2026-10-23,11,Curry Laksa
+8,Dinner,2026-10-24,13,Curry Laksa
+8,Dinner,2026-10-25,6,Curry Laksa
+8,Dinner,2026-10-26,8,Curry Laksa
+8,Dinner,2026-10-27,11,Curry Laksa
+8,Lunch,2026-09-02,11,Curry Laksa
+8,Lunch,2026-09-03,11,Curry Laksa
+8,Lunch,2026-09-04,12,Curry Laksa
+8,Lunch,2026-09-05,13,Curry Laksa
+8,Lunch,2026-09-06,13,Curry Laksa
+8,Lunch,2026-09-07,12,Curry Laksa
+8,Lunch,2026-09-08,11,Curry Laksa
+8,Lunch,2026-09-09,8,Curry Laksa
+8,Lunch,2026-09-10,9,Curry Laksa
+8,Lunch,2026-09-11,12,Curry Laksa
+8,Lunch,2026-09-12,15,Curry Laksa
+8,Lunch,2026-09-13,11,Curry Laksa
+8,Lunch,2026-09-14,14,Curry Laksa
+8,Lunch,2026-09-15,8,Curry Laksa
+8,Lunch,2026-09-16,9,Curry Laksa
+8,Lunch,2026-09-17,11,Curry Laksa
+8,Lunch,2026-09-18,9,Curry Laksa
+8,Lunch,2026-09-19,11,Curry Laksa
+8,Lunch,2026-09-20,14,Curry Laksa
+8,Lunch,2026-09-21,11,Curry Laksa
+8,Lunch,2026-09-22,11,Curry Laksa
+8,Lunch,2026-09-23,10,Curry Laksa
+8,Lunch,2026-09-24,9,Curry Laksa
+8,Lunch,2026-09-25,9,Curry Laksa
+8,Lunch,2026-09-26,14,Curry Laksa
+8,Lunch,2026-09-27,12,Curry Laksa
+8,Lunch,2026-09-28,11,Curry Laksa
+8,Lunch,2026-09-29,13,Curry Laksa
+8,Lunch,2026-09-30,11,Curry Laksa
+8,Lunch,2026-10-01,10,Curry Laksa
+8,Lunch,2026-10-02,8,Curry Laksa
+8,Lunch,2026-10-03,15,Curry Laksa
+8,Lunch,2026-10-04,13,Curry Laksa
+8,Lunch,2026-10-05,9,Curry Laksa
+8,Lunch,2026-10-06,8,Curry Laksa
+8,Lunch,2026-10-07,10,Curry Laksa
+8,Lunch,2026-10-08,12,Curry Laksa
+8,Lunch,2026-10-09,14,Curry Laksa
+8,Lunch,2026-10-10,12,Curry Laksa
+8,Lunch,2026-10-11,12,Curry Laksa
+8,Lunch,2026-10-12,14,Curry Laksa
+8,Lunch,2026-10-13,12,Curry Laksa
+8,Lunch,2026-10-14,13,Curry Laksa
+8,Lunch,2026-10-15,10,Curry Laksa
+8,Lunch,2026-10-16,11,Curry Laksa
+8,Lunch,2026-10-17,12,Curry Laksa
+8,Lunch,2026-10-18,15,Curry Laksa
+8,Lunch,2026-10-19,11,Curry Laksa
+8,Lunch,2026-10-20,12,Curry Laksa
+8,Lunch,2026-10-21,8,Curry Laksa
+8,Lunch,2026-10-22,8,Curry Laksa
+8,Lunch,2026-10-23,13,Curry Laksa
+8,Lunch,2026-10-24,17,Curry Laksa
+8,Lunch,2026-10-25,17,Curry Laksa
+8,Lunch,2026-10-26,11,Curry Laksa
+8,Lunch,2026-10-27,14,Curry Laksa
+9,Dinner,2026-09-02,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-03,6,Satay Ayam (5 sticks)
+9,Dinner,2026-09-04,8,Satay Ayam (5 sticks)
+9,Dinner,2026-09-05,9,Satay Ayam (5 sticks)
+9,Dinner,2026-09-06,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-07,5,Satay Ayam (5 sticks)
+9,Dinner,2026-09-08,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-09,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-10,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-11,8,Satay Ayam (5 sticks)
+9,Dinner,2026-09-12,5,Satay Ayam (5 sticks)
+9,Dinner,2026-09-13,8,Satay Ayam (5 sticks)
+9,Dinner,2026-09-14,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-15,5,Satay Ayam (5 sticks)
+9,Dinner,2026-09-16,6,Satay Ayam (5 sticks)
+9,Dinner,2026-09-17,9,Satay Ayam (5 sticks)
+9,Dinner,2026-09-18,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-19,10,Satay Ayam (5 sticks)
+9,Dinner,2026-09-20,10,Satay Ayam (5 sticks)
+9,Dinner,2026-09-21,8,Satay Ayam (5 sticks)
+9,Dinner,2026-09-22,7,Satay Ayam (5 sticks)
+9,Dinner,2026-09-23,5,Satay Ayam (5 sticks)
+9,Dinner,2026-09-24,8,Satay Ayam (5 sticks)
+9,Dinner,2026-09-25,5,Satay Ayam (5 sticks)
+9,Dinner,2026-09-26,9,Satay Ayam (5 sticks)
+9,Dinner,2026-09-27,13,Satay Ayam (5 sticks)
+9,Dinner,2026-09-28,6,Satay Ayam (5 sticks)
+9,Dinner,2026-09-29,6,Satay Ayam (5 sticks)
+9,Dinner,2026-09-30,6,Satay Ayam (5 sticks)
+9,Dinner,2026-10-01,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-02,6,Satay Ayam (5 sticks)
+9,Dinner,2026-10-03,10,Satay Ayam (5 sticks)
+9,Dinner,2026-10-04,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-05,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-06,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-07,7,Satay Ayam (5 sticks)
+9,Dinner,2026-10-08,5,Satay Ayam (5 sticks)
+9,Dinner,2026-10-09,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-10,10,Satay Ayam (5 sticks)
+9,Dinner,2026-10-11,10,Satay Ayam (5 sticks)
+9,Dinner,2026-10-12,6,Satay Ayam (5 sticks)
+9,Dinner,2026-10-13,6,Satay Ayam (5 sticks)
+9,Dinner,2026-10-14,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-15,7,Satay Ayam (5 sticks)
+9,Dinner,2026-10-16,7,Satay Ayam (5 sticks)
+9,Dinner,2026-10-17,11,Satay Ayam (5 sticks)
+9,Dinner,2026-10-18,12,Satay Ayam (5 sticks)
+9,Dinner,2026-10-19,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-20,7,Satay Ayam (5 sticks)
+9,Dinner,2026-10-21,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-22,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-23,8,Satay Ayam (5 sticks)
+9,Dinner,2026-10-24,11,Satay Ayam (5 sticks)
+9,Dinner,2026-10-25,12,Satay Ayam (5 sticks)
+9,Dinner,2026-10-26,7,Satay Ayam (5 sticks)
+9,Dinner,2026-10-27,7,Satay Ayam (5 sticks)
+9,Lunch,2026-09-02,6,Satay Ayam (5 sticks)
+9,Lunch,2026-09-03,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-04,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-05,10,Satay Ayam (5 sticks)
+9,Lunch,2026-09-06,10,Satay Ayam (5 sticks)
+9,Lunch,2026-09-07,8,Satay Ayam (5 sticks)
+9,Lunch,2026-09-08,10,Satay Ayam (5 sticks)
+9,Lunch,2026-09-09,8,Satay Ayam (5 sticks)
+9,Lunch,2026-09-10,10,Satay Ayam (5 sticks)
+9,Lunch,2026-09-11,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-12,11,Satay Ayam (5 sticks)
+9,Lunch,2026-09-13,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-14,7,Satay Ayam (5 sticks)
+9,Lunch,2026-09-15,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-16,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-17,8,Satay Ayam (5 sticks)
+9,Lunch,2026-09-18,8,Satay Ayam (5 sticks)
+9,Lunch,2026-09-19,12,Satay Ayam (5 sticks)
+9,Lunch,2026-09-20,11,Satay Ayam (5 sticks)
+9,Lunch,2026-09-21,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-22,8,Satay Ayam (5 sticks)
+9,Lunch,2026-09-23,11,Satay Ayam (5 sticks)
+9,Lunch,2026-09-24,9,Satay Ayam (5 sticks)
+9,Lunch,2026-09-25,7,Satay Ayam (5 sticks)
+9,Lunch,2026-09-26,10,Satay Ayam (5 sticks)
+9,Lunch,2026-09-27,12,Satay Ayam (5 sticks)
+9,Lunch,2026-09-28,12,Satay Ayam (5 sticks)
+9,Lunch,2026-09-29,10,Satay Ayam (5 sticks)
+9,Lunch,2026-09-30,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-01,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-02,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-03,12,Satay Ayam (5 sticks)
+9,Lunch,2026-10-04,10,Satay Ayam (5 sticks)
+9,Lunch,2026-10-05,11,Satay Ayam (5 sticks)
+9,Lunch,2026-10-06,7,Satay Ayam (5 sticks)
+9,Lunch,2026-10-07,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-08,11,Satay Ayam (5 sticks)
+9,Lunch,2026-10-09,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-10,11,Satay Ayam (5 sticks)
+9,Lunch,2026-10-11,12,Satay Ayam (5 sticks)
+9,Lunch,2026-10-12,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-13,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-14,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-15,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-16,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-17,12,Satay Ayam (5 sticks)
+9,Lunch,2026-10-18,10,Satay Ayam (5 sticks)
+9,Lunch,2026-10-19,8,Satay Ayam (5 sticks)
+9,Lunch,2026-10-20,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-21,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-22,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-23,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-24,12,Satay Ayam (5 sticks)
+9,Lunch,2026-10-25,10,Satay Ayam (5 sticks)
+9,Lunch,2026-10-26,9,Satay Ayam (5 sticks)
+9,Lunch,2026-10-27,8,Satay Ayam (5 sticks)
+10,Dinner,2026-09-02,24,Teh Tarik
+10,Dinner,2026-09-03,22,Teh Tarik
+10,Dinner,2026-09-04,24,Teh Tarik
+10,Dinner,2026-09-05,28,Teh Tarik
+10,Dinner,2026-09-06,31,Teh Tarik
+10,Dinner,2026-09-07,22,Teh Tarik
+10,Dinner,2026-09-08,22,Teh Tarik
+10,Dinner,2026-09-09,18,Teh Tarik
+10,Dinner,2026-09-10,20,Teh Tarik
+10,Dinner,2026-09-11,28,Teh Tarik
+10,Dinner,2026-09-12,23,Teh Tarik
+10,Dinner,2026-09-13,30,Teh Tarik
+10,Dinner,2026-09-14,22,Teh Tarik
+10,Dinner,2026-09-15,19,Teh Tarik
+10,Dinner,2026-09-16,32,Teh Tarik
+10,Dinner,2026-09-17,21,Teh Tarik
+10,Dinner,2026-09-18,19,Teh Tarik
+10,Dinner,2026-09-19,31,Teh Tarik
+10,Dinner,2026-09-20,29,Teh Tarik
+10,Dinner,2026-09-21,17,Teh Tarik
+10,Dinner,2026-09-22,24,Teh Tarik
+10,Dinner,2026-09-23,27,Teh Tarik
+10,Dinner,2026-09-24,25,Teh Tarik
+10,Dinner,2026-09-25,26,Teh Tarik
+10,Dinner,2026-09-26,28,Teh Tarik
+10,Dinner,2026-09-27,29,Teh Tarik
+10,Dinner,2026-09-28,23,Teh Tarik
+10,Dinner,2026-09-29,24,Teh Tarik
+10,Dinner,2026-09-30,34,Teh Tarik
+10,Dinner,2026-10-01,19,Teh Tarik
+10,Dinner,2026-10-02,24,Teh Tarik
+10,Dinner,2026-10-03,28,Teh Tarik
+10,Dinner,2026-10-04,31,Teh Tarik
+10,Dinner,2026-10-05,25,Teh Tarik
+10,Dinner,2026-10-06,29,Teh Tarik
+10,Dinner,2026-10-07,30,Teh Tarik
+10,Dinner,2026-10-08,25,Teh Tarik
+10,Dinner,2026-10-09,24,Teh Tarik
+10,Dinner,2026-10-10,43,Teh Tarik
+10,Dinner,2026-10-11,29,Teh Tarik
+10,Dinner,2026-10-12,24,Teh Tarik
+10,Dinner,2026-10-13,25,Teh Tarik
+10,Dinner,2026-10-14,26,Teh Tarik
+10,Dinner,2026-10-15,27,Teh Tarik
+10,Dinner,2026-10-16,26,Teh Tarik
+10,Dinner,2026-10-17,31,Teh Tarik
+10,Dinner,2026-10-18,24,Teh Tarik
+10,Dinner,2026-10-19,24,Teh Tarik
+10,Dinner,2026-10-20,22,Teh Tarik
+10,Dinner,2026-10-21,31,Teh Tarik
+10,Dinner,2026-10-22,35,Teh Tarik
+10,Dinner,2026-10-23,30,Teh Tarik
+10,Dinner,2026-10-24,31,Teh Tarik
+10,Dinner,2026-10-25,39,Teh Tarik
+10,Dinner,2026-10-26,27,Teh Tarik
+10,Dinner,2026-10-27,26,Teh Tarik
+10,Lunch,2026-09-02,32,Teh Tarik
+10,Lunch,2026-09-03,22,Teh Tarik
+10,Lunch,2026-09-04,26,Teh Tarik
+10,Lunch,2026-09-05,32,Teh Tarik
+10,Lunch,2026-09-06,35,Teh Tarik
+10,Lunch,2026-09-07,34,Teh Tarik
+10,Lunch,2026-09-08,33,Teh Tarik
+10,Lunch,2026-09-09,28,Teh Tarik
+10,Lunch,2026-09-10,19,Teh Tarik
+10,Lunch,2026-09-11,36,Teh Tarik
+10,Lunch,2026-09-12,34,Teh Tarik
+10,Lunch,2026-09-13,35,Teh Tarik
+10,Lunch,2026-09-14,23,Teh Tarik
+10,Lunch,2026-09-15,32,Teh Tarik
+10,Lunch,2026-09-16,25,Teh Tarik
+10,Lunch,2026-09-17,33,Teh Tarik
+10,Lunch,2026-09-18,29,Teh Tarik
+10,Lunch,2026-09-19,43,Teh Tarik
+10,Lunch,2026-09-20,38,Teh Tarik
+10,Lunch,2026-09-21,27,Teh Tarik
+10,Lunch,2026-09-22,31,Teh Tarik
+10,Lunch,2026-09-23,25,Teh Tarik
+10,Lunch,2026-09-24,31,Teh Tarik
+10,Lunch,2026-09-25,36,Teh Tarik
+10,Lunch,2026-09-26,41,Teh Tarik
+10,Lunch,2026-09-27,38,Teh Tarik
+10,Lunch,2026-09-28,32,Teh Tarik
+10,Lunch,2026-09-29,30,Teh Tarik
+10,Lunch,2026-09-30,29,Teh Tarik
+10,Lunch,2026-10-01,20,Teh Tarik
+10,Lunch,2026-10-02,35,Teh Tarik
+10,Lunch,2026-10-03,22,Teh Tarik
+10,Lunch,2026-10-04,42,Teh Tarik
+10,Lunch,2026-10-05,21,Teh Tarik
+10,Lunch,2026-10-06,36,Teh Tarik
+10,Lunch,2026-10-07,28,Teh Tarik
+10,Lunch,2026-10-08,25,Teh Tarik
+10,Lunch,2026-10-09,35,Teh Tarik
+10,Lunch,2026-10-10,35,Teh Tarik
+10,Lunch,2026-10-11,47,Teh Tarik
+10,Lunch,2026-10-12,19,Teh Tarik
+10,Lunch,2026-10-13,35,Teh Tarik
+10,Lunch,2026-10-14,34,Teh Tarik
+10,Lunch,2026-10-15,32,Teh Tarik
+10,Lunch,2026-10-16,26,Teh Tarik
+10,Lunch,2026-10-17,46,Teh Tarik
+10,Lunch,2026-10-18,38,Teh Tarik
+10,Lunch,2026-10-19,31,Teh Tarik
+10,Lunch,2026-10-20,34,Teh Tarik
+10,Lunch,2026-10-21,29,Teh Tarik
+10,Lunch,2026-10-22,33,Teh Tarik
+10,Lunch,2026-10-23,35,Teh Tarik
+10,Lunch,2026-10-24,37,Teh Tarik
+10,Lunch,2026-10-25,40,Teh Tarik
+10,Lunch,2026-10-26,33,Teh Tarik
+10,Lunch,2026-10-27,32,Teh Tarik
+11,Dinner,2026-09-02,12,Kopi O
+11,Dinner,2026-09-03,16,Kopi O
+11,Dinner,2026-09-04,13,Kopi O
+11,Dinner,2026-09-05,15,Kopi O
+11,Dinner,2026-09-06,13,Kopi O
+11,Dinner,2026-09-07,10,Kopi O
+11,Dinner,2026-09-08,11,Kopi O
+11,Dinner,2026-09-09,11,Kopi O
+11,Dinner,2026-09-10,12,Kopi O
+11,Dinner,2026-09-11,12,Kopi O
+11,Dinner,2026-09-12,17,Kopi O
+11,Dinner,2026-09-13,16,Kopi O
+11,Dinner,2026-09-14,12,Kopi O
+11,Dinner,2026-09-15,12,Kopi O
+11,Dinner,2026-09-16,12,Kopi O
+11,Dinner,2026-09-17,15,Kopi O
+11,Dinner,2026-09-18,14,Kopi O
+11,Dinner,2026-09-19,17,Kopi O
+11,Dinner,2026-09-20,14,Kopi O
+11,Dinner,2026-09-21,16,Kopi O
+11,Dinner,2026-09-22,15,Kopi O
+11,Dinner,2026-09-23,10,Kopi O
+11,Dinner,2026-09-24,10,Kopi O
+11,Dinner,2026-09-25,14,Kopi O
+11,Dinner,2026-09-26,15,Kopi O
+11,Dinner,2026-09-27,15,Kopi O
+11,Dinner,2026-09-28,13,Kopi O
+11,Dinner,2026-09-29,18,Kopi O
+11,Dinner,2026-09-30,13,Kopi O
+11,Dinner,2026-10-01,17,Kopi O
+11,Dinner,2026-10-02,15,Kopi O
+11,Dinner,2026-10-03,20,Kopi O
+11,Dinner,2026-10-04,16,Kopi O
+11,Dinner,2026-10-05,13,Kopi O
+11,Dinner,2026-10-06,15,Kopi O
+11,Dinner,2026-10-07,15,Kopi O
+11,Dinner,2026-10-08,13,Kopi O
+11,Dinner,2026-10-09,14,Kopi O
+11,Dinner,2026-10-10,15,Kopi O
+11,Dinner,2026-10-11,21,Kopi O
+11,Dinner,2026-10-12,16,Kopi O
+11,Dinner,2026-10-13,13,Kopi O
+11,Dinner,2026-10-14,13,Kopi O
+11,Dinner,2026-10-15,12,Kopi O
+11,Dinner,2026-10-16,14,Kopi O
+11,Dinner,2026-10-17,21,Kopi O
+11,Dinner,2026-10-18,18,Kopi O
+11,Dinner,2026-10-19,14,Kopi O
+11,Dinner,2026-10-20,17,Kopi O
+11,Dinner,2026-10-21,15,Kopi O
+11,Dinner,2026-10-22,14,Kopi O
+11,Dinner,2026-10-23,17,Kopi O
+11,Dinner,2026-10-24,16,Kopi O
+11,Dinner,2026-10-25,18,Kopi O
+11,Dinner,2026-10-26,15,Kopi O
+11,Dinner,2026-10-27,18,Kopi O
+11,Lunch,2026-09-02,11,Kopi O
+11,Lunch,2026-09-03,15,Kopi O
+11,Lunch,2026-09-04,16,Kopi O
+11,Lunch,2026-09-05,15,Kopi O
+11,Lunch,2026-09-06,16,Kopi O
+11,Lunch,2026-09-07,18,Kopi O
+11,Lunch,2026-09-08,15,Kopi O
+11,Lunch,2026-09-09,19,Kopi O
+11,Lunch,2026-09-10,16,Kopi O
+11,Lunch,2026-09-11,14,Kopi O
+11,Lunch,2026-09-12,20,Kopi O
+11,Lunch,2026-09-13,25,Kopi O
+11,Lunch,2026-09-14,13,Kopi O
+11,Lunch,2026-09-15,15,Kopi O
+11,Lunch,2026-09-16,17,Kopi O
+11,Lunch,2026-09-17,20,Kopi O
+11,Lunch,2026-09-18,17,Kopi O
+11,Lunch,2026-09-19,25,Kopi O
+11,Lunch,2026-09-20,19,Kopi O
+11,Lunch,2026-09-21,14,Kopi O
+11,Lunch,2026-09-22,16,Kopi O
+11,Lunch,2026-09-23,17,Kopi O
+11,Lunch,2026-09-24,19,Kopi O
+11,Lunch,2026-09-25,17,Kopi O
+11,Lunch,2026-09-26,18,Kopi O
+11,Lunch,2026-09-27,20,Kopi O
+11,Lunch,2026-09-28,17,Kopi O
+11,Lunch,2026-09-29,19,Kopi O
+11,Lunch,2026-09-30,18,Kopi O
+11,Lunch,2026-10-01,15,Kopi O
+11,Lunch,2026-10-02,18,Kopi O
+11,Lunch,2026-10-03,22,Kopi O
+11,Lunch,2026-10-04,25,Kopi O
+11,Lunch,2026-10-05,18,Kopi O
+11,Lunch,2026-10-06,17,Kopi O
+11,Lunch,2026-10-07,14,Kopi O
+11,Lunch,2026-10-08,20,Kopi O
+11,Lunch,2026-10-09,16,Kopi O
+11,Lunch,2026-10-10,21,Kopi O
+11,Lunch,2026-10-11,26,Kopi O
+11,Lunch,2026-10-12,19,Kopi O
+11,Lunch,2026-10-13,17,Kopi O
+11,Lunch,2026-10-14,8,Kopi O
+11,Lunch,2026-10-15,14,Kopi O
+11,Lunch,2026-10-16,16,Kopi O
+11,Lunch,2026-10-17,26,Kopi O
+11,Lunch,2026-10-18,21,Kopi O
+11,Lunch,2026-10-19,17,Kopi O
+11,Lunch,2026-10-20,15,Kopi O
+11,Lunch,2026-10-21,20,Kopi O
+11,Lunch,2026-10-22,18,Kopi O
+11,Lunch,2026-10-23,19,Kopi O
+11,Lunch,2026-10-24,20,Kopi O
+11,Lunch,2026-10-25,22,Kopi O
+11,Lunch,2026-10-26,19,Kopi O
+11,Lunch,2026-10-27,23,Kopi O
+12,Dinner,2026-09-02,13,Milo Ais
+12,Dinner,2026-09-03,15,Milo Ais
+12,Dinner,2026-09-04,17,Milo Ais
+12,Dinner,2026-09-05,28,Milo Ais
+12,Dinner,2026-09-06,18,Milo Ais
+12,Dinner,2026-09-07,13,Milo Ais
+12,Dinner,2026-09-08,12,Milo Ais
+12,Dinner,2026-09-09,13,Milo Ais
+12,Dinner,2026-09-10,19,Milo Ais
+12,Dinner,2026-09-11,11,Milo Ais
+12,Dinner,2026-09-12,24,Milo Ais
+12,Dinner,2026-09-13,26,Milo Ais
+12,Dinner,2026-09-14,16,Milo Ais
+12,Dinner,2026-09-15,17,Milo Ais
+12,Dinner,2026-09-16,15,Milo Ais
+12,Dinner,2026-09-17,14,Milo Ais
+12,Dinner,2026-09-18,14,Milo Ais
+12,Dinner,2026-09-19,16,Milo Ais
+12,Dinner,2026-09-20,20,Milo Ais
+12,Dinner,2026-09-21,19,Milo Ais
+12,Dinner,2026-09-22,14,Milo Ais
+12,Dinner,2026-09-23,18,Milo Ais
+12,Dinner,2026-09-24,19,Milo Ais
+12,Dinner,2026-09-25,17,Milo Ais
+12,Dinner,2026-09-26,15,Milo Ais
+12,Dinner,2026-09-27,21,Milo Ais
+12,Dinner,2026-09-28,14,Milo Ais
+12,Dinner,2026-09-29,17,Milo Ais
+12,Dinner,2026-09-30,14,Milo Ais
+12,Dinner,2026-10-01,15,Milo Ais
+12,Dinner,2026-10-02,17,Milo Ais
+12,Dinner,2026-10-03,28,Milo Ais
+12,Dinner,2026-10-04,19,Milo Ais
+12,Dinner,2026-10-05,15,Milo Ais
+12,Dinner,2026-10-06,18,Milo Ais
+12,Dinner,2026-10-07,13,Milo Ais
+12,Dinner,2026-10-08,15,Milo Ais
+12,Dinner,2026-10-09,15,Milo Ais
+12,Dinner,2026-10-10,21,Milo Ais
+12,Dinner,2026-10-11,25,Milo Ais
+12,Dinner,2026-10-12,15,Milo Ais
+12,Dinner,2026-10-13,17,Milo Ais
+12,Dinner,2026-10-14,16,Milo Ais
+12,Dinner,2026-10-15,15,Milo Ais
+12,Dinner,2026-10-16,15,Milo Ais
+12,Dinner,2026-10-17,19,Milo Ais
+12,Dinner,2026-10-18,25,Milo Ais
+12,Dinner,2026-10-19,16,Milo Ais
+12,Dinner,2026-10-20,15,Milo Ais
+12,Dinner,2026-10-21,14,Milo Ais
+12,Dinner,2026-10-22,17,Milo Ais
+12,Dinner,2026-10-23,11,Milo Ais
+12,Dinner,2026-10-24,19,Milo Ais
+12,Dinner,2026-10-25,19,Milo Ais
+12,Dinner,2026-10-26,18,Milo Ais
+12,Dinner,2026-10-27,19,Milo Ais
+12,Lunch,2026-09-02,18,Milo Ais
+12,Lunch,2026-09-03,13,Milo Ais
+12,Lunch,2026-09-04,16,Milo Ais
+12,Lunch,2026-09-05,26,Milo Ais
+12,Lunch,2026-09-06,28,Milo Ais
+12,Lunch,2026-09-07,14,Milo Ais
+12,Lunch,2026-09-08,21,Milo Ais
+12,Lunch,2026-09-09,23,Milo Ais
+12,Lunch,2026-09-10,18,Milo Ais
+12,Lunch,2026-09-11,23,Milo Ais
+12,Lunch,2026-09-12,30,Milo Ais
+12,Lunch,2026-09-13,20,Milo Ais
+12,Lunch,2026-09-14,18,Milo Ais
+12,Lunch,2026-09-15,18,Milo Ais
+12,Lunch,2026-09-16,15,Milo Ais
+12,Lunch,2026-09-17,21,Milo Ais
+12,Lunch,2026-09-18,19,Milo Ais
+12,Lunch,2026-09-19,26,Milo Ais
+12,Lunch,2026-09-20,25,Milo Ais
+12,Lunch,2026-09-21,18,Milo Ais
+12,Lunch,2026-09-22,15,Milo Ais
+12,Lunch,2026-09-23,15,Milo Ais
+12,Lunch,2026-09-24,28,Milo Ais
+12,Lunch,2026-09-25,13,Milo Ais
+12,Lunch,2026-09-26,17,Milo Ais
+12,Lunch,2026-09-27,25,Milo Ais
+12,Lunch,2026-09-28,16,Milo Ais
+12,Lunch,2026-09-29,16,Milo Ais
+12,Lunch,2026-09-30,18,Milo Ais
+12,Lunch,2026-10-01,21,Milo Ais
+12,Lunch,2026-10-02,19,Milo Ais
+12,Lunch,2026-10-03,28,Milo Ais
+12,Lunch,2026-10-04,21,Milo Ais
+12,Lunch,2026-10-05,17,Milo Ais
+12,Lunch,2026-10-06,18,Milo Ais
+12,Lunch,2026-10-07,17,Milo Ais
+12,Lunch,2026-10-08,18,Milo Ais
+12,Lunch,2026-10-09,17,Milo Ais
+12,Lunch,2026-10-10,22,Milo Ais
+12,Lunch,2026-10-11,21,Milo Ais
+12,Lunch,2026-10-12,24,Milo Ais
+12,Lunch,2026-10-13,17,Milo Ais
+12,Lunch,2026-10-14,21,Milo Ais
+12,Lunch,2026-10-15,17,Milo Ais
+12,Lunch,2026-10-16,26,Milo Ais
+12,Lunch,2026-10-17,31,Milo Ais
+12,Lunch,2026-10-18,31,Milo Ais
+12,Lunch,2026-10-19,21,Milo Ais
+12,Lunch,2026-10-20,15,Milo Ais
+12,Lunch,2026-10-21,24,Milo Ais
+12,Lunch,2026-10-22,22,Milo Ais
+12,Lunch,2026-10-23,20,Milo Ais
+12,Lunch,2026-10-24,29,Milo Ais
+12,Lunch,2026-10-25,22,Milo Ais
+12,Lunch,2026-10-26,24,Milo Ais
+12,Lunch,2026-10-27,22,Milo Ais
