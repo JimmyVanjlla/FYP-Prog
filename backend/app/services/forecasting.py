@@ -147,9 +147,14 @@ def train_and_generate_forecasts(
         # uncertainty_samples=0: only the point forecast (yhat) is stored, so
         # skip Prophet's Monte Carlo interval sampling, which costs real time
         # per model and which nothing reads.
+        # yearly_seasonality="auto", not True as Ch4 Algorithm 1 writes it:
+        # forced on, Prophet fits a yearly cycle to a few weeks of history and
+        # its forecasts drift further from reality each day ahead (58.8% error
+        # against 14.0% in the backtest; see FORECAST_EVALUATION.md). "auto"
+        # leaves the yearly term off until there are two years of data.
         model = Prophet(
             weekly_seasonality=True,
-            yearly_seasonality=True,
+            yearly_seasonality="auto",
             daily_seasonality=False,
             uncertainty_samples=0,
         )

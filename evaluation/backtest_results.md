@@ -4,7 +4,7 @@ Series: 24. Forecast folds per series: 4. Scored predictions: 672 per model. Tra
 
 | Model | WAPE % | MAE | MAPE % | Bias % | Within 20 % |
 |---|---|---|---|---|---|
-| Prophet (deployed) | 58.8 | 10.6 | 61.0 | 16.2 | 28.9 |
+| Prophet yearly-on | 58.8 | 10.6 | 61.0 | 16.2 | 28.9 |
 | Prophet weekly-only | 14.0 | 2.5 | 14.5 | 0.2 | 74.7 |
 | Prophet weekly-only multiplicative | 14.2 | 2.6 | 14.6 | 0.3 | 74.0 |
 | Prophet weekly-only stiff trend | 14.0 | 2.5 | 14.5 | 0.2 | 74.7 |
@@ -15,7 +15,7 @@ Series: 24. Forecast folds per series: 4. Scored predictions: 672 per model. Tra
 
 ### Error by how far ahead the forecast is
 
-| Days ahead (WAPE %) | Prophet (deployed) | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
+| Days ahead (WAPE %) | Prophet yearly-on | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 21.0 | 14.2 | 14.1 | 14.3 | 17.8 | 14.5 | 14.4 | 13.0 |
 | 2 | 33.5 | 14.4 | 14.4 | 14.4 | 18.1 | 14.6 | 15.9 | 12.7 |
@@ -27,14 +27,14 @@ Series: 24. Forecast folds per series: 4. Scored predictions: 672 per model. Tra
 
 ### Weekdays versus weekends
 
-| Day type (WAPE %) | Prophet (deployed) | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
+| Day type (WAPE %) | Prophet yearly-on | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
 |---|---|---|---|---|---|---|---|---|
 | Weekday | 62.1 | 13.7 | 13.7 | 13.8 | 16.6 | 14.1 | 14.4 | 12.3 |
 | Weekend | 52.4 | 14.5 | 15.1 | 14.4 | 18.2 | 14.7 | 19.9 | 12.9 |
 
 ### Stability across folds (a longer history is available in later folds)
 
-| Fold (WAPE %) | Prophet (deployed) | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
+| Fold (WAPE %) | Prophet yearly-on | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
 |---|---|---|---|---|---|---|---|---|
 | 1 | 68.1 | 14.4 | 14.5 | 14.4 | 16.9 | 14.4 | 16.7 | 13.3 |
 | 2 | 58.0 | 13.2 | 13.3 | 13.2 | 16.7 | 13.9 | 16.9 | 11.9 |
@@ -43,7 +43,7 @@ Series: 24. Forecast folds per series: 4. Scored predictions: 672 per model. Tra
 
 ### By menu item (Lunch and Dinner combined)
 
-| Menu item (WAPE %) | Prophet (deployed) | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
+| Menu item (WAPE %) | Prophet yearly-on | Prophet weekly-only | Prophet weekly-only multiplicative | Prophet weekly-only stiff trend | Same weekday last week | Same weekday, 4-week average | Trailing 7-day average | Noise floor (true mean) |
 |---|---|---|---|---|---|---|---|---|
 | Satay Ayam (5 sticks) | 54.3 | 11.3 | 11.2 | 11.4 | 15.2 | 11.7 | 15.9 | 10.6 |
 | Mee Goreng Mamak | 67.4 | 11.7 | 11.9 | 11.8 | 13.8 | 11.5 | 13.0 | 10.1 |
@@ -64,7 +64,7 @@ Number of series where the Prophet variant has lower error.
 
 | Model | Better than 'Same weekday last week' | Better than 'Same weekday, 4-week average' | Better than 'Trailing 7-day average' |
 |---|---|---|---|
-| Prophet (deployed) | 0 of 24 | 0 of 24 | 0 of 24 |
+| Prophet yearly-on | 0 of 24 | 0 of 24 | 0 of 24 |
 | Prophet weekly-only | 23 of 24 | 16 of 24 | 23 of 24 |
 | Prophet weekly-only multiplicative | 23 of 24 | 12 of 24 | 22 of 24 |
 | Prophet weekly-only stiff trend | 23 of 24 | 16 of 24 | 23 of 24 |
@@ -75,9 +75,9 @@ WAPE of the Prophet variant minus WAPE of the baseline, in percentage points (ne
 
 | Comparison | WAPE difference (points) | 95% low | 95% high |
 |---|---|---|---|
-| Prophet (deployed) minus Same weekday last week | 41.61 | 34.93 | 47.83 |
-| Prophet (deployed) minus Same weekday, 4-week average | 44.45 | 37.77 | 50.69 |
-| Prophet (deployed) minus Trailing 7-day average | 42.51 | 35.46 | 49.13 |
+| Prophet yearly-on minus Same weekday last week | 41.61 | 34.93 | 47.83 |
+| Prophet yearly-on minus Same weekday, 4-week average | 44.45 | 37.77 | 50.69 |
+| Prophet yearly-on minus Trailing 7-day average | 42.51 | 35.46 | 49.13 |
 | Prophet weekly-only minus Same weekday last week | -3.18 | -3.97 | -2.31 |
 | Prophet weekly-only minus Same weekday, 4-week average | -0.34 | -0.77 | 0.13 |
 | Prophet weekly-only minus Trailing 7-day average | -2.27 | -3.00 | -1.55 |

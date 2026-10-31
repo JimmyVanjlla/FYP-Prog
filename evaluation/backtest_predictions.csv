@@ -1,4 +1,4 @@
-menu_item_id,item,meal_period,fold,ds,horizon_day,weekend,actual,Prophet (deployed),Prophet weekly-only,Prophet weekly-only multiplicative,Prophet weekly-only stiff trend,Same weekday last week,"Same weekday, 4-week average",Trailing 7-day average,Noise floor (true mean)
+menu_item_id,item,meal_period,fold,ds,horizon_day,weekend,actual,Prophet yearly-on,Prophet weekly-only,Prophet weekly-only multiplicative,Prophet weekly-only stiff trend,Same weekday last week,"Same weekday, 4-week average",Trailing 7-day average,Noise floor (true mean)
 1,Nasi Lemak,Dinner,1,2026-09-30,1,False,16.0,14.316502316945922,20.559264583135924,20.420203426947943,20.497291246757545,19.0,18.25,20.0,18.3825
 1,Nasi Lemak,Dinner,1,2026-10-01,2,False,20.0,9.40061433206728,18.81729983441712,18.274762892270537,18.747823157557306,16.0,16.5,20.0,18.428303571428575
 1,Nasi Lemak,Dinner,1,2026-10-02,3,False,22.0,6.491218350228637,19.566829929318015,19.495334594220303,19.49753140102152,24.0,17.25,20.0,18.474107142857143

@@ -9,16 +9,17 @@ below is reproducible from `evaluation/orders_snapshot.csv` (see section 7).
 
 ## 1. Summary
 
-1. **The model as built and as specified in Chapter 4 (Algorithm 1, line 8,
-   `yearly_seasonality = TRUE`) performs badly on a restaurant with weeks of
-   history:** 58.8% weighted error, against 14.3% for a plain four-week
-   same-weekday average. It was worse than every simple method on all 24
-   series, and its error grew with the forecast horizon (21% one day ahead,
-   115% seven days ahead).
-2. **The cause is the yearly seasonality setting.** It asks Prophet to learn a
+1. **The model as first built, and as specified in Chapter 4 (Algorithm 1,
+   line 8, `yearly_seasonality = TRUE`), performed badly on a restaurant with
+   weeks of history:** 58.8% weighted error, against 14.3% for a plain
+   four-week same-weekday average. It was worse than every simple method on
+   all 24 series, and its error grew with the forecast horizon (21% one day
+   ahead, 115% seven days ahead).
+2. **The cause was the yearly seasonality setting.** It asks Prophet to learn a
    yearly cycle from 4 to 7 weeks of data. With it switched off, Prophet's
    error falls to **14.0%**, within 1.5 points of the best any method could
-   achieve on this data (12.5%).
+   achieve on this data (12.5%). **The app now uses Prophet's `auto` setting,
+   which does exactly that at this history length (section 6).**
 3. **With that fixed, Prophet is better than "same as last week" by 3.2
    points** (95% interval 2.3 to 4.0, so not chance) and better than a flat
    7-day average by 2.3 points, but **not distinguishable from the 4-week
@@ -51,9 +52,12 @@ reference for everything below.
   repeat. That gives 4 folds per series and 672 scored predictions per method.
   This matches production: a daily run trains on history and forecasts 7 days.
   The model never sees the days it is scored on.
-- **Prophet** is configured as `app/services/forecasting.py` configures it
-  (weekly and yearly seasonality, point forecast only). The FR4.5 leftover
-  adjustment is not applied; it needs leftover logs and is a separate mechanism.
+- **Prophet** is run in four configurations. The first is how
+  `app/services/forecasting.py` was originally configured and how Chapter 4
+  writes it (weekly and yearly seasonality forced on, point forecast only).
+  The second turns the yearly term off. The other two are sensitivity checks.
+  The FR4.5 leftover adjustment is not applied; it needs leftover logs and is
+  a separate mechanism.
 - **Manual-baseline stand-ins** (nothing is fitted):
   1. same weekday last week ("same as last week");
   2. average of the same weekday over the last 4 weeks;
@@ -77,8 +81,8 @@ reference for everything below.
 
 | Model | WAPE % | MAE | MAPE % | Bias % | Within 20% |
 |---|---|---|---|---|---|
-| Prophet (deployed: weekly + yearly) | 58.8 | 10.6 | 61.0 | +16.2 | 28.9 |
-| Prophet, weekly only (yearly off) | 14.0 | 2.5 | 14.5 | +0.2 | 74.7 |
+| Prophet, yearly forced on (as first built) | 58.8 | 10.6 | 61.0 | +16.2 | 28.9 |
+| Prophet, weekly only (what `auto` gives; now deployed) | 14.0 | 2.5 | 14.5 | +0.2 | 74.7 |
 | Same weekday last week | 17.2 | 3.1 | 17.4 | -1.7 | 67.6 |
 | Same weekday, 4-week average | 14.3 | 2.6 | 14.3 | -4.5 | 76.0 |
 | Trailing 7-day average | 16.3 | 2.9 | 16.6 | -1.7 | 68.8 |
@@ -86,7 +90,7 @@ reference for everything below.
 
 ### Error by days ahead (WAPE %)
 
-| Days ahead | Prophet (deployed) | Prophet weekly-only | Last week | 4-week avg | 7-day avg | Noise floor |
+| Days ahead | Prophet yearly-on | Prophet weekly-only | Last week | 4-week avg | 7-day avg | Noise floor |
 |---|---|---|---|---|---|---|
 | 1 | 21.0 | 14.2 | 17.8 | 14.5 | 14.4 | 13.0 |
 | 2 | 33.5 | 14.4 | 18.1 | 14.6 | 15.9 | 12.7 |
@@ -96,7 +100,7 @@ reference for everything below.
 | 6 | 97.9 | 13.3 | 14.5 | 14.4 | 12.5 | 11.5 |
 | 7 | 114.9 | 13.8 | 16.6 | 13.7 | 14.3 | 12.6 |
 
-The deployed configuration gets steadily worse the further ahead it forecasts.
+The yearly-on configuration gets steadily worse the further ahead it forecasts.
 That pattern is the signature of a model extrapolating something it learned
 from too little data. The weekly-only model is flat across the week.
 
@@ -104,13 +108,13 @@ from too little data. The weekly-only model is flat across the week.
 
 | Comparison | Difference | 95% interval |
 |---|---|---|
-| Deployed Prophet minus 4-week average | +44.5 | +37.8 to +50.7 |
+| Yearly-on Prophet minus 4-week average | +44.5 | +37.8 to +50.7 |
 | Weekly-only Prophet minus same weekday last week | -3.2 | -4.0 to -2.3 |
 | Weekly-only Prophet minus trailing 7-day average | -2.3 | -3.0 to -1.6 |
 | Weekly-only Prophet minus 4-week average | -0.3 | -0.8 to +0.1 |
 
 Series by series, weekly-only Prophet beats last-week in 23 of 24 series, the
-7-day average in 23 of 24, and the 4-week average in 16 of 24. The deployed
+7-day average in 23 of 24, and the 4-week average in 16 of 24. The yearly-on
 configuration beats none of them in any series.
 
 ### Stable across folds
@@ -160,19 +164,28 @@ same-day-last-week forecast (17.2%) with a 95% interval for the difference of
 2.3 to 4.0 points. It could not be distinguished from a 4-week same-weekday
 average (14.3%). Evaluation against real restaurant data is future work."
 
-## 6. Finding to act on
+## 6. The change made
 
-Chapter 4 Algorithm 1 and the implementation both set `yearly_seasonality =
-TRUE`. The measured effect is a model four times less accurate than a naive
-average. Prophet's own default (`yearly_seasonality="auto"`) turns the yearly
-term on only once there are two years of history, which keeps the algorithm's
-intent (capture yearly patterns when the data can support them) without the
-failure. In this evaluation that setting behaves exactly like weekly-only.
+Chapter 4 Algorithm 1 and the first implementation both set
+`yearly_seasonality = TRUE`. The measured effect was a model four times less
+accurate than a naive average. `app/services/forecasting.py` now sets
+`yearly_seasonality="auto"`, Prophet's own rule: the yearly term is switched on
+only once there are two years of history (verified: weekly only at 56 and 400
+days, weekly plus yearly at 800 days). That keeps the algorithm's intent,
+capturing yearly patterns when the data can support them, without the failure.
+At the history lengths in this evaluation it behaves exactly like weekly-only.
 
-Changing it means the implementation differs from the printed pseudocode, so the
-report's Algorithm 1 should be updated to match, with this evaluation as the
-reason. Forecasts already stored were produced with the old setting and are
-replaced the next time training runs.
+Two regression tests guard it (`tests/test_forecast_accuracy_regression.py`):
+one trains on 35 noisy days with a known weekly pattern and requires the next
+six days to be within 25% on average and 50% on the worst day (the old setting
+gave 66% and 162%), and one checks the setting itself.
+
+**The implementation now differs from the printed pseudocode, so Algorithm 1 in
+the report should be updated to match**, line 8 reading
+`Prophet( weekly_seasonality = TRUE, yearly_seasonality = AUTO, ... )` with a
+note that AUTO enables it from two years of data, citing this evaluation. The
+forecasts already stored were produced with the old setting; they are replaced
+the next time training runs.
 
 ## 7. Reproducing this
 

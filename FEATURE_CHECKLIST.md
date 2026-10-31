@@ -9,7 +9,7 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 178 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
+- Tests: 180 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
 
@@ -31,7 +31,8 @@ Checked against Form 2, Form 4(i) and Chapters 1-4 on 31 Oct 2026. None of these
 
 | Promise | Where | Status |
 |---|---|---|
-| Forecast accuracy and waste reduction "measured against the manual baseline once the system is built" | Ch1 conclusion | **Not done.** The app stores per-forecast accuracy, but the data in the database is seeded, so those figures are not evidence. A proper evaluation needs a backtest of Prophet against simple baselines (same weekday last week, trailing average) on real or realistically simulated order data. Waste reduction against a baseline cannot be measured without real operation; say so as a limitation. |
+| Forecast accuracy "measured against the manual baseline once the system is built" | Ch1 conclusion | **Done on simulated data**, see `FORECAST_EVALUATION.md`. A rolling-origin backtest (24 series, 672 predictions) found the model as originally specified much worse than simple baselines (58.8% error vs 14.3%) because of `yearly_seasonality=True`; that is fixed (now `"auto"`), after which Prophet scores 14.0% against a 12.5% noise floor and beats same-weekday-last-week by 3.2 points. Real order data is still needed to say anything about real-world accuracy. **Chapter 4's Algorithm 1 (line 8) must be edited to match the code.** |
+| Waste cost reduction "measured against the manual baseline" | Ch1 conclusion | **Not done, and cannot be from simulated data.** It needs a restaurant using the system for weeks and a record of waste before it. State it as a limitation and future work. |
 | UAT test cases "reviewed and accepted by supervisor" | Form 2 (13 Nov 2026) | **No test-case document exists.** Automated tests do (178 backend, 25 Flutter, 5 cross-role workflows), but a written UAT script mapped to the use cases is not in the repo. Sign-off is the owner's. |
 | Integration testing "for all 6 user roles" | Form 2 (7 Sep 2026) | Covered by `tests/test_cross_role_workflows.py` and the app run on the emulator; not written up as a test report. |
 | Evaluation and later chapters of the final report | Ch1 "evaluation of the system" | Only Chapters 1-4 and Form 4(i) (the FYP1 log, 8 meetings) are in the project folder. A progress log for the second semester, if the programme requires one, is not. |
@@ -60,6 +61,7 @@ Checked and fine: expiry handling ("prioritized usage") is the near-expiry alert
 - The delivery deviation threshold was hard-coded at 10% although FR10.5 says configurable. It's now a setting.
 - Three screens (approvals, waste, reports) had a latent debug-mode crash on pull-to-refresh (`setState` returning a Future), present since Sprint 5.
 - Narrow-screen layout overflows in several new screens, found by the widget tests.
+- **Forecasts were far less accurate than a plain average.** Found by the backtest (`FORECAST_EVALUATION.md`): forcing yearly seasonality on, as Chapter 4 specifies, made Prophet fit a yearly cycle to weeks of data (58.8% error). It is now `"auto"` (14.0%). Every prep, staffing and purchase recommendation comes from these forecasts, so this affected all of them. Also found by CI: Prophet's wheel bundles an incomplete Stan folder that broke forecast training on Linux, including the deployed server.
 
 ## Performance targets (Chapter 3), measured
 

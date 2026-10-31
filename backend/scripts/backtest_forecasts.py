@@ -36,13 +36,14 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-PROPHET = "Prophet (deployed)"
+PROPHET = "Prophet yearly-on"
 PROPHET_WK = "Prophet weekly-only"
 PROPHET_MULT = "Prophet weekly-only multiplicative"
 PROPHET_STIFF = "Prophet weekly-only stiff trend"
-# The first is what app/services/forecasting.py runs (and what Chapter 4's
-# Algorithm 1 specifies). The rest are alternatives to measure it against;
-# the last two are sensitivity checks, not candidates tuned on this data.
+# The first is what the app originally ran and what Chapter 4's Algorithm 1
+# specifies (yearly seasonality forced on). The app now uses "auto", which at
+# the history lengths tested here is identical to the second. The last two are
+# sensitivity checks, not candidates tuned on this data.
 PROPHET_CONFIGS = {
     PROPHET: {"weekly_seasonality": True, "yearly_seasonality": True},
     PROPHET_WK: {"weekly_seasonality": True, "yearly_seasonality": False},
