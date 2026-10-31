@@ -1,4 +1,5 @@
 """UC-RA-01: read a report's figures in the app, and retry a failed one."""
+import os
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 
@@ -85,6 +86,29 @@ def test_failed_report_can_be_regenerated_in_place(client, db_session):
     assert body["status"] == "generated"
     assert body["pdf_path"]
     assert len(client.get("/reports", headers=manager).json()) == 1
+
+
+def test_download_rebuilds_a_pdf_that_is_not_on_this_machines_disk(client, db_session):
+    """The worker writes the weekly PDF on its own disk; the API serves it from
+    its own. A missing file must be re-rendered, not answered with a 404."""
+    manager, report = _report_with_data(client, db_session)
+    os.remove(report["pdf_path"])
+
+    resp = client.get(f"/reports/{report['report_id']}/download", headers=manager)
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert resp.content.startswith(b"%PDF")
+
+
+def test_download_of_a_failed_report_is_still_404(client, db_session):
+    manager, report = _report_with_data(client, db_session)
+    row = db_session.get(Report, report["report_id"])
+    row.status = "failed"
+    db_session.commit()
+    os.remove(report["pdf_path"])
+
+    assert client.get(f"/reports/{report['report_id']}/download", headers=manager).status_code == 404
 
 
 def test_regenerate_unknown_report_is_404_and_non_managers_are_refused(client, db_session):

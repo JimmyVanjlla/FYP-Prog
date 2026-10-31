@@ -6,6 +6,7 @@
 services:
   - type: web
     name: restaurant-ops-api
+    plan: free                     # sleeps after ~15 min idle; first request then takes ~30-60 s
     runtime: docker
     rootDir: backend
     dockerfilePath: ./Dockerfile
@@ -32,6 +33,7 @@ services:
   # Beat schedulers, or every job fires twice).
   - type: worker
     name: restaurant-ops-worker
+    plan: starter                  # the cheapest paid tier; Render has no free workers
     runtime: docker
     rootDir: backend
     dockerfilePath: ./Dockerfile

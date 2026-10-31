@@ -5,9 +5,18 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-# check_same_thread is only needed for the sqlite dev fallback; ignored by
-# psycopg for real Postgres connections.
-_connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+# check_same_thread is only needed for the sqlite dev fallback.
+#
+# prepare_threshold=None turns off psycopg 3's automatic prepared statements.
+# Supabase's transaction pooler (the IPv4 URL this project must use) gives each
+# transaction a different server connection, so a statement prepared on one
+# connection is "already exists" or "does not exist" on the next: an
+# intermittent DuplicatePreparedStatement that only appears once a query has
+# run a few times.
+if settings.database_url.startswith("sqlite"):
+    _connect_args = {"check_same_thread": False}
+else:
+    _connect_args = {"prepare_threshold": None}
 
 engine = create_engine(settings.database_url, connect_args=_connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

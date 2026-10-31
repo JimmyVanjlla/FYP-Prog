@@ -171,6 +171,29 @@ def regenerate_report(db: Session, report: Report) -> Report:
     return report
 
 
+def ensure_pdf(db: Session, report: Report) -> str | None:
+    """FR11.2 — path of the report's PDF, re-rendering it from the database
+    when the file isn't on this machine's disk. The API and the Celery worker
+    run as separate containers with separate, ephemeral disks, so a PDF the
+    worker wrote on Monday (or one written before the API last restarted)
+    isn't there to serve. None when there is nothing to render (generation
+    failed, or the period no longer has data)."""
+    if report.status == "failed" or not report.pdf_path:
+        return None
+    if os.path.exists(report.pdf_path):
+        return report.pdf_path
+
+    forecast_data = _forecast_accuracy_data(db, report.period_start, report.period_end)
+    waste_data = _waste_data(db, report.period_start, report.period_end)
+    budget_data = _budget_data(db, report.period_start, report.period_end)
+    if not _has_any_data(forecast_data, waste_data, budget_data):
+        return None
+
+    report.pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data)
+    db.commit()
+    return report.pdf_path
+
+
 def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, budget_data: dict) -> str:
     os.makedirs(REPORTS_DIR, exist_ok=True)
     filename = f"{report.period_end.isoformat()}_weekly_summary.pdf"

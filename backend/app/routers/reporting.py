@@ -81,6 +81,7 @@ def download_report(
 ) -> FileResponse:
     """FR11.2."""
     report = reporting_service.get_report(db, report_id)
-    if report is None or not report.pdf_path or not os.path.exists(report.pdf_path):
+    pdf_path = reporting_service.ensure_pdf(db, report) if report is not None else None
+    if pdf_path is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report PDF not found.")
-    return FileResponse(report.pdf_path, media_type="application/pdf", filename=os.path.basename(report.pdf_path))
+    return FileResponse(pdf_path, media_type="application/pdf", filename=os.path.basename(pdf_path))

@@ -70,7 +70,19 @@ against a production database; it creates test accounts with a known password.
 - Render's free tier has no free background workers, and a free web service
   sleeps when idle. The scheduled jobs (forecast training at 06:00, etc.) need
   the worker running, so a paid worker (or Railway's usage-based plan) is
-  needed for the scheduled behaviour to actually happen.
+  needed for the scheduled behaviour to actually happen. `render.yaml` asks for
+  the API on `free` and the worker on `starter` (about US$7 a month); without
+  an explicit `plan:` a Blueprint defaults to a paid plan for every service.
+- Memory: a full forecast-training cycle peaks at about 150 MB in the Python
+  process (measured on the development machine; the Stan model runs as a
+  child process on top of that), well inside the 512 MB of the starter tier.
+- The API and worker have separate, ephemeral disks. Weekly report PDFs are
+  therefore re-rendered from the database on download if the file isn't on the
+  API's disk, so a report the worker produced is still downloadable.
+- The database URL must be Supabase's **transaction pooler**. The engine
+  disables psycopg's prepared-statement cache (`prepare_threshold=None`) for
+  that reason; without it queries fail intermittently with
+  `DuplicatePreparedStatement`.
 
 ## 2. Mobile app
 
