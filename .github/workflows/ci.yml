@@ -44,7 +44,21 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -m pytest -q
+      - name: Run tests
+        shell: bash
+        run: python -m pytest -q -rfE --tb=short 2>&1 | tee pytest.log
+      # Puts the failing test names on the run summary page, where they can be
+      # read without opening the raw log.
+      - name: Report failures
+        if: failure()
+        run: |
+          python - <<'EOF'
+          import pathlib
+          text = pathlib.Path("pytest.log").read_text(errors="replace")
+          tail = "\n".join(text.splitlines()[-60:])[-3500:]
+          tail = tail.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+          print(f"::error title=pytest failed::{tail}")
+          EOF
 
   frontend:
     name: Frontend (analyze + test)
