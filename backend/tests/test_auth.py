@@ -236,11 +236,38 @@ def test_non_manager_cannot_provision_staff_accounts(client):
     assert resp.status_code == 403
 
 
-def test_login_is_rate_limited_after_repeated_failures(client):
+class _InMemoryRedis:
+    """Just the four calls the login rate limiter makes, so the test needs no
+    Redis server (CI has none, and a shared one keeps counters between runs)."""
+
+    def __init__(self):
+        self.counts: dict[str, int] = {}
+        self.ttls: dict[str, int] = {}
+
+    def incr(self, key):
+        self.counts[key] = self.counts.get(key, 0) + 1
+        return self.counts[key]
+
+    def expire(self, key, seconds):
+        self.ttls[key] = seconds
+
+    def ttl(self, key):
+        return self.ttls.get(key, -1)
+
+    def delete(self, key):
+        self.counts.pop(key, None)
+        self.ttls.pop(key, None)
+
+
+def test_login_is_rate_limited_after_repeated_failures(client, monkeypatch):
     """NFR-Security — /auth/login previously had no limit on attempts at
-    all. A unique email per test run avoids colliding with leftover
-    counters from a previous run against the same real Redis instance."""
+    all."""
+    from app.core import rate_limit
     from app.core.config import get_settings
+
+    fake_redis = _InMemoryRedis()
+    monkeypatch.setattr(rate_limit, "_get_redis", lambda: fake_redis)
+    monkeypatch.setattr(rate_limit, "_unavailable_until", 0.0)
 
     settings = get_settings()
     email = f"ratelimit-{uuid.uuid4().hex}@restaurant.com"
