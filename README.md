@@ -341,7 +341,9 @@ code, the database and the app running on an emulator. It started the day at
 See `FEATURE_CHECKLIST.md` ("What is still genuinely open") for detail. In
 short, these need something only the project owner can provide:
 
-- **Deploying** (Render/Railway account; Docker to build the image).
+- **A background worker for the scheduled jobs.** The API is deployed
+  (`https://fyp-prog.onrender.com`, Render free tier, verified); the Celery
+  worker is not, because Render has no free workers (about US$7 a month).
 - **An iOS build** (needs a Mac).
 - **A decision on multi-restaurant support**: not built; the schema change
   would be additive.

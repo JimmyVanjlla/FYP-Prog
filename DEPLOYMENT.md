@@ -23,10 +23,12 @@ Be clear-eyed about this before relying on it:
 |---|---|
 | Backend runs and passes its tests against hosted Supabase + Redis | Verified (locally) |
 | Alembic migrations apply to a real Postgres | Verified (every migration was applied to Supabase) |
-| `Dockerfile` / `render.yaml` | **Written, not built or applied.** The development machine has no Docker, and no Render/Railway account was available. Expect to fix small things on first deploy. |
-| HTTPS | Provided by the platform (Render/Railway terminate TLS). Never exercised, since nothing is deployed. |
-| Celery worker + Beat running the scheduled jobs | The tasks, schedules and retry/alert logic are tested; a live worker process has **not** been run against the hosted Redis in this repo's history. |
-| Push notifications (FCM) | Verified on the Android emulator against a real Firebase project (token registered, backend push received with the app closed). Not yet tried from a deployed server or on a physical phone. |
+| `Dockerfile` | **Built and running** on Render (free web service) at `https://fyp-prog.onrender.com`, created by hand from the Dockerfile; the first build and start-up needed no changes. |
+| `render.yaml` | Still **not applied**: Render's Blueprint flow wants a card on file because it includes the paid worker. The API was created manually instead (Docker, root directory `backend`, free instance, secrets from `render.env`). |
+| HTTPS | Verified: plain HTTP redirects (301) to HTTPS. |
+| Deployed API | Verified 31 Oct 2026: `/health`, login, authenticated reads, report PDF download (re-rendered on the API's own disk), all endpoints under 0.61 s. |
+| Celery worker + Beat running the scheduled jobs | **Not deployed** (needs a paid Render worker, about US$7 a month). The tasks, schedules and retry/alert logic are tested; a live worker process has not been run against the hosted Redis. |
+| Push notifications (FCM) | Verified on the Android emulator against a real Firebase project, including a push sent by the **deployed** server (kitchen prep-deviation notification). Not tried on a physical phone. |
 | iOS build | Not built (needs a Mac). The deployment target is pinned to iOS 13.0. |
 
 ## 1. Backend (Render)
@@ -38,6 +40,18 @@ Be clear-eyed about this before relying on it:
    - `REDIS_URL` -- from Redis Cloud.
 4. `JWT_SECRET` is generated for you. `ENVIRONMENT=production` is set, which makes the API **refuse to start** if the secret is still the public default.
 5. Deploy. The container runs `alembic upgrade head` and then serves. Check `https://<service>.onrender.com/health` and `/docs`.
+
+### Without a card: the API only, created by hand
+
+This is how the live service was deployed. **New -> Web Service -> Public Git
+Repository**, then: branch `main`, language Docker, root directory `backend`,
+Dockerfile path `./Dockerfile`, instance type Free, health check `/health`.
+Set `ENVIRONMENT=production`, a fresh random `JWT_SECRET`, `DATABASE_URL`
+(`postgresql+psycopg://...` pooler URL), `REDIS_URL` and
+`FCM_CREDENTIALS_PATH=/etc/secrets/firebase-service-account.json`, and add the
+service-account JSON as a Secret File of that name. A public-URL repo has no
+webhook, so each push needs **Manual Deploy -> Deploy latest commit**. No
+worker means no scheduled jobs: trigger training and reports by hand.
 
 ### Environment variables
 
