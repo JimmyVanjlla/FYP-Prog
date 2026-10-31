@@ -57,7 +57,11 @@ def main() -> int:
         print(f"Moving incomplete bundled CmdStan stub aside: {d} -> {target}")
         if target.exists():
             shutil.rmtree(target)
-        d.rename(target)
+        # shutil.move, not Path.rename: inside a Docker image the folder lives in
+        # an earlier layer, and renaming it there fails with "Invalid
+        # cross-device link" on some builders (Render's). move() falls back to
+        # copy-then-delete.
+        shutil.move(str(d), str(target))
 
     print(
         "Done. Verify with:\n"
