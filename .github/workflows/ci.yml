@@ -44,6 +44,9 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
+      # Prophet's wheel bundles an incomplete CmdStan folder that cmdstanpy
+      # rejects before it can use the prebuilt model beside it.
+      - run: python scripts/setup_windows_prophet.py
       - name: Run tests
         shell: bash
         run: python -m pytest -q -rfE --tb=short 2>&1 | tee pytest.log
@@ -97,7 +100,15 @@ jobs:
           except Exception:
               traceback.print_exc(file=sys.stdout)
           EOF
-          python diag.py 2>&1 | tee diag.log || true
+          python scripts/setup_windows_prophet.py 2>&1 | tee diag.log
+          cat >> diag.py <<'EOF'
+          import pandas as pd
+          from prophet import Prophet
+          m = Prophet(uncertainty_samples=0, yearly_seasonality=False)
+          m.fit(pd.DataFrame({"ds": pd.date_range("2026-01-01", periods=30), "y": range(30)}))
+          print("PROPHET FIT OK, backend:", m.stan_backend.get_type())
+          EOF
+          python diag.py 2>&1 | tee -a diag.log || true
           python - <<'EOF'
           import pathlib
           t = "\n".join(pathlib.Path("diag.log").read_text(errors="replace").splitlines()[-45:])[-3800:]

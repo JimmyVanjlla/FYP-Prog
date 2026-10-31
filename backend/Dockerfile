@@ -24,6 +24,11 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
+# Prophet's wheel bundles an incomplete CmdStan folder (no makefile) that
+# cmdstanpy rejects before it can use the prebuilt model sitting beside it,
+# so Prophet() fails to load its Stan backend. Move the stub aside.
+RUN python scripts/setup_windows_prophet.py
+
 # Generated report PDFs are written here; mount a persistent disk on this path
 # if reports must survive a redeploy.
 RUN mkdir -p /app/generated_reports

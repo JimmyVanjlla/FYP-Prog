@@ -1,9 +1,9 @@
 """
-One-time setup for Prophet on a Windows dev machine. Not needed on the
-Linux deployment target (Railway/Render) — there, `pip install prophet`
-just works given build-essential in the image.
+One-time setup for Prophet, needed on Windows dev machines AND on Linux (CI
+and the Docker image): `pip install prophet` alone does not give a working
+install on either. The Dockerfile and the CI workflow both run this script.
 
-What this fixes: Prophet's Windows wheel ships a precompiled
+What this fixes: Prophet's wheel ships a precompiled
 prophet_model.bin (good, no compile needed) alongside an *incomplete*
 bundled-cmdstan support directory (prophet/stan_model/cmdstan-<version>/ —
 present but empty, no makefile). Prophet's backend loader sees that
@@ -31,10 +31,6 @@ from pathlib import Path
 
 
 def main() -> int:
-    if sys.platform != "win32":
-        print("Not Windows — nothing to do here.")
-        return 0
-
     stan_model_dir = importlib_resources.files("prophet") / "stan_model"
     model_bin = Path(str(stan_model_dir / "prophet_model.bin"))
     if not model_bin.exists():
