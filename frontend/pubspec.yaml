@@ -45,6 +45,8 @@ dependencies:
   # Opens a generated report PDF in the system browser/viewer (FR11.2) —
   # the app itself has no in-app PDF renderer.
   url_launcher: ^6.3.1
+  firebase_core: ^5.1.0
+  firebase_messaging: ^17.0.1
 
 dev_dependencies:
   flutter_test:

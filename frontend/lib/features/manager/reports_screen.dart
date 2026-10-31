@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
 import '../../models/report.dart';
+import 'report_summary_screen.dart';
 
 /// Module 11 — FR11.1/FR11.2. Manager triggers a weekly summary and opens
 /// the generated PDF in the system viewer (no in-app PDF renderer).
@@ -39,7 +39,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
     await _future;
   }
 
@@ -65,14 +67,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     } finally {
       if (mounted) setState(() => _generating = false);
     }
-  }
-
-  Future<void> _openPdf(Report report) async {
-    final auth = context.read<AuthState>();
-    final token = auth.token;
-    if (token == null) return;
-    final url = auth.api.reportDownloadUrl(report.reportId, token: token);
-    await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
   @override
@@ -161,14 +155,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         subtitle: Text(report.type),
                         trailing: report.status == 'generated'
                             ? SeverityChip(
-                                label: 'Open PDF',
+                                label: 'View',
                                 color: Severity.ok,
                               )
                             : SeverityChip(
                                 label: 'Failed',
                                 color: Severity.critical,
                               ),
-                        onTap: report.hasPdf ? () => _openPdf(report) : null,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ReportSummaryScreen(reportId: report.reportId),
+                            ),
+                          );
+                          if (mounted) await _refresh();
+                        },
                       ),
                     );
                   },

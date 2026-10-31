@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_client.dart';
 import 'jwt.dart';
+import 'push_service.dart';
 
 /// The 7 staff roles (Ch1 §1.5.2 / Ch4 §4.1) — mirrors the backend's
 /// app/models/roles.py::Role. Kept as plain string constants (not a Dart
@@ -38,14 +41,16 @@ class AuthState extends ChangeNotifier {
 
   final ApiClient api;
   final FlutterSecureStorage _storage;
+  final PushService _push;
 
   String? _token;
   String? _role;
   bool _restoring = true;
 
-  AuthState({ApiClient? api, FlutterSecureStorage? storage})
+  AuthState({ApiClient? api, FlutterSecureStorage? storage, PushService? push})
     : api = api ?? ApiClient(),
-      _storage = storage ?? const FlutterSecureStorage();
+      _storage = storage ?? const FlutterSecureStorage(),
+      _push = push ?? PushService();
 
   bool get isAuthenticated => _token != null;
   String? get role => _role;
@@ -61,6 +66,7 @@ class AuthState extends ChangeNotifier {
     final stored = await _storage.read(key: _tokenStorageKey);
     if (stored != null) {
       _applyToken(stored);
+      unawaited(_push.register(api));
     }
     _restoring = false;
     notifyListeners();
@@ -71,6 +77,7 @@ class AuthState extends ChangeNotifier {
     final token = result['access_token'] as String;
     await _storage.write(key: _tokenStorageKey, value: token);
     _applyToken(token);
+    unawaited(_push.register(api));
     notifyListeners();
   }
 
@@ -91,6 +98,9 @@ class AuthState extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // While the token is still valid, so the backend stops pushing this
+    // person's alerts to this phone.
+    await _push.unregister(api);
     await _storage.delete(key: _tokenStorageKey);
     _token = null;
     _role = null;

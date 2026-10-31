@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
+import '../../core/async_view.dart';
 import '../../core/auth_state.dart';
+import '../../core/json.dart';
 import '../../core/theme.dart';
 import '../../models/portion_recommendation.dart';
 import '../../models/purchase_order.dart';
@@ -34,7 +36,16 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     final api = context.read<AuthState>().api;
     final posRaw = await api.listPurchaseOrders(status: 'pending_approval');
     final portionsRaw = await api.listPortionRecommendations(status: 'pending');
+    Json? budget;
+    try {
+      budget = asJson(await api.getJson('/procurement/budget/utilisation'));
+    } catch (_) {
+      budget = null; // the queue is still usable without the budget figure
+    }
+    final menu = asJsonList(await api.getJson('/menu-items', query: {'include_inactive': true, 'limit': 500}));
     return _ApprovalsData(
+      budget: budget,
+      itemNames: {for (final m in menu) m['menu_item_id'] as int: m['name'] as String},
       purchaseOrders: posRaw
           .map((e) => PurchaseOrder.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -45,7 +56,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _load());
+    setState(() {
+      _future = _load();
+    });
     await _future;
   }
 
@@ -84,6 +97,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (data.budget != null) ...[
+                _BudgetCard(budget: data.budget!),
+                const SizedBox(height: 16),
+              ],
               if (data.purchaseOrders.isNotEmpty) ...[
                 SectionHeader(
                   icon: Icons.local_shipping_outlined,
@@ -91,7 +108,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                   trailing: '${data.purchaseOrders.length}',
                 ),
                 for (final po in data.purchaseOrders) ...[
-                  _PurchaseOrderTile(po: po, onChanged: _refresh),
+                  _PurchaseOrderTile(po: po, remaining: data.remaining, onChanged: _refresh),
                   const SizedBox(height: 10),
                 ],
                 const SizedBox(height: 14),
@@ -105,6 +122,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 for (final r in data.portionRecommendations) ...[
                   _PortionRecommendationTile(
                     recommendation: r,
+                    itemName: data.itemNames[r.menuItemId],
                     onChanged: _refresh,
                   ),
                   const SizedBox(height: 10),
@@ -121,18 +139,108 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 class _ApprovalsData {
   final List<PurchaseOrder> purchaseOrders;
   final List<PortionRecommendation> portionRecommendations;
+  // This month's budget position, and dish names for the portion reviews.
+  final Json? budget;
+  final Map<int, String> itemNames;
 
   _ApprovalsData({
     required this.purchaseOrders,
     required this.portionRecommendations,
+    required this.budget,
+    required this.itemNames,
   });
+
+  double? get remaining => budget == null ? null : asDouble(budget!['remaining']);
+}
+
+class _BudgetCard extends StatelessWidget {
+  final Json budget;
+
+  const _BudgetCard({required this.budget});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = asDouble(budget['utilisation_pct']);
+    final color = pct >= 100 ? Severity.critical : (pct >= 80 ? Severity.warning : Severity.ok);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.account_balance_wallet_outlined, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This month: ${money(budget['spent'])} of ${money(budget['budget_limit'])}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                SeverityChip(label: '${pct.toStringAsFixed(0)}% used', color: color),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(value: (pct / 100).clamp(0.0, 1.0), minHeight: 8, color: color),
+            ),
+            const SizedBox(height: 6),
+            Text('${money(budget['remaining'])} remaining'),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PurchaseOrderTile extends StatelessWidget {
   final PurchaseOrder po;
+  final double? remaining;
   final Future<void> Function() onChanged;
 
-  const _PurchaseOrderTile({required this.po, required this.onChanged});
+  const _PurchaseOrderTile({required this.po, required this.remaining, required this.onChanged});
+
+  Future<void> _viewItems(BuildContext context) async {
+    final api = context.read<AuthState>().api;
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: AsyncView<({List<Json> items, Map<int, Json> ingredients})>(
+          load: () async {
+            final results = await Future.wait([
+              api.getJson('/procurement/purchase-orders/${po.poId}/items'),
+              api.getJson('/inventory/ingredients', query: {'limit': 500}),
+            ]);
+            return (
+              items: asJsonList(results[0]),
+              ingredients: {for (final i in asJsonList(results[1])) i['ingredient_id'] as int: i},
+            );
+          },
+          builder: (context, data, _) => ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            children: [
+              Text('PO #${po.poId} items', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              for (final item in data.items)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(data.ingredients[item['ingredient_id']]?['name'] as String? ?? 'Ingredient #${item['ingredient_id']}'),
+                  subtitle: Text(
+                    '${trimNum(item['quantity'])} ${data.ingredients[item['ingredient_id']]?['unit'] ?? ''} at ${money(item['unit_price'])}',
+                  ),
+                  trailing: Text(money(asDouble(item['quantity']) * asDouble(item['unit_price']))),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,7 +274,33 @@ class _PurchaseOrderTile extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 10),
+            if (remaining != null) ...[
+              const SizedBox(height: 6),
+              Builder(
+                builder: (context) {
+                  final total = double.tryParse(po.totalCost.toString()) ?? 0;
+                  final over = total > remaining!;
+                  return Text(
+                    over
+                        ? 'Remaining budget ${money(remaining)}: this order is ${money(total - remaining!)} over'
+                        : 'Remaining budget ${money(remaining)}: ${money(remaining! - total)} left if approved',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: over ? Severity.critical : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                },
+              ),
+            ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _viewItems(context),
+                icon: const Icon(Icons.list_alt_rounded, size: 18),
+                label: const Text('View items'),
+              ),
+            ),
             PrimarySecondaryActions(
               primaryLabel: 'Approve',
               secondaryLabel: 'Reject',
@@ -200,10 +334,12 @@ class _PurchaseOrderTile extends StatelessWidget {
 
 class _PortionRecommendationTile extends StatelessWidget {
   final PortionRecommendation recommendation;
+  final String? itemName;
   final Future<void> Function() onChanged;
 
   const _PortionRecommendationTile({
     required this.recommendation,
+    required this.itemName,
     required this.onChanged,
   });
 
@@ -219,7 +355,7 @@ class _PortionRecommendationTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    'Menu item #${recommendation.menuItemId} · ${recommendation.leftoverRate}% leftover rate',
+                    '${itemName ?? 'Menu item #${recommendation.menuItemId}'} · ${recommendation.leftoverRate}% leftover rate',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),

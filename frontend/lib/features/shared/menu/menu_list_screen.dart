@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/api_client.dart';
+import '../../../core/async_view.dart';
 import '../../../core/auth_state.dart';
+import '../../../core/json.dart';
 import '../../../core/theme.dart';
-import '../../../models/menu_item.dart';
+import 'menu_detail_screen.dart';
 import 'menu_form_screen.dart';
 
 /// FR2.4 — every authenticated role can view the menu; only the Restaurant
 /// Manager can create/edit (server-enforced via require_role — this screen
 /// just mirrors that so a non-Manager never sees a control they'd get a 403
-/// from anyway).
+/// from anyway). Each item opens its detail (profit margin, recipe, edit).
 class MenuListScreen extends StatefulWidget {
   const MenuListScreen({super.key});
 
@@ -19,74 +20,60 @@ class MenuListScreen extends StatefulWidget {
 }
 
 class _MenuListScreenState extends State<MenuListScreen> {
-  late Future<List<MenuItem>> _future;
+  bool _showInactive = false;
+  int _version = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<List<MenuItem>> _load() async {
+  Future<List<Json>> _load() async {
     final api = context.read<AuthState>().api;
-    final raw = await api.listMenuItems();
-    return raw
-        .map((e) => MenuItem.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
+    return asJsonList(
+      await api.getJson('/menu-items', query: {'include_inactive': _showInactive, 'limit': 500}),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final isManager = context.watch<AuthState>().role == Roles.manager;
 
-    return FutureBuilder<List<MenuItem>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          final message = snapshot.error is ApiException
-              ? (snapshot.error as ApiException).message
-              : 'Failed to load menu.';
-          return Center(child: Text(message));
-        }
-        final items = snapshot.data ?? [];
-        if (items.isEmpty && !isManager) {
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView(
-              children: const [
-                SizedBox(height: 120),
-                EmptyState(
-                  icon: Icons.restaurant_menu_outlined,
-                  message: 'No menu items yet.',
-                ),
-              ],
-            ),
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: items.length + (isManager ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              // Ch4 §4.4.1: the "+ add" row is the same reused pattern
-              // used everywhere else something can be added (e.g. later,
-              // "+ Assign staff" on the Schedule Builder screen).
-              if (isManager && index == items.length) {
-                return _AddMenuItemRow(onAdded: _refresh);
-              }
-              return _MenuItemTile(item: items[index]);
-            },
-          ),
+    return AsyncView<List<Json>>(
+      key: ValueKey('$_version|$_showInactive'),
+      load: _load,
+      builder: (context, items, reload) {
+        return RefreshableList(
+          onRefresh: reload,
+          empty: isManager
+              ? null
+              : const EmptyState(icon: Icons.restaurant_menu_outlined, message: 'No menu items yet.'),
+          children: [
+            if (isManager)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Show deactivated items'),
+                value: _showInactive,
+                onChanged: (v) => setState(() => _showInactive = v),
+              ),
+            for (final item in items) ...[
+              _MenuItemTile(
+                item: item,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => MenuDetailScreen(menuItemId: item['menu_item_id'] as int)),
+                  );
+                  if (mounted) setState(() => _version++);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (isManager)
+              AddRow(
+                label: 'Add menu item',
+                onTap: () async {
+                  final created = await Navigator.of(
+                    context,
+                  ).push<bool>(MaterialPageRoute(builder: (_) => const MenuFormScreen()));
+                  if (created == true) await reload();
+                },
+              ),
+          ],
         );
       },
     );
@@ -94,64 +81,39 @@ class _MenuListScreenState extends State<MenuListScreen> {
 }
 
 class _MenuItemTile extends StatelessWidget {
-  final MenuItem item;
+  final Json item;
+  final VoidCallback onTap;
 
-  const _MenuItemTile({required this.item});
+  const _MenuItemTile({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final active = item['is_active'] as bool;
+    final available = item['is_available'] as bool;
+    final lowIngredient = item['has_low_stock_ingredient'] == true;
+    final margin = item['profit_margin'];
+
+    final chip = !active
+        ? const SeverityChip(label: 'Deactivated', color: Severity.critical)
+        : !available
+            ? const SeverityChip(label: 'Unavailable', color: Severity.critical)
+            : lowIngredient
+                ? const SeverityChip(label: 'Low ingredient', color: Severity.warning)
+                : const SeverityChip(label: 'Available', color: Severity.ok);
+
     return Card(
       child: ListTile(
-        leading: const IconBadge(icon: Icons.restaurant_menu_rounded),
-        title: Text(item.name),
-        subtitle: Text('${item.category} · RM ${item.price}'),
-        trailing: SeverityChip(
-          label: item.isAvailable ? 'Available' : 'Unavailable',
-          color: item.isAvailable ? Severity.ok : Severity.critical,
+        onTap: onTap,
+        leading: IconBadge(
+          icon: Icons.restaurant_menu_rounded,
+          color: active ? null : Severity.critical,
         ),
-      ),
-    );
-  }
-}
-
-class _AddMenuItemRow extends StatelessWidget {
-  final Future<void> Function() onAdded;
-
-  const _AddMenuItemRow({required this.onAdded});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () async {
-        final created = await Navigator.of(
-          context,
-        ).push<bool>(MaterialPageRoute(builder: (_) => const MenuFormScreen()));
-        if (created == true) await onAdded();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-          ),
-          borderRadius: BorderRadius.circular(16),
+        title: Text(item['name'] as String),
+        subtitle: Text(
+          '${item['category']}  ·  ${money(item['price'])}'
+          '${margin == null ? '' : '  ·  margin ${money(margin)}'}',
         ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 6),
-            Text(
-              'Add menu item',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+        trailing: chip,
       ),
     );
   }

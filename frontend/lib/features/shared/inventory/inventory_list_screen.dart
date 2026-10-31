@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/api_client.dart';
+import '../../../core/async_view.dart';
 import '../../../core/auth_state.dart';
+import '../../../core/json.dart';
 import '../../../core/theme.dart';
-import '../../../models/ingredient.dart';
+import 'ingredient_detail_screen.dart';
 
-/// Module 3 — FR3.1/FR3.3. Every role can view stock levels; only
-/// Inventory Staff and the Restaurant Manager can add ingredients or record
+/// Module 3 — FR3.1/FR3.3. Every role can view stock levels; only Inventory
+/// Staff and the Restaurant Manager can add ingredients or record
 /// adjustments (server-enforced; this screen mirrors that client-side).
+/// Each row shows on-hand beside the threshold it's measured against (Ch4
+/// §4.4.1: "on-hand quantity next to the low-stock threshold"), and opens
+/// the ingredient's detail.
 class InventoryListScreen extends StatefulWidget {
   const InventoryListScreen({super.key});
 
@@ -17,232 +21,60 @@ class InventoryListScreen extends StatefulWidget {
 }
 
 class _InventoryListScreenState extends State<InventoryListScreen> {
-  late Future<List<Ingredient>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<List<Ingredient>> _load() async {
-    final api = context.read<AuthState>().api;
-    final raw = await api.listIngredients();
-    return raw
-        .map((e) => Ingredient.fromJson(e as Map<String, dynamic>))
-        .toList();
-  }
-
-  Future<void> _refresh() async {
-    setState(() => _future = _load());
-    await _future;
-  }
+  int _version = 0;
 
   bool get _canManage {
     final role = context.read<AuthState>().role;
     return role == Roles.inventoryStaff || role == Roles.manager;
   }
 
+  Future<({List<Json> ingredients, double defaultThreshold})> _load() async {
+    final api = context.read<AuthState>().api;
+    final results = await Future.wait([
+      api.getJson('/inventory/ingredients', query: {'limit': 500}),
+      api.getJson('/config'),
+    ]);
+    return (
+      ingredients: asJsonList(results[0]),
+      defaultThreshold: asDouble(asJson(results[1])['default_low_stock_threshold']),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Ingredient>>(
-      future: _future,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          final message = snapshot.error is ApiException
-              ? (snapshot.error as ApiException).message
-              : 'Failed to load inventory.';
-          return Center(child: Text(message));
-        }
-        final ingredients = snapshot.data ?? [];
-        if (ingredients.isEmpty && !_canManage) {
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: ListView(
-              children: const [
-                SizedBox(height: 120),
-                EmptyState(
-                  icon: Icons.inventory_2_outlined,
-                  message: 'No ingredients tracked yet.',
-                ),
-              ],
-            ),
-          );
-        }
-        return RefreshIndicator(
-          onRefresh: _refresh,
-          child: ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: ingredients.length + (_canManage ? 1 : 0),
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
-              if (_canManage && index == ingredients.length) {
-                return _AddIngredientRow(onAdded: _refresh);
-              }
-              return _IngredientTile(
-                ingredient: ingredients[index],
-                onChanged: _refresh,
-              );
-            },
-          ),
+    return AsyncView<({List<Json> ingredients, double defaultThreshold})>(
+      key: ValueKey(_version),
+      load: _load,
+      builder: (context, data, reload) {
+        return RefreshableList(
+          onRefresh: reload,
+          empty: _canManage
+              ? null
+              : const EmptyState(icon: Icons.inventory_2_outlined, message: 'No ingredients tracked yet.'),
+          children: [
+            for (final ingredient in data.ingredients) ...[
+              _IngredientTile(
+                ingredient: ingredient,
+                defaultThreshold: data.defaultThreshold,
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => IngredientDetailScreen(ingredientId: ingredient['ingredient_id'] as int),
+                    ),
+                  );
+                  if (mounted) setState(() => _version++);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (_canManage) AddRow(label: 'Add ingredient', onTap: () => _showAddDialog(context, reload)),
+          ],
         );
       },
     );
   }
-}
 
-class _IngredientTile extends StatelessWidget {
-  final Ingredient ingredient;
-  final Future<void> Function() onChanged;
-
-  const _IngredientTile({required this.ingredient, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: ListTile(
-        leading: IconBadge(
-          icon: Icons.inventory_2_rounded,
-          color: ingredient.isLowStock ? Severity.critical : null,
-        ),
-        title: Text(ingredient.name),
-        subtitle: Text('${ingredient.currentStock} ${ingredient.unit} on hand'),
-        trailing: SeverityChip(
-          label: ingredient.isLowStock ? 'Low stock' : 'OK',
-          color: ingredient.isLowStock ? Severity.critical : Severity.ok,
-        ),
-        onTap: () => _showAdjustDialog(context),
-      ),
-    );
-  }
-
-  Future<void> _showAdjustDialog(BuildContext context) async {
-    final qtyController = TextEditingController();
-    String reason = 'miscount';
-    final formKey = GlobalKey<FormState>();
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: Text('Adjust ${ingredient.name}'),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: qtyController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    signed: true,
-                    decimal: true,
-                  ),
-                  decoration: const InputDecoration(
-                    labelText: 'Adjustment (+/-)',
-                    helperText:
-                        'e.g. -2.5 for spoilage, +5 to correct a miscount',
-                  ),
-                  // FR3.6 — validated inline, at the point of entry.
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Enter a quantity.';
-                    }
-                    final parsed = num.tryParse(v.trim());
-                    if (parsed == null) return 'Must be a number.';
-                    if (parsed == 0) return 'Cannot be zero.';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: reason,
-                  decoration: const InputDecoration(labelText: 'Reason'),
-                  items: const ['spillage', 'spoilage', 'miscount']
-                      .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                      .toList(),
-                  onChanged: (v) => setState(() => reason = v ?? reason),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  Navigator.of(context).pop(true);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-
-    if (confirmed != true || !context.mounted) return;
-    try {
-      final api = context.read<AuthState>().api;
-      await api.recordStockAdjustment(
-        ingredientId: ingredient.ingredientId,
-        adjustedQuantity: qtyController.text.trim(),
-        reasonCategory: reason,
-      );
-      await onChanged();
-    } on ApiException catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
-  }
-}
-
-class _AddIngredientRow extends StatelessWidget {
-  final Future<void> Function() onAdded;
-
-  const _AddIngredientRow({required this.onAdded});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: () => _showAddDialog(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 6),
-            Text(
-              'Add ingredient',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _showAddDialog(BuildContext context) async {
+  Future<void> _showAddDialog(BuildContext context, Future<void> Function() reload) async {
     final nameController = TextEditingController();
     final unitController = TextEditingController(text: 'kg');
     final stockController = TextEditingController(text: '0');
@@ -260,30 +92,22 @@ class _AddIngredientRow extends StatelessWidget {
               TextFormField(
                 controller: nameController,
                 decoration: const InputDecoration(labelText: 'Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required.' : null,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required.' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: unitController,
-                decoration: const InputDecoration(
-                  labelText: 'Unit (e.g. kg, litre)',
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required.' : null,
+                decoration: const InputDecoration(labelText: 'Unit (e.g. kg, litre)'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required.' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: stockController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Current stock'),
                 validator: (v) {
                   final parsed = num.tryParse(v?.trim() ?? '');
-                  if (parsed == null || parsed < 0) {
-                    return 'Must be a number ≥ 0.';
-                  }
+                  if (parsed == null || parsed < 0) return 'Must be a number ≥ 0.';
                   return null;
                 },
               ),
@@ -291,15 +115,10 @@ class _AddIngredientRow extends StatelessWidget {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
-              if (formKey.currentState!.validate()) {
-                Navigator.of(context).pop(true);
-              }
+              if (formKey.currentState!.validate()) Navigator.of(context).pop(true);
             },
             child: const Text('Add'),
           ),
@@ -308,20 +127,46 @@ class _AddIngredientRow extends StatelessWidget {
     );
 
     if (confirmed != true || !context.mounted) return;
-    try {
-      final api = context.read<AuthState>().api;
-      await api.createIngredient(
+    final api = context.read<AuthState>().api;
+    final ok = await runAction(
+      context,
+      () => api.createIngredient(
         name: nameController.text.trim(),
         unit: unitController.text.trim(),
         currentStock: stockController.text.trim(),
-      );
-      await onAdded();
-    } on ApiException catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
+      ),
+      success: 'Ingredient added.',
+    );
+    if (ok) await reload();
+  }
+}
+
+class _IngredientTile extends StatelessWidget {
+  final Json ingredient;
+  final double defaultThreshold;
+  final VoidCallback onTap;
+
+  const _IngredientTile({required this.ingredient, required this.defaultThreshold, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final low = ingredient['is_low_stock'] == true;
+    final own = ingredient['low_stock_threshold'];
+    final threshold = own == null ? defaultThreshold : asDouble(own);
+    return Card(
+      child: ListTile(
+        onTap: onTap,
+        leading: IconBadge(icon: Icons.inventory_2_rounded, color: low ? Severity.critical : null),
+        title: Text(ingredient['name'] as String),
+        subtitle: Text(
+          '${trimNum(ingredient['current_stock'])} ${ingredient['unit']} on hand'
+          '  ·  alert below ${trimNum(threshold)}${own == null ? ' (default)' : ''}',
+        ),
+        trailing: SeverityChip(
+          label: low ? 'Low stock' : 'OK',
+          color: low ? Severity.critical : Severity.ok,
+        ),
+      ),
+    );
   }
 }

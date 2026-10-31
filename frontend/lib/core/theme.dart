@@ -198,12 +198,16 @@ class SeverityChip extends StatelessWidget {
         children: [
           Icon(_icon, color: color, size: 13),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w700,
-              fontSize: 12,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -309,6 +313,43 @@ class IconBadge extends StatelessWidget {
       radius: 20,
       backgroundColor: tint.withValues(alpha: 0.14),
       child: Icon(icon, color: tint, size: 20),
+    );
+  }
+}
+
+
+/// The dashed "+ add" row Chapter 4 (section 4.4.1) names as the one
+/// interaction pattern for adding something to a list — "the same pattern
+/// as '+ Assign staff' on Schedule Builder; same pattern for every status
+/// list". One widget so every screen's add row looks and behaves the same.
+class AddRow extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const AddRow({super.key, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          border: Border.all(color: primary.withValues(alpha: 0.4)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_rounded, size: 18, color: primary),
+            const SizedBox(width: 6),
+            Text(label, style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
     );
   }
 }

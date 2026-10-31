@@ -350,4 +350,56 @@ class ApiClient {
     );
     return _decode(resp) as Map<String, dynamic>;
   }
+
+  // --- Generic helpers --------------------------------------------------
+  // The feature screens added after Sprint 5 talk to many endpoints; rather
+  // than a hand-written wrapper per endpoint, they go through these four,
+  // which share the same auth header and error handling as everything above.
+
+  Uri _uriWithQuery(String path, Map<String, dynamic>? query) {
+    final params = <String, String>{
+      for (final e in (query ?? const <String, dynamic>{}).entries)
+        if (e.value != null && e.value.toString().isNotEmpty)
+          e.key: e.value.toString(),
+    };
+    final uri = _uri(path);
+    return params.isEmpty ? uri : uri.replace(queryParameters: params);
+  }
+
+  Future<dynamic> getJson(String path, {Map<String, dynamic>? query}) async {
+    final resp = await http.get(_uriWithQuery(path, query), headers: _headers);
+    return _decode(resp);
+  }
+
+  Future<dynamic> postJson(String path, [Object? body]) async {
+    final resp = await http.post(
+      _uri(path),
+      headers: _headers,
+      body: body == null ? null : jsonEncode(body),
+    );
+    return _decode(resp);
+  }
+
+  Future<dynamic> patchJson(String path, Object? body) async {
+    final resp = await http.patch(
+      _uri(path),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    return _decode(resp);
+  }
+
+  Future<dynamic> putJson(String path, Object? body) async {
+    final resp = await http.put(
+      _uri(path),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    return _decode(resp);
+  }
+
+  Future<dynamic> deleteJson(String path) async {
+    final resp = await http.delete(_uri(path), headers: _headers);
+    return _decode(resp);
+  }
 }
