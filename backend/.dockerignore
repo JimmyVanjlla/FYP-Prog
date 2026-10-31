@@ -6,4 +6,6 @@ __pycache__/
 *.db
 generated_reports/
 tests/
-scripts/
+# dev-only scripts (seed data etc.), except the Prophet fix the image needs
+scripts/*
+!scripts/setup_windows_prophet.py
