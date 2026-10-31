@@ -63,59 +63,6 @@ jobs:
           print(f"::error title=pytest failed::{tail}")
           EOF
 
-  prophet-diag:
-    name: TEMP Prophet diagnostics
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: pip
-          cache-dependency-path: backend/requirements.txt
-      - run: pip install -r requirements.txt
-      - name: Load Prophet and report why it fails
-        shell: bash
-        run: |
-          cat > diag.py <<'EOF'
-          import importlib.metadata as m, logging, sys, traceback
-          logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
-          for p in ["prophet", "cmdstanpy", "stanio", "numpy", "pandas", "holidays"]:
-              print(p, m.version(p))
-          import os, prophet
-          sm = os.path.join(os.path.dirname(prophet.__file__), "stan_model")
-          print("stan_model dir:", sorted(os.listdir(sm)) if os.path.isdir(sm) else "MISSING")
-          for root, _, files in os.walk(sm):
-              for f in files:
-                  if f.startswith("prophet_model") or f == "stanc" or f == "make":
-                      print("  found", os.path.relpath(os.path.join(root, f), sm))
-          try:
-              from prophet.models import CmdStanPyBackend
-              CmdStanPyBackend()
-              print("CmdStanPyBackend OK")
-          except Exception:
-              traceback.print_exc(file=sys.stdout)
-          EOF
-          python scripts/setup_windows_prophet.py 2>&1 | tee diag.log
-          cat >> diag.py <<'EOF'
-          import pandas as pd
-          from prophet import Prophet
-          m = Prophet(uncertainty_samples=0, yearly_seasonality=False)
-          m.fit(pd.DataFrame({"ds": pd.date_range("2026-01-01", periods=30), "y": range(30)}))
-          print("PROPHET FIT OK, backend:", m.stan_backend.get_type())
-          EOF
-          python diag.py 2>&1 | tee -a diag.log || true
-          python - <<'EOF'
-          import pathlib
-          t = "\n".join(pathlib.Path("diag.log").read_text(errors="replace").splitlines()[-45:])[-3800:]
-          t = t.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
-          print(f"::warning title=prophet diag::{t}")
-          EOF
-
   frontend:
     name: Frontend (analyze + test)
     runs-on: ubuntu-latest

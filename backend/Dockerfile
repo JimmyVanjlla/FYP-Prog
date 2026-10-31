@@ -11,8 +11,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Prophet drives a compiled Stan model. The Linux wheel ships it prebuilt, but
 # a compiler is the fallback if pip has to build from source on this platform
-# (Ch2 section 2.2.1: Windows dev machines need an extra toolchain step; the
-# Linux deployment target only needs build-essential).
+# (Ch2 section 2.2.1: Windows dev machines need an extra toolchain step). The
+# wheel's bundled CmdStan folder is incomplete on Linux too; see the
+# scripts/setup_windows_prophet.py step below.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
