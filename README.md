@@ -301,29 +301,52 @@ and runs forecasting/portion-feedback/waste-trend training so the app
 isn't staring at empty screens. See its docstring for usage; it's meant
 for a single run against a fresh database, not repeated seeding.
 
-## Known gaps / good next steps
+## Closing the gap between the report and the build (31 Oct 2026)
 
-- Flutter screens for Staff Scheduling, full Procurement (supplier/PO
-  management beyond the Manager's approval queue), and Delivery are not
-  built yet — those modules are backend-complete and tested but
-  API-only for now.
-- FCM push notifications are stored honestly as `queued_for_retry` —
-  wiring a real Firebase service account (`Settings.fcm_credentials_path`)
-  would make them actually deliver.
-- Android's `minSdkVersion` uses the Flutter SDK's default (API 24 /
-  Android 7.0) rather than being explicitly pinned to match
-  NFR-Usability's stated "Android 8.0 and above" floor. Broader
-  compatibility isn't a functional problem, but the config doesn't
-  encode the documented claim exactly — bump `minSdk` to 26 in
-  `frontend/android/app/build.gradle.kts` if that precision matters.
-  (iOS is already correctly pinned to 13.0.)
-- NFR-Performance targets (API <2s, a full Prophet cycle <60s for up to
-  100 menu items, weekly PDF <30s) are asserted in the report but never
-  load-tested here — plausible given the stack, not measured.
+`FEATURE_CHECKLIST.md` lists every requirement the report promises (61 FRs,
+the NFRs, the Chapter 4 screens) against what's built, verified against the
+code, the database and the app running on an emulator. It started the day at
+25 of 61 complete; it ends at **60 of 61**. What changed:
+
+- **Five bugs fixed**: duplicate forecasts (which doubled staffing and
+  purchasing recommendations), forecasted consumption never reaching stock, no
+  alert when a scheduled job exhausts its retries, an audit trail that missed
+  most actions, and no explanation when a forecast isn't available yet.
+- **More found on the way**: the datetime-vs-date boundary bug in two further
+  places, an 8-second `/menu-items` (a query-per-item pattern; now 0.7 s),
+  duplicate prep and staffing recommendations, re-confirmable delivery receipts,
+  a hard-coded delivery threshold the report says is configurable, and a
+  latent pull-to-refresh crash in three screens.
+- **Every role now has its own app.** Added: staff management and activity log,
+  settings, forecast dashboard, prep confirmation, menu item detail (margin and
+  recipe), ingredient detail (batches, thresholds, restock requests, waste),
+  restock queue, the Schedule Builder with shift opening/closing, suppliers,
+  purchase orders with a running total, deliveries with live mismatch flagging,
+  report summaries, notification inbox and "my shifts". Navigation is per-role
+  (a bottom bar, or a drawer for the Manager's ten destinations).
+- **Performance measured** (`backend/scripts/measure_performance.py`): API
+  slowest 0.7 s (target 2 s), a 100-item forecast cycle 43 s (target 60 s),
+  weekly PDF 0.13 s (target 30 s).
+- **Deployment files** (`backend/Dockerfile`, `render.yaml`, `DEPLOYMENT.md`).
+  Written but not built or applied; see below.
+- **Push notifications**: device registration, FCM sending over the HTTP v1
+  API, a retry job, and the app-side client, all inert until a Firebase
+  project is supplied.
+- **Tests**: 176 backend (including 5 workflows that cross roles) and 25
+  Flutter widget tests, which also caught several real layout and state bugs.
+
+## What's still open
+
+See `FEATURE_CHECKLIST.md` ("What is still genuinely open") for detail. In
+short, these need something only the project owner can provide:
+
+- **Deploying** (Render/Railway account; Docker to build the image).
+- **A Firebase project**, so push notifications can reach a real phone.
+- **An iOS build** (needs a Mac).
+- **A decision on multi-restaurant support**: not built; the schema change
+  would be additive.
+- **UAT and supervisor sign-off.**
 - No CI pipeline yet (tests are run locally).
-- Deployment (Railway/Render per Ch2's feasibility study) hasn't been set
-  up — everything so far runs locally against the real Supabase/Redis
-  Cloud instances.
 
 ## Free-tier cloud gotchas (if you come back after a break)
 

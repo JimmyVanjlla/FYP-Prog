@@ -1,0 +1,49 @@
+# Render Blueprint: the API plus the Celery worker (with the Beat scheduler
+# built in). Database and Redis are external (Supabase / Redis Cloud), so
+# they're supplied as secrets rather than created here.
+#
+# Not applied to a real Render account from this repo -- see DEPLOYMENT.md.
+services:
+  - type: web
+    name: restaurant-ops-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production          # makes startup refuse the default JWT secret
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false                # Supabase *pooler* URL (IPv4), postgresql+psycopg://...
+      - key: REDIS_URL
+        sync: false
+      - key: CORS_ALLOWED_ORIGINS
+        value: ""                  # mobile app needs none; set for a web client
+      - key: FCM_CREDENTIALS_PATH
+        value: /etc/secrets/firebase-service-account.json   # add as a Secret File to enable push
+
+  # Runs every scheduled job in Ch4 section 4.1: daily forecast training,
+  # stock consumption, near-expiry scan, leftover analysis, weekly waste
+  # rollup and report, and the push-notification retry. --beat embeds the
+  # scheduler so one worker covers it; for more throughput, split Beat into
+  # its own single instance and scale the workers separately (never run two
+  # Beat schedulers, or every job fires twice).
+  - type: worker
+    name: restaurant-ops-worker
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A app.celery_app worker --beat --loglevel=info --concurrency=2
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: FCM_CREDENTIALS_PATH
+        value: /etc/secrets/firebase-service-account.json
