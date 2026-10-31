@@ -9,7 +9,7 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 176 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
+- Tests: 178 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
 
@@ -195,7 +195,7 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 | Maintainability | Separated routers / services / models | Done |  |
 | Maintainability | Auto-generated API documentation (OpenAPI) | Done | Served at /docs. |
 | Scalability | Horizontal scaling by adding workers, no code change | Plausible, untested | The API is stateless and Celery is separate; documented in DEPLOYMENT.md (including the one-Beat-scheduler rule). |
-| Scalability | Schema ready for multi-restaurant use without redesign | Not built | See open item 4. |
+| Scalability | Schema ready for multi-restaurant use without redesign | Not built | See open item 3. |
 
 ## Chapter 4 mobile screens and design principles
 
