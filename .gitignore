@@ -31,3 +31,9 @@ frontend/.idea/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# --- Firebase credentials (never commit) ---
+*service-account*.json
+*firebase-adminsdk*.json
+google-services.json
+GoogleService-Info.plist
