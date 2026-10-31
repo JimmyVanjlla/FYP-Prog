@@ -17,8 +17,13 @@ These need something only you can provide, or a decision from you. None can be c
 
 1. **Deployment (Chapter 2, every sprint's final step): API deployed, worker not.** The API runs on Render's free tier at `https://fyp-prog.onrender.com` (built from `backend/Dockerfile`, HTTPS from the platform, migrations applied at start-up). Verified there on 31 Oct 2026: login, authenticated reads, report PDF download, every endpoint under the 2 s target (slowest 0.61 s), and a push notification sent by the deployed server reaching the Android emulator. **No Celery worker is running**, because Render has no free workers (about US$7 a month). Until one runs, the scheduled jobs (daily training, stock consumption, weekly report, push retry) only happen when triggered by hand. The free web service also sleeps when idle, so the first request after a quiet spell takes 30-60 s.
 2. **iOS.** Pinned to iOS 13.0 as promised, but never built: that needs a Mac. Push on iOS would also need an APNs key uploaded to Firebase.
-3. **Multi-restaurant readiness (Scalability NFR).** No table carries a restaurant/tenant column. Adding one later is additive (a `restaurants` table, a nullable `restaurant_id` on the root entities, and scoping the queries), not a redesign, which is what the report promises, but none of it is built. Decide whether 'designed to accommodate' is enough or you want it built.
-4. **User acceptance testing and supervisor sign-off.** Process milestones I can't judge from here. Form 2 puts UAT at 13 Nov 2026, the draft report at 27 Nov and the final at 11 Dec.
+3. **User acceptance testing and supervisor sign-off.** Process milestones I can't judge from here. Form 2 puts UAT at 13 Nov 2026, the draft report at 27 Nov and the final at 11 Dec.
+
+Parked by the owner for now (31 Oct 2026): iOS, UAT, rotating the demo passwords, and the paid worker.
+
+## Decided
+
+- **Multi-restaurant readiness (Scalability NFR): decided on 31 Oct 2026 to verify and document, not build.** The schema was audited table by table; `MULTI_RESTAURANT.md` records the result. In short: 9 of the 35 tables need a `restaurant_id` (7 root tables plus `budgets` and `shift_schedules`), the other 26 inherit it through foreign keys, and no unique constraint blocks it. The work to switch it on is query scoping in the service layer (about 120 sites), not schema redesign, which is what Chapter 3 promises.
 
 ## Fixed since the first check
 
@@ -195,7 +200,7 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 | Maintainability | Separated routers / services / models | Done |  |
 | Maintainability | Auto-generated API documentation (OpenAPI) | Done | Served at /docs. |
 | Scalability | Horizontal scaling by adding workers, no code change | Plausible, untested | The API is stateless and Celery is separate; documented in DEPLOYMENT.md (including the one-Beat-scheduler rule). |
-| Scalability | Schema ready for multi-restaurant use without redesign | Not built | See open item 3. |
+| Scalability | Schema ready for multi-restaurant use without redesign | Done (audited, not built) | The schema was audited and needs no redesign: 9 tables would gain a `restaurant_id`, the other 26 inherit it, and no unique constraint blocks it. Enabling it means scoping queries, not changing the data model. See `MULTI_RESTAURANT.md`. |
 
 ## Chapter 4 mobile screens and design principles
 

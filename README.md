@@ -352,10 +352,10 @@ short, these need something only the project owner can provide:
   (`https://fyp-prog.onrender.com`, Render free tier, verified); the Celery
   worker is not, because Render has no free workers (about US$7 a month).
 - **An iOS build** (needs a Mac).
-- **A decision on multi-restaurant support**: not built; the schema change
-  would be additive.
 - **UAT and supervisor sign-off.**
-- No CI pipeline yet (tests are run locally).
+
+Multi-restaurant support is decided: not built, audited instead. See
+`MULTI_RESTAURANT.md` for the table-by-table result and the migration plan.
 
 ## Free-tier cloud gotchas (if you come back after a break)
 
