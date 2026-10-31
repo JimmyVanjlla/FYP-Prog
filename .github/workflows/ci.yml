@@ -63,6 +63,37 @@ jobs:
           print(f"::error title=pytest failed::{tail}")
           EOF
 
+  # Builds the same image Render builds and checks Prophet works inside it, so
+  # a broken Dockerfile or .dockerignore fails here instead of on a deploy.
+  docker:
+    name: Docker image builds and runs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        shell: bash
+        run: docker build --progress=plain -t restaurant-ops:ci backend 2>&1 | tee build.log
+      - name: Report build failure
+        if: failure()
+        run: |
+          python3 - <<'EOF'
+          import pathlib
+          text = pathlib.Path("build.log").read_text(errors="replace")
+          tail = "\n".join(text.splitlines()[-40:])[-3500:]
+          tail = tail.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+          print(f"::error title=docker build failed::{tail}")
+          EOF
+      - name: Prophet can fit a model inside the image
+        run: |
+          docker run --rm restaurant-ops:ci python -c "
+          import pandas as pd
+          from prophet import Prophet
+          m = Prophet(uncertainty_samples=0, yearly_seasonality=False)
+          m.fit(pd.DataFrame({'ds': pd.date_range('2026-01-01', periods=30), 'y': range(30)}))
+          print('PROPHET OK IN IMAGE')
+          "
+
   frontend:
     name: Frontend (analyze + test)
     runs-on: ubuntu-latest
