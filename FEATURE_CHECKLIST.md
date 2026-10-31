@@ -25,6 +25,22 @@ Parked by the owner for now (31 Oct 2026): iOS, UAT, rotating the demo passwords
 
 - **Multi-restaurant readiness (Scalability NFR): decided on 31 Oct 2026 to verify and document, not build.** The schema was audited table by table; `MULTI_RESTAURANT.md` records the result. In short: 9 of the 35 tables need a `restaurant_id` (7 root tables plus `budgets` and `shift_schedules`), the other 26 inherit it through foreign keys, and no unique constraint blocks it. The work to switch it on is query scoping in the service layer (about 120 sites), not schema redesign, which is what Chapter 3 promises.
 
+## Promised in the forms and chapters, outside the 61 requirements
+
+Checked against Form 2, Form 4(i) and Chapters 1-4 on 31 Oct 2026. None of these is a feature to build; they are evidence and documents the report still needs.
+
+| Promise | Where | Status |
+|---|---|---|
+| Forecast accuracy and waste reduction "measured against the manual baseline once the system is built" | Ch1 conclusion | **Not done.** The app stores per-forecast accuracy, but the data in the database is seeded, so those figures are not evidence. A proper evaluation needs a backtest of Prophet against simple baselines (same weekday last week, trailing average) on real or realistically simulated order data. Waste reduction against a baseline cannot be measured without real operation; say so as a limitation. |
+| UAT test cases "reviewed and accepted by supervisor" | Form 2 (13 Nov 2026) | **No test-case document exists.** Automated tests do (178 backend, 25 Flutter, 5 cross-role workflows), but a written UAT script mapped to the use cases is not in the repo. Sign-off is the owner's. |
+| Integration testing "for all 6 user roles" | Form 2 (7 Sep 2026) | Covered by `tests/test_cross_role_workflows.py` and the app run on the emulator; not written up as a test report. |
+| Evaluation and later chapters of the final report | Ch1 "evaluation of the system" | Only Chapters 1-4 and Form 4(i) (the FYP1 log, 8 meetings) are in the project folder. A progress log for the second semester, if the programme requires one, is not. |
+| Automated weekly report via Celery and Redis | Form 2 abstract | Built and tested; **not running on the deployed server** (no worker, see open item 1). |
+| "Mobile application" | Form 2 | Android only; iOS parked (open item 2). |
+| Draft report date | Form 2 says 27 Nov 2026, Ch1 says 4 Dec 2026 | **The documents disagree.** Ch1 also lists System Preview 2 on 2-11 Nov and Final System Testing on 16-20 Nov. Confirm with the supervisor which dates apply. |
+
+Checked and fine: expiry handling ("prioritized usage") is the near-expiry alert plus batches listed earliest-expiry first, which matches the wording in Ch3; goods returns exist as `return_pending` and `return_resolved` states; the seventh role (Owner) appears in Ch3 and Ch4 although Form 2 and Ch1 say six.
+
 ## Fixed since the first check
 
 **The five bugs from the first check:**
