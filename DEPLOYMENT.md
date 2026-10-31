@@ -27,6 +27,7 @@ Be clear-eyed about this before relying on it:
 | `render.yaml` | Still **not applied**: Render's Blueprint flow wants a card on file because it includes the paid worker. The API was created manually instead (Docker, root directory `backend`, free instance, secrets from `render.env`). |
 | HTTPS | Verified: plain HTTP redirects (301) to HTTPS. |
 | Deployed API | Verified 31 Oct 2026: `/health`, login, authenticated reads, report PDF download (re-rendered on the API's own disk), all endpoints under 0.61 s. |
+| Forecast training on the deployed API | Verified 31 Oct 2026 after fixing the Prophet stub (see below): `POST /forecasting/train` returned 200 and updated 72 forecasts in 36 s on the free instance. That is about 1.5 s per item and period on Render's shared CPU against 0.4 s on the development machine, so a full 100-item cycle would take around 2.5 minutes there, over the 60 s target; the scheduled run belongs on a worker, not a web request. |
 | Celery worker + Beat running the scheduled jobs | **Not deployed** (needs a paid Render worker, about US$7 a month). The tasks, schedules and retry/alert logic are tested; a live worker process has not been run against the hosted Redis. |
 | Push notifications (FCM) | Verified on the Android emulator against a real Firebase project, including a push sent by the **deployed** server (kitchen prep-deviation notification). Not tried on a physical phone. |
 | iOS build | Not built (needs a Mac). The deployment target is pinned to iOS 13.0. |
@@ -40,6 +41,17 @@ Be clear-eyed about this before relying on it:
    - `REDIS_URL` -- from Redis Cloud.
 4. `JWT_SECRET` is generated for you. `ENVIRONMENT=production` is set, which makes the API **refuse to start** if the secret is still the public default.
 5. Deploy. The container runs `alembic upgrade head` and then serves. Check `https://<service>.onrender.com/health` and `/docs`.
+
+### Two image problems the first deploys hit (both fixed)
+
+- Prophet's wheel bundles an incomplete CmdStan folder, so `Prophet()` raised
+  `'Prophet' object has no attribute 'stan_backend'` and every forecast
+  training call returned 500. The Dockerfile now runs
+  `scripts/setup_windows_prophet.py`, which moves that folder aside.
+- That script must be allowed through `backend/.dockerignore` (it excludes the
+  rest of `scripts/`), and must use `shutil.move`: renaming a folder from an
+  earlier image layer fails with "Invalid cross-device link" on Render's
+  builder, though not on GitHub's, so CI could not catch it.
 
 ### Without a card: the API only, created by hand
 
