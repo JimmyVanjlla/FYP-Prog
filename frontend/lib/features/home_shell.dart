@@ -61,6 +61,8 @@ List<Destination> destinationsFor(String? role) {
         _menu,
         _inventory,
         _deliveries,
+        // Owners create and manage accounts alongside Managers.
+        Destination('Staff', Icons.groups_rounded, StaffScreen()),
       ];
     case Roles.kitchenStaff:
       return const [
@@ -116,9 +118,11 @@ class _HomeShellState extends State<HomeShell> {
     final destinations = destinationsFor(auth.role);
     final index = _index < destinations.length ? _index : 0;
     final current = destinations[index];
-    // A bottom bar holds five comfortably; a role with more gets a drawer.
-    final useDrawer = destinations.length > 5;
 
+    // Every role navigates the same way, through the menu button at the top
+    // left, however many screens it has. (A bottom bar for some roles and a
+    // drawer for others looked inconsistent, and long labels such as
+    // "Restock requests" wrapped badly under their icons.)
     return Scaffold(
       appBar: AppBar(
         title: Text(current.label),
@@ -142,36 +146,24 @@ class _HomeShellState extends State<HomeShell> {
           ),
         ],
       ),
-      drawer: useDrawer
-          ? NavigationDrawer(
-              selectedIndex: index,
-              onDestinationSelected: (i) {
-                setState(() => _index = i);
-                Navigator.of(context).pop();
-              },
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 24, 16, 12),
-                  child: Text(
-                    auth.role ?? '',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                ),
-                for (final d in destinations)
-                  NavigationDrawerDestination(icon: Icon(d.icon), label: Text(d.label)),
-              ],
-            )
-          : null,
+      drawer: NavigationDrawer(
+        selectedIndex: index,
+        onDestinationSelected: (i) {
+          setState(() => _index = i);
+          Navigator.of(context).pop();
+        },
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 24, 16, 12),
+            child: Text(
+              auth.role ?? '',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final d in destinations) NavigationDrawerDestination(icon: Icon(d.icon), label: Text(d.label)),
+        ],
+      ),
       body: current.screen,
-      bottomNavigationBar: !useDrawer && destinations.length > 1
-          ? NavigationBar(
-              selectedIndex: index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              destinations: [
-                for (final d in destinations) NavigationDestination(icon: Icon(d.icon), label: d.label),
-              ],
-            )
-          : null,
     );
   }
 }

@@ -29,17 +29,13 @@ void main() {
       await pumpAs(tester, role, const HomeShell());
       final labels = destinationsFor(role).map((d) => d.label).toList();
       expect(labels, expected);
-      // Everything it offers is reachable: in the bottom bar, or the drawer.
-      if (labels.length <= 5) {
-        for (final label in expected) {
-          expect(find.text(label), findsWidgets);
-        }
-      } else {
-        await tester.tap(find.byTooltip('Open navigation menu'));
-        await tester.pumpAndSettle();
-        for (final label in expected) {
-          expect(find.text(label), findsWidgets);
-        }
+      // Every role navigates the same way: the menu button opens a drawer
+      // that lists everything the role can reach.
+      expect(find.byType(NavigationBar), findsNothing);
+      await tester.tap(find.byTooltip('Open navigation menu'));
+      await tester.pumpAndSettle();
+      for (final label in expected) {
+        expect(find.text(label), findsWidgets);
       }
       for (final label in absent) {
         expect(labels.contains(label), isFalse, reason: '$role should not be offered "$label"');
@@ -77,7 +73,16 @@ void main() {
       );
     });
 
-    testWidgets('the manager has too many destinations for a bar, so gets a drawer', (tester) async {
+    testWidgets('owners can manage staff accounts as well as oversee the restaurant', (tester) async {
+      await expectDestinations(
+        tester,
+        Roles.owner,
+        ['Forecasts', 'Waste', 'Menu', 'Inventory', 'Deliveries', 'Staff'],
+        ['Prep', 'Purchasing', 'Settings'],
+      );
+    });
+
+    testWidgets('the manager sees every management screen in the drawer', (tester) async {
       await expectDestinations(
         tester,
         Roles.manager,

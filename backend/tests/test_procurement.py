@@ -204,12 +204,29 @@ def test_deactivate_supplier(client):
     assert resp.status_code == 200
     assert resp.json()["is_active"] is False
 
-    # Excluded from future pricing lookups (get_unit_price filters to
-    # active suppliers) — falls back to 0.00 with no active supplier left.
-    po = client.post(
+    # New orders cannot be addressed to a deactivated supplier.
+    blocked = client.post(
         "/procurement/purchase-orders",
         json={
             "supplier_id": supplier["supplier_id"],
+            "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}],
+        },
+        headers=auth_headers(officer_token),
+    )
+    assert blocked.status_code == 409
+
+    # Its prices are excluded from pricing lookups (get_unit_price filters to
+    # active suppliers): an order to another supplier that has not priced the
+    # ingredient falls back to 0.00 now that no active supplier prices it.
+    other = client.post(
+        "/procurement/suppliers",
+        json={"name": "Other Supplier", "contact_info": "+60 12-0000000"},
+        headers=auth_headers(officer_token),
+    ).json()
+    po = client.post(
+        "/procurement/purchase-orders",
+        json={
+            "supplier_id": other["supplier_id"],
             "line_items": [{"ingredient_id": ingredient["ingredient_id"], "quantity": "5"}],
         },
         headers=auth_headers(officer_token),

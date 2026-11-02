@@ -34,6 +34,13 @@ class Settings(BaseSettings):
 
     environment: str = "development"
 
+    # Whether /auth/register accepts anyone. None means decide by environment:
+    # open in development (the test suite and seed script create accounts
+    # freely), closed in production, where only a Restaurant Manager or Owner
+    # creates accounts (POST /users), after the very first one. Set to
+    # true/false to override either way.
+    public_registration_enabled: bool | None = None
+
     # Comma-separated list of origins allowed to make cross-origin browser
     # requests (e.g. "https://admin.example.com,http://localhost:3000").
     # Empty by default: the Flutter mobile app doesn't send an Origin header

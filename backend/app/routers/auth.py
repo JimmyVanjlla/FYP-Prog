@@ -22,6 +22,11 @@ def register(data: UserRegister, db: Session = Depends(get_db)) -> UserOut:
             status_code=status.HTTP_409_CONFLICT,
             detail="An account with this email address already exists.",
         )
+    except auth_service.PublicRegistrationClosedError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Accounts are created by a Restaurant Manager or Owner. Ask one of them to add you.",
+        )
     except auth_service.PrivilegedRoleAlreadyProvisionedError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

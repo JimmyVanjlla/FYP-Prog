@@ -79,11 +79,14 @@ worker means no scheduled jobs: trigger training and reports by hand.
 
 ### The first account
 
-Self-registration as Restaurant Manager or Owner only works **once** (the
-bootstrap). Register the real Manager first, through the app's Register
-screen, before anyone else. After that the Manager creates every other
-account from the **Staff** screen. Do not run `scripts/seed_dev_data.py`
-against a production database; it creates test accounts with a known password.
+With `ENVIRONMENT=production`, `/auth/register` is **closed**, apart from
+creating the very first account, which must be a Restaurant Manager or
+Owner (the app has no Register screen; use the API docs page, `/docs`,
+`POST /auth/register`). After that, only a Manager or an Owner can create
+accounts, from the app's **Staff** screen (`POST /users`). Nobody can register
+themselves. `PUBLIC_REGISTRATION_ENABLED=true` or `false` overrides this either
+way. Do not run `scripts/seed_dev_data.py` against a production database; it
+creates test accounts with a known password.
 
 ### Scaling and cost
 

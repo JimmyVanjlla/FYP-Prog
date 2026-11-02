@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/auth_state.dart';
-import 'register_screen.dart';
 
 /// Ch4 §4.4.1: "Authentication asks for nothing the system doesn't need" —
 /// a single email/password pair, no role selector (the JWT already encodes
@@ -147,16 +146,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               )
                             : const Text('Log in'),
                       ),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: _submitting
-                            ? null
-                            : () => Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen(),
-                                ),
-                              ),
-                        child: const Text('New staff member? Register'),
+                      const SizedBox(height: 20),
+                      Text(
+                        'No account yet? Your Restaurant Manager or Owner creates it for you.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),

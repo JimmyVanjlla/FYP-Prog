@@ -107,21 +107,8 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> register({
-    required String name,
-    required String email,
-    required String password,
-    required String role,
-  }) async {
-    await api.register(
-      name: name,
-      email: email,
-      password: password,
-      role: role,
-    );
-    // FR1.1 registration doesn't itself log the user in — mirrors the
-    // backend, which issues no token from /auth/register.
-  }
+  // There is no self-registration in the app: a Restaurant Manager or Owner
+  // creates every account from the Staff screen (POST /users).
 
   Future<void> logout() async {
     // While the token is still valid, so the backend stops pushing this

@@ -42,6 +42,27 @@ python scripts/demo_push.py --base-url https://fyp-prog.onrender.com
 It confirms one Lunch recommendation for today as Kitchen at 1.8 times the recommended quantity. If it says there is nothing
 unconfirmed, open the Kitchen Prep screen once (it creates the recommendations) and run it again, or add `--period Dinner`.
 
+## Showing notifications (three ways, easiest first)
+
+1. **In-app inbox, no setup (about 1 minute).** Every role has a bell icon at the top right. In beat 2, when the Manager approves
+   purchase order #1, the system records "Purchase order #1 was approved" for the Procurement Officer. Later, log in as
+   `procurement@test.com` and tap the bell: it is waiting there. This shows notifications are tied to roles and to events.
+2. **Prep updates for the kitchen.** Confirming a prep quantity that differs a lot from the recommendation (beat 4) sends a
+   "Prep update" to every Kitchen Staff account. Log in as another kitchen account (or the same one) and open the bell.
+3. **A real push to the phone (beat 7).** Log in as Kitchen on the emulator, press the Home button so the app is in the
+   background, then run the push command from `backend/`. A notification appears in the phone's notification bar within seconds.
+   A push is **not** drawn while the app is open on screen, which is why the app must be in the background.
+
+Other things that raise notifications, if asked: a high-demand forecast (Kitchen), low stock and near-expiry stock (Inventory),
+a published shift schedule (the staff on it), purchase orders approved or rejected (Procurement), and a scheduled job that
+fails after its retries (Manager and Owner).
+
+## If you are asked to create a staff account
+
+Log in as `manager@test.com` (or `owner@test.com`), open the menu at the top left, choose **Staff**, then **Add staff account**.
+Only a Manager or Owner can do this. There is no self-registration: the login screen says so, and on the live server the
+registration endpoint is closed after the first account. Use a throwaway name, because the account stays in the database.
+
 ## The evaluation, in 90 seconds (beat 9)
 
 Say this, in this order:
@@ -52,6 +73,17 @@ Say this, in this order:
 4. "Limits: this is simulated order data, so it shows the method works, not what it saves a real restaurant. With real data and a real restaurant over several weeks I could also measure waste reduction, which I cannot claim yet."
 
 Full figures: `FORECAST_EVALUATION.md`.
+
+## How the app is navigated
+
+Every role uses the same menu: the three-line button at the top left opens a drawer listing that role's screens. The bell
+(notifications) and the logout icon are at the top right.
+
+## Suppliers: what deactivating does
+
+A deactivated supplier cannot receive new purchase orders, and their prices stop counting towards dish margins and waste costs
+(an ingredient only they price then shows as costing 0). **Reactivate** restores all of that. Do not deactivate a supplier during
+the demo: Fresh Farm Poultry & Seafood supplies PO #1, and Kedai Runcit Supplies supplies PO #3.
 
 ## Talking points for things that may look odd
 

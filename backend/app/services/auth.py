@@ -4,6 +4,7 @@ database model layers")."""
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.audit import AuditLog
 from app.models.roles import Role
@@ -24,6 +25,11 @@ class DuplicateEmailError(Exception):
 
 class InvalidCredentialsError(Exception):
     """FR1.7 — deliberately doesn't say which of email/password was wrong."""
+
+
+class PublicRegistrationClosedError(Exception):
+    """Raised by register_user_self_service when public registration is closed
+    and the caller is not creating the very first Manager/Owner account."""
 
 
 class PrivilegedRoleAlreadyProvisionedError(Exception):
@@ -54,15 +60,29 @@ def register_user(db: Session, data: UserRegister) -> User:
     return user
 
 
+def _public_registration_open() -> bool:
+    settings = get_settings()
+    if settings.public_registration_enabled is not None:
+        return settings.public_registration_enabled
+    return settings.environment != "production"
+
+
 def register_user_self_service(db: Session, data: UserRegister) -> User:
-    """FR1.1's open /auth/register, with one guard: self-registering as
-    Restaurant Owner or Restaurant Manager is only allowed when no account
-    with that exact role exists yet (the system's bootstrap window — the
-    very first Owner/Manager account has to come from somewhere with no
-    Manager yet available to provision it). Once one exists, further
-    Owner/Manager accounts must come from an existing Manager via
-    POST /users, same as any other staff account they create for someone
-    else."""
+    """FR1.1's /auth/register. Two guards.
+
+    1. Where public registration is closed (production, by default), the only
+       account anyone can create for themselves is the very first one, and it
+       must be a Restaurant Manager or Owner, since only they can create the
+       rest (POST /users). Without that, anyone who found the app could make
+       themselves a Kitchen or Procurement account.
+    2. Self-registering as Restaurant Owner or Restaurant Manager is only
+       allowed when no account with that exact role exists yet (the
+       bootstrap window); further ones come from an existing Manager or
+       Owner via POST /users."""
+    if not _public_registration_open():
+        nobody_exists_yet = db.scalar(select(User).limit(1)) is None
+        if not (nobody_exists_yet and data.role in _PRIVILEGED_ROLES):
+            raise PublicRegistrationClosedError
     if data.role in _PRIVILEGED_ROLES:
         already_exists = db.scalar(select(User).where(User.role == data.role.value).limit(1))
         if already_exists is not None:

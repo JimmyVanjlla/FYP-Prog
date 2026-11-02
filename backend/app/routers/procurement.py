@@ -61,6 +61,19 @@ def deactivate_supplier(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found.")
 
 
+@router.patch("/suppliers/{supplier_id}/reactivate", response_model=SupplierOut)
+def reactivate_supplier(
+    supplier_id: int,
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+) -> SupplierOut:
+    """The reverse of deactivation."""
+    try:
+        return procurement_service.reactivate_supplier(db, supplier_id)
+    except procurement_service.NotFoundError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found.")
+
+
 @router.post("/suppliers/pricing", response_model=SupplierPricingOut, status_code=status.HTTP_201_CREATED)
 def set_supplier_pricing(
     data: SupplierPricingCreate,
@@ -150,6 +163,11 @@ def create_purchase_order(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Purchase orders need at least one line item with a positive quantity.",
+        )
+    except procurement_service.SupplierInactiveError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This supplier is deactivated. Reactivate them before ordering.",
         )
     out = PurchaseOrderOut.model_validate(po)
     out.exceeds_budget = exceeds_budget

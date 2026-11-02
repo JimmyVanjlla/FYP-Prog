@@ -34,6 +34,10 @@ class NotFoundError(Exception):
     pass
 
 
+class SupplierInactiveError(Exception):
+    """A new purchase order was addressed to a deactivated supplier."""
+
+
 class InvalidPurchaseOrderError(Exception):
     """FR9.6 — zero/negative quantity line items."""
 
@@ -51,6 +55,18 @@ def get_unit_price(db: Session, ingredient_id: int) -> Decimal:
         .order_by(SupplierPricing.unit_price.asc())
     )
     return price if price is not None else Decimal("0.00")
+
+
+def get_supplier_unit_price(db: Session, supplier_id: int, ingredient_id: int) -> Decimal:
+    """What THIS supplier charges for the ingredient, for pricing a purchase
+    order addressed to them. Where they have not priced it, falls back to the
+    cheapest active supplier's price (get_unit_price) so a line is never free."""
+    own = db.scalar(
+        select(SupplierPricing.unit_price)
+        .where(SupplierPricing.supplier_id == supplier_id)
+        .where(SupplierPricing.ingredient_id == ingredient_id)
+    )
+    return own if own is not None else get_unit_price(db, ingredient_id)
 
 
 # --- Suppliers & pricing -----------------------------------------------
@@ -74,11 +90,27 @@ def deactivate_supplier(db: Session, supplier_id: int) -> Supplier:
     recommendations." Deactivation rather than deletion, same pattern as
     User/MenuItem; get_unit_price already filters to Supplier.is_active,
     so an inactive supplier's pricing is automatically excluded from
-    future cost lookups without any extra work here."""
+    future cost lookups without any extra work here.
+
+    Knock-on effect worth knowing: an ingredient priced ONLY by this supplier
+    now costs 0.00 in dish profit margins and waste costs until another
+    active supplier prices it or this one is reactivated."""
     supplier = db.get(Supplier, supplier_id)
     if supplier is None:
         raise NotFoundError
     supplier.is_active = False
+    db.commit()
+    db.refresh(supplier)
+    return supplier
+
+
+def reactivate_supplier(db: Session, supplier_id: int) -> Supplier:
+    """The reverse of deactivate_supplier: the supplier's prices count again
+    and new purchase orders can be addressed to them."""
+    supplier = db.get(Supplier, supplier_id)
+    if supplier is None:
+        raise NotFoundError
+    supplier.is_active = True
     db.commit()
     db.refresh(supplier)
     return supplier
@@ -213,13 +245,19 @@ def create_purchase_order(
         if item["quantity"] <= 0:
             raise InvalidPurchaseOrderError
 
+    supplier = db.get(Supplier, supplier_id)
+    if supplier is not None and not supplier.is_active:
+        raise SupplierInactiveError
+
     total_cost = Decimal("0.00")
     po = PurchaseOrder(supplier_id=supplier_id, created_by=created_by, total_cost=Decimal("0.00"))
     db.add(po)
     db.flush()
 
     for item in line_items:
-        unit_price = get_unit_price(db, item["ingredient_id"])
+        # The chosen supplier's own price, not the cheapest anyone charges:
+        # an order to supplier A must cost what A charges.
+        unit_price = get_supplier_unit_price(db, supplier_id, item["ingredient_id"])
         line_cost = (unit_price * item["quantity"]).quantize(Decimal("0.01"))
         total_cost += line_cost
         db.add(

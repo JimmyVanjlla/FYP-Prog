@@ -9,7 +9,7 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 183 backend (including 5 cross-role integration workflows), 32 Flutter tests; the Flutter analyzer is clean.
+- Tests: 196 backend (including 5 cross-role integration workflows), 37 Flutter tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
 
@@ -61,6 +61,9 @@ Checked and fine: expiry handling ("prioritized usage") is the near-expiry alert
 - The delivery deviation threshold was hard-coded at 10% although FR10.5 says configurable. It's now a setting.
 - Three screens (approvals, waste, reports) had a latent debug-mode crash on pull-to-refresh (`setState` returning a Future), present since Sprint 5.
 - Narrow-screen layout overflows in several new screens, found by the widget tests.
+- **Accounts could be created by anyone.** `/auth/register` accepted any non-Manager/Owner role from anyone who found the app. On the live server (`ENVIRONMENT=production`) it is now closed after the first Manager or Owner, and only a Manager or an Owner creates accounts (Staff screen; the Owner gets that screen too). The app's Register screen is removed. 8 backend tests, including the Owner and the roles that must be refused.
+- **Purchase orders were priced from the wrong supplier, and could be sent to a deactivated one.** An order's line prices used the cheapest active supplier's price, not the price of the supplier the order was addressed to (the order form already showed the chosen supplier's prices, so the saved total disagreed with it). Orders now use the chosen supplier's own prices and are refused for a deactivated supplier. Suppliers can now be reactivated (button and endpoint), a price can be changed by tapping it, and the deactivation warning says it zeroes that supplier's prices in margins and waste costs.
+- **Navigation is the same for every role:** the menu button at the top left, as the Manager had. The bottom bar for smaller roles is gone (its longer labels, such as "Restock requests", wrapped badly).
 - An expired login left the app on "Could not validate credentials" with a Try again button that could never work. Found by rehearsing the demo on the emulator the morning after a login. The app now checks a saved token's expiry when it opens, and any 401 during a session sends the person back to the login screen with a notice; tests cover both and that a wrong password is not mistaken for an expired session.
 - Generating purchase recommendations (FR9.2) appended a full new set every time, so tapping Generate twice showed every ingredient twice. Found while preparing the demo; each run now replaces the last, with tests (there were none for this function).
 - **Forecasts were far less accurate than a plain average.** Found by the backtest (`FORECAST_EVALUATION.md`): forcing yearly seasonality on, as Chapter 4 specifies, made Prophet fit a yearly cycle to weeks of data (58.8% error). It is now `"auto"` (14.0%). Every prep, staffing and purchase recommendation comes from these forecasts, so this affected all of them. Also found by CI: Prophet's wheel bundles an incomplete Stan folder that broke forecast training on Linux, including the deployed server.

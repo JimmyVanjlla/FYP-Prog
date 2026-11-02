@@ -71,25 +71,6 @@ class ApiClient {
     throw ApiException(resp.statusCode, message);
   }
 
-  Future<Map<String, dynamic>> register({
-    required String name,
-    required String email,
-    required String password,
-    required String role,
-  }) async {
-    final resp = await http.post(
-      _uri('/auth/register'),
-      headers: _headers,
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'role': role,
-      }),
-    );
-    return _decode(resp) as Map<String, dynamic>;
-  }
-
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,

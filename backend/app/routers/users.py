@@ -12,6 +12,12 @@ from app.services import auth as auth_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+# Only the people who run the restaurant create, change or review accounts.
+# Everyone else is given an account by one of them; nobody registers
+# themselves once the first Manager or Owner exists (see
+# app/services/auth.py::register_user_self_service).
+_ACCOUNT_ADMINS = (Role.RESTAURANT_MANAGER, Role.RESTAURANT_OWNER)
+
 
 @router.get("/me", response_model=UserOut)
 def read_current_user(current_user: User = Depends(get_current_user)) -> UserOut:
@@ -23,7 +29,7 @@ def list_users(
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
-    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+    _admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
 ) -> list[UserOut]:
     return list(db.query(User).order_by(User.name).limit(limit).offset(offset).all())
 
@@ -32,9 +38,9 @@ def list_users(
 def create_staff_account(
     data: UserRegister,
     db: Session = Depends(get_db),
-    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+    _admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
 ) -> UserOut:
-    """FR1.1/FR1.4 — a Manager provisioning a staff account directly,
+    """FR1.1/FR1.4 — a Manager or Owner provisioning a staff account directly,
     for any role including another Restaurant Owner/Manager. This is the
     counterpart to POST /auth/register's self-service path, which only
     allows Owner/Manager once (see
@@ -55,9 +61,9 @@ def update_user(
     user_id: int,
     data: UserUpdate,
     db: Session = Depends(get_db),
-    manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+    manager: User = Depends(require_role(*_ACCOUNT_ADMINS)),
 ) -> UserOut:
-    """FR1.4 — Restaurant Manager deactivates/reassigns roles for staff
+    """FR1.4 — Restaurant Manager or Owner deactivates/reassigns roles for staff
     accounts. Creation happens via POST /auth/register (self-service) or
     POST /users (Manager-provisioned); this endpoint covers deactivate +
     role reassignment for an account that already exists."""
@@ -86,7 +92,7 @@ def list_audit_logs(
     user_id: int | None = None,
     limit: int = 200,
     db: Session = Depends(get_db),
-    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+    _admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
 ) -> list[AuditLogOut]:
     """FR1.5 — the read side of the audit trail. Sprint 1 only ever wrote
     to AuditLog (register/login/update_user); nothing could actually view

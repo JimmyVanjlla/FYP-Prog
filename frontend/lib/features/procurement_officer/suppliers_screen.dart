@@ -127,34 +127,43 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
 
   int get _id => widget.supplier['supplier_id'] as int;
 
-  Future<void> _setPrice(BuildContext context, List<Json> ingredients, Future<void> Function() reload) async {
+  /// Adds a price, or (when [existing] is a row from the list) changes it.
+  Future<void> _setPrice(
+    BuildContext context,
+    List<Json> ingredients,
+    Future<void> Function() reload, {
+    Json? existing,
+  }) async {
     if (ingredients.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('There are no ingredients yet. Add them in Inventory first.')),
       );
       return;
     }
-    int ingredientId = ingredients.first['ingredient_id'] as int;
-    final price = TextEditingController();
+    final editing = existing != null;
+    int ingredientId = editing ? existing['ingredient_id'] as int : ingredients.first['ingredient_id'] as int;
+    final price = TextEditingController(text: editing ? existing['unit_price'].toString() : '');
     final formKey = GlobalKey<FormState>();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Set a price'),
+          title: Text(editing ? 'Change price' : 'Set a price'),
           content: Form(
             key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 DropdownButtonFormField<int>(
+                  isExpanded: true,
                   initialValue: ingredientId,
                   decoration: const InputDecoration(labelText: 'Ingredient'),
                   items: [
                     for (final i in ingredients)
                       DropdownMenuItem(value: i['ingredient_id'] as int, child: Text('${i['name']} (per ${i['unit']})')),
                   ],
-                  onChanged: (v) => setState(() => ingredientId = v ?? ingredientId),
+                  // Changing a price keeps its ingredient; pick another to add a new price.
+                  onChanged: editing ? null : (v) => setState(() => ingredientId = v ?? ingredientId),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -201,7 +210,9 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
     final proceed = await confirmAction(
       context,
       title: 'Deactivate ${widget.supplier['name']}?',
-      message: 'Past orders are kept, but this supplier is left out of new purchase orders.',
+      message: 'Past orders are kept, and you can reactivate this supplier later.\n\n'
+          'While deactivated, new orders cannot be addressed to them, and their prices stop counting '
+          'towards dish margins and waste costs. An ingredient that only they price will show as costing 0.',
       confirmLabel: 'Deactivate',
     );
     if (!proceed || !context.mounted) return;
@@ -212,6 +223,16 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
       success: 'Supplier deactivated.',
     );
     if (ok && mounted) setState(() => _active = false);
+  }
+
+  Future<void> _reactivate(BuildContext context) async {
+    final api = context.read<AuthState>().api;
+    final ok = await runAction(
+      context,
+      () => api.patchJson('/procurement/suppliers/$_id/reactivate', {}),
+      success: 'Supplier reactivated.',
+    );
+    if (ok && mounted) setState(() => _active = true);
   }
 
   @override
@@ -257,9 +278,19 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                     child: ListTile(
                       dense: true,
                       title: Text(names[p['ingredient_id']]?['name'] as String? ?? 'Ingredient #${p['ingredient_id']}'),
-                      trailing: Text(
-                        '${money(p['unit_price'])} / ${names[p['ingredient_id']]?['unit'] ?? 'unit'}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      onTap: () => _setPrice(context, data.ingredients, () async {
+                        setState(() => _version++);
+                      }, existing: p),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${money(p['unit_price'])} / ${names[p['ingredient_id']]?['unit'] ?? 'unit'}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.edit_outlined, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ],
                       ),
                     ),
                   ),
@@ -270,14 +301,19 @@ class _SupplierDetailScreenState extends State<SupplierDetailScreen> {
                   setState(() => _version++);
                 }),
               ),
-              if (_active) ...[
-                const SizedBox(height: 24),
+              const SizedBox(height: 24),
+              if (_active)
                 OutlinedButton.icon(
                   onPressed: () => _deactivate(context),
                   icon: const Icon(Icons.block_rounded),
                   label: const Text('Deactivate supplier'),
+                )
+              else
+                FilledButton.icon(
+                  onPressed: () => _reactivate(context),
+                  icon: const Icon(Icons.restore_rounded),
+                  label: const Text('Reactivate supplier'),
                 ),
-              ],
             ],
           );
         },
