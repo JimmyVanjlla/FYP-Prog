@@ -121,6 +121,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             : null,
                         onFieldSubmitted: (_) => _submit(),
                       ),
+                      if (context.watch<AuthState>().notice != null && _errorText == null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          context.watch<AuthState>().notice!,
+                          style: TextStyle(color: scheme.onSurfaceVariant),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                       if (_errorText != null) ...[
                         const SizedBox(height: 12),
                         Text(

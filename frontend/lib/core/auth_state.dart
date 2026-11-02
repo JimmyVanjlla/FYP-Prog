@@ -47,10 +47,18 @@ class AuthState extends ChangeNotifier {
   String? _role;
   bool _restoring = true;
 
+  /// Shown on the login screen after a session ends on its own (the token
+  /// expired), so the person knows why they were sent back.
+  String? notice;
+
   AuthState({ApiClient? api, FlutterSecureStorage? storage, PushService? push})
     : api = api ?? ApiClient(),
       _storage = storage ?? const FlutterSecureStorage(),
-      _push = push ?? PushService();
+      _push = push ?? PushService() {
+    this.api.onUnauthorized = _sessionExpired;
+  }
+
+  static const _expiredNotice = 'Your session has expired. Please log in again.';
 
   bool get isAuthenticated => _token != null;
   String? get role => _role;
@@ -64,7 +72,12 @@ class AuthState extends ChangeNotifier {
   /// user to log in again every time they reopen the app.
   Future<void> restoreSession() async {
     final stored = await _storage.read(key: _tokenStorageKey);
-    if (stored != null) {
+    if (stored != null && isJwtExpired(stored)) {
+      // Tokens last 24 hours; one saved yesterday is useless, and keeping it
+      // would open the app on a screen that can only fail.
+      await _storage.delete(key: _tokenStorageKey);
+      notice = _expiredNotice;
+    } else if (stored != null) {
       _applyToken(stored);
       unawaited(_push.register(api));
     }
@@ -72,10 +85,23 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The backend rejected our token mid-session. Drop it and go back to login.
+  /// (No push unregister: that call needs a valid token, which is the problem.)
+  void _sessionExpired() {
+    if (_token == null) return; // several requests can fail together
+    unawaited(_storage.delete(key: _tokenStorageKey));
+    _token = null;
+    _role = null;
+    api.setToken(null);
+    notice = _expiredNotice;
+    notifyListeners();
+  }
+
   Future<void> login({required String email, required String password}) async {
     final result = await api.login(email: email, password: password);
     final token = result['access_token'] as String;
     await _storage.write(key: _tokenStorageKey, value: token);
+    notice = null;
     _applyToken(token);
     unawaited(_push.register(api));
     notifyListeners();

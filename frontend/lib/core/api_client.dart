@@ -36,6 +36,13 @@ class ApiClient {
 
   void setToken(String? token) => _token = token;
 
+  /// Called when the backend answers 401 to a request that carried a token,
+  /// meaning the session has expired or been revoked. AuthState uses it to
+  /// return to the login screen instead of leaving the user on a screen whose
+  /// "Try again" can never succeed. A 401 with no token (a wrong password at
+  /// login) does not trigger it.
+  void Function()? onUnauthorized;
+
   Map<String, String> get _headers => {
     'Content-Type': 'application/json',
     if (_token != null) 'Authorization': 'Bearer $_token',
@@ -60,6 +67,7 @@ class ApiClient {
     } catch (_) {
       // Non-JSON error body — fall back to the generic message above.
     }
+    if (resp.statusCode == 401 && _token != null) onUnauthorized?.call();
     throw ApiException(resp.statusCode, message);
   }
 
