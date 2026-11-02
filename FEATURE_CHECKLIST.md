@@ -9,7 +9,7 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 180 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
+- Tests: 183 backend (including 5 cross-role integration workflows), 25 Flutter widget tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
 
@@ -61,6 +61,7 @@ Checked and fine: expiry handling ("prioritized usage") is the near-expiry alert
 - The delivery deviation threshold was hard-coded at 10% although FR10.5 says configurable. It's now a setting.
 - Three screens (approvals, waste, reports) had a latent debug-mode crash on pull-to-refresh (`setState` returning a Future), present since Sprint 5.
 - Narrow-screen layout overflows in several new screens, found by the widget tests.
+- Generating purchase recommendations (FR9.2) appended a full new set every time, so tapping Generate twice showed every ingredient twice. Found while preparing the demo; each run now replaces the last, with tests (there were none for this function).
 - **Forecasts were far less accurate than a plain average.** Found by the backtest (`FORECAST_EVALUATION.md`): forcing yearly seasonality on, as Chapter 4 specifies, made Prophet fit a yearly cycle to weeks of data (58.8% error). It is now `"auto"` (14.0%). Every prep, staffing and purchase recommendation comes from these forecasts, so this affected all of them. Also found by CI: Prophet's wheel bundles an incomplete Stan folder that broke forecast training on Linux, including the deployed server.
 
 ## Performance targets (Chapter 3), measured

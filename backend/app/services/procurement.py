@@ -10,7 +10,7 @@ current stock levels", not a transcription of report pseudocode.
 from datetime import date, timedelta
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.dates import end_of_day
@@ -158,6 +158,11 @@ def generate_procurement_recommendations(db: Session, *, horizon_days: int = 7) 
             + total_portions * link.quantity_per_serving
         )
         representative_forecast.setdefault(link.ingredient_id, item_forecasts[0].forecast_id)
+
+    # A recommendation is a snapshot of what to buy now, and nothing refers to
+    # one, so each run replaces the last. Appending left every earlier run on
+    # screen: two taps of "Generate" showed every ingredient twice.
+    db.execute(delete(ProcurementRecommendation))
 
     recommendations: list[ProcurementRecommendation] = []
     for ingredient_id, forecasted_consumption in consumption_by_ingredient.items():
