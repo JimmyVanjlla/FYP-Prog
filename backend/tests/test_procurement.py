@@ -313,7 +313,12 @@ def test_po_reject_notifies_procurement_officer(client):
         headers=auth_headers(officer_token),
     ).json()
 
-    client.post(f"/procurement/purchase-orders/{po['po_id']}/reject", headers=auth_headers(manager_token))
+    client.post(
+        f"/procurement/purchase-orders/{po['po_id']}/reject",
+        json={"reason": "Prices are above last month's"},
+        headers=auth_headers(manager_token),
+    )
 
     notifications = client.get("/kitchen/notifications", headers=auth_headers(officer_token)).json()
-    assert any(n["type"] == "po_rejected" for n in notifications)
+    rejected = [n for n in notifications if n["type"] == "po_rejected"]
+    assert rejected and "Prices are above last month's" in rejected[0]["message"]  # the officer is told why

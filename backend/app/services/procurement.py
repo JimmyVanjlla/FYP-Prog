@@ -7,7 +7,7 @@ heuristic below (forecasted consumption minus current stock) is this
 module's own reasonable interpretation of "based on forecasted demand and
 current stock levels", not a transcription of report pseudocode.
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import delete, select
@@ -32,6 +32,10 @@ from app.services.config import get_or_create_config
 
 class NotFoundError(Exception):
     pass
+
+
+class AlreadyDecidedError(Exception):
+    """The purchase order is no longer awaiting a decision."""
 
 
 class SupplierInactiveError(Exception):
@@ -293,12 +297,18 @@ def _exceeds_monthly_budget(db: Session, additional_cost: Decimal) -> bool:
 
 
 def approve_purchase_order(db: Session, po_id: int, approved_by: int) -> PurchaseOrder:
-    """UC-PS-01 main flow step 5."""
+    """UC-PS-01 main flow step 5. Only an order still awaiting a decision can
+    be approved: without this, a delivered or rejected order could be flipped
+    back to "approved" by a stray request."""
     po = db.get(PurchaseOrder, po_id)
     if po is None:
         raise NotFoundError
+    if po.status != "pending_approval":
+        raise AlreadyDecidedError
     po.status = "approved"
     po.approved_by = approved_by
+    po.decided_by = approved_by
+    po.decided_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(po)
     notification_service.notify(
@@ -310,20 +320,26 @@ def approve_purchase_order(db: Session, po_id: int, approved_by: int) -> Purchas
     return po
 
 
-def reject_purchase_order(db: Session, po_id: int) -> PurchaseOrder:
+def reject_purchase_order(db: Session, po_id: int, rejected_by: int, reason: str) -> PurchaseOrder:
     """UC-PS-01 Alt Flow 4a — "notifies the Procurement Officer for
-    revision.\""""
+    revision." The reason is kept on the order and sent in the notification,
+    so the officer knows what to change."""
     po = db.get(PurchaseOrder, po_id)
     if po is None:
         raise NotFoundError
+    if po.status != "pending_approval":
+        raise AlreadyDecidedError
     po.status = "rejected"
+    po.decided_by = rejected_by
+    po.decided_at = datetime.now(timezone.utc)
+    po.decision_note = reason
     db.commit()
     db.refresh(po)
     notification_service.notify(
         db,
         recipient_id=po.created_by,
         type_="po_rejected",
-        message=f"Purchase order #{po.po_id} was rejected.",
+        message=f"Purchase order #{po.po_id} was rejected: {reason}",
     )
     return po
 

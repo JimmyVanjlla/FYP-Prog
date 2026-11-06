@@ -17,6 +17,7 @@ import 'shared/inventory/inventory_list_screen.dart';
 import 'shared/inventory/restocking_requests_screen.dart';
 import 'shared/menu/menu_list_screen.dart';
 import 'shared/notifications/notifications_screen.dart';
+import 'shared/profile/profile_screen.dart';
 import 'shared/schedule/my_schedule_screen.dart';
 import 'shift_supervisor/schedules_screen.dart';
 
@@ -128,6 +129,13 @@ class _HomeShellState extends State<HomeShell> {
         title: Text(current.label),
         actions: [
           IconButton(
+            tooltip: 'My profile',
+            icon: const Icon(Icons.account_circle_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
+          IconButton(
             tooltip: 'Notifications',
             icon: const Icon(Icons.notifications_none_rounded),
             onPressed: () => Navigator.of(context).push(
@@ -161,6 +169,20 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ),
           for (final d in destinations) NavigationDrawerDestination(icon: Icon(d.icon), label: Text(d.label)),
+          const Padding(padding: EdgeInsets.fromLTRB(28, 8, 28, 8), child: Divider(height: 1)),
+          // Not a destination: it opens on top of whatever screen you were on.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: ListTile(
+              leading: const Icon(Icons.account_circle_outlined),
+              title: const Text('My profile'),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              onTap: () {
+                Navigator.of(context).pop(); // close the drawer
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              },
+            ),
+          ),
         ],
       ),
       body: current.screen,

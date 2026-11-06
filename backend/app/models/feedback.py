@@ -23,3 +23,8 @@ class PortionRecommendation(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    # The Manager's decision, kept for the approvals history: who, when, and
+    # (for a rejection) why.
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(String(500), nullable=True)

@@ -13,6 +13,10 @@ class PortionRecommendationOut(BaseModel):
     suggested_portion_size: Decimal
     status: str
     created_at: datetime
+    # The Manager's decision, for the approvals history.
+    decided_by: int | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
 
 
 class IdentifyHighLeftoverResult(BaseModel):

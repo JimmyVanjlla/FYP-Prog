@@ -46,26 +46,47 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       key: ValueKey(_version),
       load: _load,
       builder: (context, data, reload) {
+        final groups = groupByPriority(data.ingredients, data.defaultThreshold);
+        Widget tile(Json ingredient) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _IngredientTile(
+            ingredient: ingredient,
+            defaultThreshold: data.defaultThreshold,
+            onTap: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => IngredientDetailScreen(ingredientId: ingredient['ingredient_id'] as int),
+                ),
+              );
+              if (mounted) setState(() => _version++);
+            },
+          ),
+        );
         return RefreshableList(
           onRefresh: reload,
           empty: _canManage
               ? null
               : const EmptyState(icon: Icons.inventory_2_outlined, message: 'No ingredients tracked yet.'),
           children: [
-            for (final ingredient in data.ingredients) ...[
-              _IngredientTile(
-                ingredient: ingredient,
-                defaultThreshold: data.defaultThreshold,
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => IngredientDetailScreen(ingredientId: ingredient['ingredient_id'] as int),
-                    ),
-                  );
-                  if (mounted) setState(() => _version++);
-                },
+            // Low stock first, most urgent at the top, then everything else.
+            if (groups.low.isNotEmpty) ...[
+              SectionHeader(
+                icon: Icons.error_rounded,
+                label: 'Low stock: restock these',
+                trailing: '${groups.low.length}',
+                color: Severity.critical,
               ),
-              const SizedBox(height: 10),
+              for (final ingredient in groups.low) tile(ingredient),
+              const SizedBox(height: 8),
+            ],
+            if (groups.ok.isNotEmpty) ...[
+              SectionHeader(
+                icon: Icons.check_circle_rounded,
+                label: 'Well stocked',
+                trailing: '${groups.ok.length}',
+                color: Severity.ok,
+              ),
+              for (final ingredient in groups.ok) tile(ingredient),
             ],
             if (_canManage) AddRow(label: 'Add ingredient', onTap: () => _showAddDialog(context, reload)),
           ],
@@ -139,6 +160,27 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     );
     if (ok) await reload();
   }
+}
+
+/// Splits ingredients into low stock and the rest, each in a sensible order.
+/// Low stock is sorted by how far below its threshold it is (the emptiest,
+/// relative to what it should hold, first), so the first row is always the
+/// most urgent one; the rest are alphabetical.
+({List<Json> low, List<Json> ok}) groupByPriority(List<Json> ingredients, double defaultThreshold) {
+  double fill(Json i) {
+    final own = i['low_stock_threshold'];
+    final threshold = own == null ? defaultThreshold : asDouble(own);
+    return threshold <= 0 ? 0 : asDouble(i['current_stock']) / threshold;
+  }
+
+  String name(Json i) => (i['name'] as String).toLowerCase();
+  final low = [for (final i in ingredients) if (i['is_low_stock'] == true) i]
+    ..sort((a, b) {
+      final byFill = fill(a).compareTo(fill(b));
+      return byFill != 0 ? byFill : name(a).compareTo(name(b));
+    });
+  final ok = [for (final i in ingredients) if (i['is_low_stock'] != true) i]..sort((a, b) => name(a).compareTo(name(b)));
+  return (low: low, ok: ok);
 }
 
 class _IngredientTile extends StatelessWidget {

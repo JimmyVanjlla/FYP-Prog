@@ -7,7 +7,7 @@ from app.deps import get_current_user, require_role
 from app.models.audit import AuditLog
 from app.models.roles import Role
 from app.models.user import User
-from app.schemas.user import AuditLogOut, UserOut, UserRegister, UserUpdate
+from app.schemas.user import AuditLogOut, PasswordChange, ProfileUpdate, UserOut, UserRegister, UserUpdate
 from app.services import auth as auth_service
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -22,6 +22,40 @@ _ACCOUNT_ADMINS = (Role.RESTAURANT_MANAGER, Role.RESTAURANT_OWNER)
 @router.get("/me", response_model=UserOut)
 def read_current_user(current_user: User = Depends(get_current_user)) -> UserOut:
     return current_user
+
+
+# The /me routes come before /{user_id}, which would otherwise try to read "me"
+# as a number.
+@router.patch("/me", response_model=UserOut)
+def update_own_profile(
+    data: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserOut:
+    """Anyone can view and edit their own profile (name and contact details).
+    There is no role or is_active here: nobody changes their own permissions,
+    and the email is the login."""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        if field == "name" and value is None:
+            continue  # a name cannot be cleared
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/password", status_code=status.HTTP_204_NO_CONTENT)
+def change_own_password(
+    data: PasswordChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    try:
+        auth_service.change_password(
+            db, current_user, current_password=data.current_password, new_password=data.new_password
+        )
+    except auth_service.WrongCurrentPasswordError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Your current password is incorrect.")
 
 
 @router.get("", response_model=list[UserOut])
@@ -72,6 +106,9 @@ def update_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     changes = data.model_dump(exclude_unset=True)
+    # name, role and is_active are required on an account: sending null for one
+    # means "no change", not "blank it". The contact details may be cleared.
+    changes = {k: v for k, v in changes.items() if v is not None or k not in {"name", "role", "is_active"}}
     for field, value in changes.items():
         setattr(target, field, value.value if isinstance(value, Role) else value)
 

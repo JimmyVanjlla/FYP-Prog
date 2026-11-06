@@ -230,26 +230,6 @@ class ApiClient {
     return _decode(resp) as List<dynamic>;
   }
 
-  Future<Map<String, dynamic>> approvePortionRecommendation(
-    int recommendationId,
-  ) async {
-    final resp = await http.post(
-      _uri('/portion-feedback/recommendations/$recommendationId/approve'),
-      headers: _headers,
-    );
-    return _decode(resp) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> rejectPortionRecommendation(
-    int recommendationId,
-  ) async {
-    final resp = await http.post(
-      _uri('/portion-feedback/recommendations/$recommendationId/reject'),
-      headers: _headers,
-    );
-    return _decode(resp) as Map<String, dynamic>;
-  }
-
   // --- Module 6: Waste Management ---
 
   Future<List<dynamic>> listWasteLogs() async {
@@ -270,22 +250,6 @@ class ApiClient {
     );
     final resp = await http.get(uri, headers: _headers);
     return _decode(resp) as List<dynamic>;
-  }
-
-  Future<Map<String, dynamic>> approvePurchaseOrder(int poId) async {
-    final resp = await http.post(
-      _uri('/procurement/purchase-orders/$poId/approve'),
-      headers: _headers,
-    );
-    return _decode(resp) as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> rejectPurchaseOrder(int poId) async {
-    final resp = await http.post(
-      _uri('/procurement/purchase-orders/$poId/reject'),
-      headers: _headers,
-    );
-    return _decode(resp) as Map<String, dynamic>;
   }
 
   // --- Module 11: Reporting & Analytics ---

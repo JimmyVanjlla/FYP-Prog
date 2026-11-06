@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/async_view.dart';
 import '../../core/auth_state.dart';
+import '../../core/dialogs.dart';
+import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
 import '../../models/portion_recommendation.dart';
@@ -16,14 +18,68 @@ import '../../models/purchase_order.dart';
 /// same section's "Screens are scoped to the task, not to the use-case
 /// document" principle — a Manager's actual job here is clearing a queue
 /// of approvals, not navigating module-by-module.
-class ApprovalsScreen extends StatefulWidget {
+///
+/// A second tab keeps the decisions already made: who decided, when, and for
+/// a rejection the reason, so a Manager can look back at them.
+class ApprovalsScreen extends StatelessWidget {
   const ApprovalsScreen({super.key});
 
   @override
-  State<ApprovalsScreen> createState() => _ApprovalsScreenState();
+  Widget build(BuildContext context) {
+    return const DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.fact_check_rounded), text: 'To review'),
+              Tab(icon: Icon(Icons.history_rounded), text: 'History'),
+            ],
+          ),
+          Expanded(child: TabBarView(children: [_PendingTab(), _HistoryTab()])),
+        ],
+      ),
+    );
+  }
 }
 
-class _ApprovalsScreenState extends State<ApprovalsScreen> {
+/// Approves with a confirmation toast, or rejects only after the Manager has
+/// confirmed and given a reason (kept with the decision, and sent to whoever
+/// raised it).
+Future<void> _approve(BuildContext context, String path, Future<void> Function() onChanged) async {
+  final api = context.read<AuthState>().api;
+  final ok = await runAction(context, () => api.postJson(path), success: 'Approved.');
+  if (ok) await onChanged();
+}
+
+Future<void> _reject(
+  BuildContext context,
+  String path, {
+  required String title,
+  required Future<void> Function() onChanged,
+}) async {
+  final reason = await promptText(
+    context,
+    title: title,
+    message: 'This cannot be undone. The reason is saved, sent to whoever raised it, and shown in the history.',
+    label: 'Reason for rejection',
+    confirmLabel: 'Reject',
+    minLength: 3,
+  );
+  if (reason == null || !context.mounted) return;
+  final api = context.read<AuthState>().api;
+  final ok = await runAction(context, () => api.postJson(path, {'reason': reason}), success: 'Rejected.');
+  if (ok) await onChanged();
+}
+
+class _PendingTab extends StatefulWidget {
+  const _PendingTab();
+
+  @override
+  State<_PendingTab> createState() => _PendingTabState();
+}
+
+class _PendingTabState extends State<_PendingTab> {
   late Future<_ApprovalsData> _future;
 
   @override
@@ -87,6 +143,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 EmptyState(
                   icon: Icons.task_alt_rounded,
                   message: 'Nothing needs your attention right now.',
+                  detail: 'Decisions you have already made are in the History tab.',
                 ),
               ],
             ),
@@ -304,31 +361,18 @@ class _PurchaseOrderTile extends StatelessWidget {
             PrimarySecondaryActions(
               primaryLabel: 'Approve',
               secondaryLabel: 'Reject',
-              onPrimary: () => _act(context, approve: true),
-              onSecondary: () => _act(context, approve: false),
+              onPrimary: () => _approve(context, '/procurement/purchase-orders/${po.poId}/approve', onChanged),
+              onSecondary: () => _reject(
+                context,
+                '/procurement/purchase-orders/${po.poId}/reject',
+                title: 'Reject PO #${po.poId}?',
+                onChanged: onChanged,
+              ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _act(BuildContext context, {required bool approve}) async {
-    final api = context.read<AuthState>().api;
-    try {
-      if (approve) {
-        await api.approvePurchaseOrder(po.poId);
-      } else {
-        await api.rejectPurchaseOrder(po.poId);
-      }
-      await onChanged();
-    } on ApiException catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
   }
 }
 
@@ -345,6 +389,8 @@ class _PortionRecommendationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final name = itemName ?? 'Menu item #${recommendation.menuItemId}';
+    final path = '/portion-feedback/recommendations/${recommendation.recommendationId}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(14),
@@ -355,7 +401,7 @@ class _PortionRecommendationTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '${itemName ?? 'Menu item #${recommendation.menuItemId}'} · ${recommendation.leftoverRate}% leftover rate',
+                    '$name · ${recommendation.leftoverRate}% leftover rate',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -373,30 +419,191 @@ class _PortionRecommendationTile extends StatelessWidget {
             PrimarySecondaryActions(
               primaryLabel: 'Approve',
               secondaryLabel: 'Reject',
-              onPrimary: () => _act(context, approve: true),
-              onSecondary: () => _act(context, approve: false),
+              onPrimary: () => _approve(context, '$path/approve', onChanged),
+              onSecondary: () => _reject(
+                context,
+                '$path/reject',
+                title: 'Reject the portion change for $name?',
+                onChanged: onChanged,
+              ),
             ),
           ],
         ),
       ),
     );
   }
+}
 
-  Future<void> _act(BuildContext context, {required bool approve}) async {
+/// One past decision, from either kind of review.
+class _Decision {
+  final String kind; // 'Purchase order' or 'Portion review'
+  final String title;
+  final String detail;
+  final bool approved;
+  final DateTime when;
+  final String decidedBy;
+  final String? reason;
+
+  _Decision({
+    required this.kind,
+    required this.title,
+    required this.detail,
+    required this.approved,
+    required this.when,
+    required this.decidedBy,
+    required this.reason,
+  });
+}
+
+class _HistoryTab extends StatefulWidget {
+  const _HistoryTab();
+
+  @override
+  State<_HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends State<_HistoryTab> {
+  /// null = everything; true = approved only; false = rejected only.
+  bool? _filter;
+
+  Future<List<_Decision>> _load() async {
     final api = context.read<AuthState>().api;
-    try {
-      if (approve) {
-        await api.approvePortionRecommendation(recommendation.recommendationId);
-      } else {
-        await api.rejectPortionRecommendation(recommendation.recommendationId);
-      }
-      await onChanged();
-    } on ApiException catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
+    final results = await Future.wait([
+      api.getJson('/procurement/purchase-orders', query: {'limit': 500}),
+      api.getJson('/portion-feedback/recommendations', query: {'limit': 500}),
+      api.getJson('/users', query: {'limit': 500}),
+      api.getJson('/menu-items', query: {'include_inactive': true, 'limit': 500}),
+    ]);
+    final people = {for (final u in asJsonList(results[2])) u['user_id'] as int: u['name'] as String};
+    final dishes = {for (final m in asJsonList(results[3])) m['menu_item_id'] as int: m['name'] as String};
+
+    String who(dynamic id) => id == null ? 'Unknown' : (people[id] ?? 'User #$id');
+    DateTime when(Json row) => parseDate(row['decided_at'] ?? row['created_at'])?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0);
+
+    final decisions = <_Decision>[
+      for (final po in asJsonList(results[0]))
+        if (po['status'] != 'pending_approval')
+          _Decision(
+            kind: 'Purchase order',
+            title: 'PO #${po['po_id']} · ${money(po['total_cost'])}',
+            // An approved order moves on through delivery; say where it is now.
+            detail: po['status'] == 'rejected' ? 'Purchase order' : 'Purchase order · now ${_readable(po['status'])}',
+            approved: po['status'] != 'rejected',
+            when: when(po),
+            decidedBy: who(po['decided_by'] ?? po['approved_by']),
+            reason: po['decision_note'] as String?,
+          ),
+      for (final r in asJsonList(results[1]))
+        if (r['status'] != 'pending')
+          _Decision(
+            kind: 'Portion review',
+            title: dishes[r['menu_item_id']] ?? 'Menu item #${r['menu_item_id']}',
+            detail: 'Portion review · ${r['leftover_rate']}% leftover, suggested ${r['suggested_portion_size']}',
+            approved: r['status'] == 'approved',
+            when: when(r),
+            decidedBy: who(r['decided_by']),
+            reason: r['decision_note'] as String?,
+          ),
+    ]..sort((a, b) => b.when.compareTo(a.when));
+    return decisions;
+  }
+
+  static String _readable(dynamic status) => (status as String).replaceAll('_', ' ');
+
+  @override
+  Widget build(BuildContext context) {
+    return AsyncView<List<_Decision>>(
+      load: _load,
+      builder: (context, all, reload) {
+        final shown = _filter == null ? all : all.where((d) => d.approved == _filter).toList();
+        return RefreshableList(
+          onRefresh: reload,
+          children: [
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final option in <(String, bool?)>[('All', null), ('Approved', true), ('Rejected', false)])
+                  ChoiceChip(
+                    label: Text(option.$1),
+                    selected: _filter == option.$2,
+                    onSelected: (_) => setState(() => _filter = option.$2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (shown.isEmpty)
+              const EmptyState(
+                icon: Icons.history_rounded,
+                message: 'No decisions to show.',
+                detail: 'Approved and rejected reviews appear here.',
+              ),
+            for (final d in shown) ...[
+              _DecisionCard(decision: d),
+              const SizedBox(height: 10),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DecisionCard extends StatelessWidget {
+  final _Decision decision;
+
+  const _DecisionCard({required this.decision});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = decision.approved ? Severity.ok : Severity.critical;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconBadge(
+                  icon: decision.kind == 'Purchase order' ? Icons.local_shipping_outlined : Icons.restaurant_menu_outlined,
+                  color: color,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(decision.title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(decision.detail, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SeverityChip(label: decision.approved ? 'Approved' : 'Rejected', color: color),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${decision.approved ? 'Approved' : 'Rejected'} by ${decision.decidedBy} · ${friendlyDateTime(decision.when.toIso8601String())}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+            if (decision.reason != null && decision.reason!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Severity.critical.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('Reason: ${decision.reason}', style: Theme.of(context).textTheme.bodyMedium),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

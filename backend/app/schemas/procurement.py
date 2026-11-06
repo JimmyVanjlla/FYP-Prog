@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class SupplierCreate(BaseModel):
@@ -61,6 +61,21 @@ class PurchaseOrderItemOut(BaseModel):
     unit_price: Decimal
 
 
+class RejectionReason(BaseModel):
+    """Why a purchase order or portion review is being rejected. Required, so
+    the person who raised it knows what to change."""
+
+    reason: str = Field(min_length=3, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def _not_just_spaces(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 3:
+            raise ValueError("Give a reason of at least 3 characters.")
+        return value
+
+
 class PurchaseOrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,6 +86,11 @@ class PurchaseOrderOut(BaseModel):
     status: str
     total_cost: Decimal
     created_at: datetime
+    # The Manager's decision, for the approvals history: who, when, and the
+    # reason when it was rejected.
+    decided_by: int | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
     # FR9.6 — warning, not a block, when the order would exceed the
     # remaining monthly budget.
     exceeds_budget: bool = False

@@ -269,7 +269,11 @@ class SectionHeader extends StatelessWidget {
   final String label;
   final String? trailing;
 
-  const SectionHeader({super.key, required this.icon, required this.label, this.trailing});
+  /// Tints the icon, for a group that stands for a status (for example the
+  /// critical colour above a list of low-stock items). Defaults to the brand colour.
+  final Color? color;
+
+  const SectionHeader({super.key, required this.icon, required this.label, this.trailing, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -278,7 +282,7 @@ class SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: scheme.primary),
+          Icon(icon, size: 18, color: color ?? scheme.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Text(label, style: Theme.of(context).textTheme.titleMedium),

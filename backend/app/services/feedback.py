@@ -2,7 +2,7 @@
 Module 7: Portion & Forecast Feedback business logic. FR7.1-FR7.5, plus
 ALGORITHM IdentifyHighLeftoverDishes (Ch4 §4.8.2 / UC-PF-03).
 """
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -153,7 +153,9 @@ def list_portion_recommendations(
     return list(db.scalars(stmt))
 
 
-def approve_portion_recommendation(db: Session, recommendation_id: int) -> PortionRecommendation:
+def approve_portion_recommendation(
+    db: Session, recommendation_id: int, decided_by: int | None = None
+) -> PortionRecommendation:
     """FR2.3/FR7.2/FR7.3 — Manager approval propagates the reduction
     factor to every ingredient in the dish's recipe (scaling each
     quantity_per_serving down, not just the one representative figure
@@ -190,16 +192,27 @@ def approve_portion_recommendation(db: Session, recommendation_id: int) -> Porti
         )
 
     recommendation.status = "approved"
+    recommendation.decided_by = decided_by
+    recommendation.decided_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(recommendation)
     return recommendation
 
 
-def reject_portion_recommendation(db: Session, recommendation_id: int) -> PortionRecommendation:
+def reject_portion_recommendation(
+    db: Session, recommendation_id: int, decided_by: int | None = None, reason: str | None = None
+) -> PortionRecommendation:
+    """A pending review can be rejected, with the reason kept for the history.
+    An already-decided one cannot be flipped, which the endpoint used to allow."""
     recommendation = db.get(PortionRecommendation, recommendation_id)
     if recommendation is None:
         raise RecommendationNotFoundError
+    if recommendation.status != "pending":
+        raise InvalidPortionSizeError
     recommendation.status = "rejected"
+    recommendation.decided_by = decided_by
+    recommendation.decided_at = datetime.now(timezone.utc)
+    recommendation.decision_note = reason
     db.commit()
     db.refresh(recommendation)
     return recommendation

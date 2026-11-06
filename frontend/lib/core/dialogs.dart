@@ -58,13 +58,19 @@ Future<String?> promptNumber(
 }
 
 /// Asks for a free-text answer (e.g. a reason). Returns null if cancelled.
+/// [message] explains what is about to happen; [minLength] and [maxLength]
+/// are checked as the person types (Ch4 section 4.4.1: errors surface at the
+/// point of entry).
 Future<String?> promptText(
   BuildContext context, {
   required String title,
   required String label,
+  String? message,
   String confirmLabel = 'Save',
   bool required = true,
   int maxLines = 3,
+  int minLength = 1,
+  int maxLength = 500,
 }) {
   final controller = TextEditingController();
   final formKey = GlobalKey<FormState>();
@@ -74,12 +80,29 @@ Future<String?> promptText(
       title: Text(title),
       content: Form(
         key: formKey,
-        child: TextFormField(
-          controller: controller,
-          autofocus: true,
-          maxLines: maxLines,
-          decoration: InputDecoration(labelText: label),
-          validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Required.' : null,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (message != null) ...[
+              Text(message),
+              const SizedBox(height: 12),
+            ],
+            TextFormField(
+              controller: controller,
+              autofocus: true,
+              maxLines: maxLines,
+              maxLength: maxLength,
+              autovalidateMode: AutovalidateMode.onUserInteraction,
+              decoration: InputDecoration(labelText: label),
+              validator: (v) {
+                final text = v?.trim() ?? '';
+                if (text.isEmpty) return required ? 'Required.' : null;
+                if (text.length < minLength) return 'Please write at least $minLength characters.';
+                return null;
+              },
+            ),
+          ],
         ),
       ),
       actions: [

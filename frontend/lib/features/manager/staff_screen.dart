@@ -6,11 +6,12 @@ import '../../core/auth_state.dart';
 import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
+import 'staff_detail_screen.dart';
 
-/// FR1.4 / FR1.5 — the Restaurant Manager creates, deactivates and
-/// reassigns staff accounts, and reviews the audit trail of what each
-/// account has done. Beyond the first Manager/Owner (who can self-register),
-/// this screen is the only way a Manager/Owner account gets created.
+/// FR1.4 / FR1.5 — a Restaurant Manager or Owner creates, deactivates and
+/// reassigns staff accounts, keeps their contact details, and reviews the
+/// audit trail of what each account has done. Beyond the very first
+/// Manager/Owner, this screen is the only way an account gets created.
 class StaffScreen extends StatelessWidget {
   const StaffScreen({super.key});
 
@@ -48,86 +49,20 @@ class _AccountsTab extends StatelessWidget {
             _UserTile(user: u, onChanged: reload),
             const SizedBox(height: 10),
           ],
-          AddRow(label: 'Add staff account', onTap: () => _showCreateDialog(context, reload)),
+          AddRow(
+            label: 'Add staff account',
+            onTap: () async {
+              final created = await Navigator.of(context).push<bool>(
+                MaterialPageRoute(builder: (_) => const StaffFormScreen()),
+              );
+              if (created == true) await reload();
+            },
+          ),
         ],
       ),
     );
   }
 
-  Future<void> _showCreateDialog(BuildContext context, Future<void> Function() reload) async {
-    final name = TextEditingController();
-    final email = TextEditingController();
-    final password = TextEditingController();
-    String role = Roles.kitchenStaff;
-    final formKey = GlobalKey<FormState>();
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('New staff account'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: name,
-                    decoration: const InputDecoration(labelText: 'Full name'),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required.' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: email,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email.' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: password,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Temporary password'),
-                    validator: (v) => (v == null || v.length < 8) ? 'At least 8 characters.' : null,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: role,
-                    decoration: const InputDecoration(labelText: 'Role'),
-                    items: Roles.all.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
-                    onChanged: (v) => setState(() => role = v ?? role),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) Navigator.pop(context, true);
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-    final api = context.read<AuthState>().api;
-    final ok = await runAction(
-      context,
-      () => api.postJson('/users', {
-        'name': name.text.trim(),
-        'email': email.text.trim(),
-        'password': password.text,
-        'role': role,
-      }),
-      success: 'Account created.',
-    );
-    if (ok) await reload();
-  }
 }
 
 class _UserTile extends StatelessWidget {
@@ -141,6 +76,12 @@ class _UserTile extends StatelessWidget {
     final active = user['is_active'] as bool;
     return Card(
       child: ListTile(
+        onTap: () async {
+          await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => StaffDetailScreen(user: user)),
+          );
+          await onChanged(); // details may have been edited
+        },
         leading: IconBadge(
           icon: active ? Icons.person_rounded : Icons.person_off_rounded,
           color: active ? null : Severity.critical,

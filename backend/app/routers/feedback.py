@@ -6,6 +6,7 @@ from app.deps import require_role
 from app.models.roles import Role
 from app.models.user import User
 from app.schemas.feedback import IdentifyHighLeftoverResult, PortionRecommendationOut
+from app.schemas.procurement import RejectionReason
 from app.services import feedback as feedback_service
 
 router = APIRouter(prefix="/portion-feedback", tags=["portion-feedback"])
@@ -40,11 +41,11 @@ def trigger_analysis(
 def approve_recommendation(
     recommendation_id: int,
     db: Session = Depends(get_db),
-    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+    manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> PortionRecommendationOut:
     """FR7.2 / FR7.3."""
     try:
-        return feedback_service.approve_portion_recommendation(db, recommendation_id)
+        return feedback_service.approve_portion_recommendation(db, recommendation_id, manager.user_id)
     except feedback_service.RecommendationNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found.")
     except feedback_service.InvalidPortionSizeError:
@@ -57,10 +58,17 @@ def approve_recommendation(
 @router.post("/recommendations/{recommendation_id}/reject", response_model=PortionRecommendationOut)
 def reject_recommendation(
     recommendation_id: int,
+    data: RejectionReason,
     db: Session = Depends(get_db),
-    _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
+    manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> PortionRecommendationOut:
+    """A reason is required and kept for the approvals history."""
     try:
-        return feedback_service.reject_portion_recommendation(db, recommendation_id)
+        return feedback_service.reject_portion_recommendation(db, recommendation_id, manager.user_id, data.reason)
     except feedback_service.RecommendationNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found.")
+    except feedback_service.InvalidPortionSizeError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Only pending recommendations can be rejected.",
+        )

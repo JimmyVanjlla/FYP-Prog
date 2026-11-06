@@ -21,6 +21,13 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(30), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Staff contact details. All optional: an account can be created with just
+    # a name, email and role, and the person (or a Manager/Owner) fills the
+    # rest in later from the profile / staff screens.
+    phone_number: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    emergency_contact_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    emergency_contact_phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

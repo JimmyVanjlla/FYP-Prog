@@ -15,6 +15,7 @@ from app.schemas.procurement import (
     PurchaseOrderCreate,
     PurchaseOrderItemOut,
     PurchaseOrderOut,
+    RejectionReason,
     SupplierCreate,
     SupplierDiscrepancyCreate,
     SupplierDiscrepancyOut,
@@ -183,17 +184,25 @@ def approve_purchase_order(
         return procurement_service.approve_purchase_order(db, po_id, manager.user_id)
     except procurement_service.NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found.")
+    except procurement_service.AlreadyDecidedError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This order has already been decided.")
 
 
 @router.post("/purchase-orders/{po_id}/reject", response_model=PurchaseOrderOut)
 def reject_purchase_order(
-    po_id: int, db: Session = Depends(get_db), _manager: User = Depends(require_role(Role.RESTAURANT_MANAGER))
+    po_id: int,
+    data: RejectionReason,
+    db: Session = Depends(get_db),
+    manager: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> PurchaseOrderOut:
-    """FR9.3."""
+    """FR9.3. A reason is required; it is kept on the order and sent to the
+    officer who raised it."""
     try:
-        return procurement_service.reject_purchase_order(db, po_id)
+        return procurement_service.reject_purchase_order(db, po_id, manager.user_id, data.reason)
     except procurement_service.NotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order not found.")
+    except procurement_service.AlreadyDecidedError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This order has already been decided.")
 
 
 @router.post("/budget", response_model=BudgetOut, status_code=status.HTTP_201_CREATED)

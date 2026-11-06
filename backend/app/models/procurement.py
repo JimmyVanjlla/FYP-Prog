@@ -61,6 +61,12 @@ class PurchaseOrder(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    # The approval decision, kept so the Manager can look back at it: who
+    # decided, when, and (for a rejection) why. `approved_by` stays as it was;
+    # `decided_by` is set for rejections as well.
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     items: Mapped[list["PurchaseOrderItem"]] = relationship(back_populates="purchase_order")
 

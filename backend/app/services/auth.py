@@ -27,6 +27,10 @@ class InvalidCredentialsError(Exception):
     """FR1.7 — deliberately doesn't say which of email/password was wrong."""
 
 
+class WrongCurrentPasswordError(Exception):
+    """The current password given when changing a password was incorrect."""
+
+
 class PublicRegistrationClosedError(Exception):
     """Raised by register_user_self_service when public registration is closed
     and the caller is not creating the very first Manager/Owner account."""
@@ -51,6 +55,10 @@ def register_user(db: Session, data: UserRegister) -> User:
         password_hash=hash_password(data.password),
         role=data.role.value,
         is_active=True,
+        phone_number=data.phone_number,
+        address=data.address,
+        emergency_contact_name=data.emergency_contact_name,
+        emergency_contact_phone=data.emergency_contact_phone,
     )
     db.add(user)
     db.flush()
@@ -88,6 +96,15 @@ def register_user_self_service(db: Session, data: UserRegister) -> User:
         if already_exists is not None:
             raise PrivilegedRoleAlreadyProvisionedError
     return register_user(db, data)
+
+
+def change_password(db: Session, user: User, *, current_password: str, new_password: str) -> None:
+    """A person changing their own password. Requires the current one, so a
+    phone left unlocked cannot be used to take over the account."""
+    if not verify_password(current_password, user.password_hash):
+        raise WrongCurrentPasswordError
+    user.password_hash = hash_password(new_password)
+    db.commit()  # the request itself is already in the audit trail (deps.get_current_user)
 
 
 def authenticate_user(db: Session, email: str, password: str) -> tuple[str, str]:
