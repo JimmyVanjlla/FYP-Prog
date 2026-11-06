@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/auth_state.dart';
+import '../core/theme.dart';
 import 'kitchen_staff/leftover_log_screen.dart';
 import 'kitchen_staff/prep_screen.dart';
 import 'manager/approvals_screen.dart';
@@ -161,11 +162,42 @@ class _HomeShellState extends State<HomeShell> {
           Navigator.of(context).pop();
         },
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(28, 24, 16, 12),
-            child: Text(
-              auth.role ?? '',
-              style: Theme.of(context).textTheme.titleMedium,
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              gradient: brandGradient(context),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.white.withValues(alpha: 0.22),
+                  child: const Icon(Icons.restaurant_rounded, color: Colors.white),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        auth.displayName ?? auth.role ?? '',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w800),
+                      ),
+                      if (auth.displayName != null)
+                        Text(
+                          auth.role ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           for (final d in destinations) NavigationDrawerDestination(icon: Icon(d.icon), label: Text(d.label)),

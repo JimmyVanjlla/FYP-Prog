@@ -79,7 +79,10 @@ class _ProfileBodyState extends State<_ProfileBody> {
       success: 'Profile saved.',
     );
     if (mounted) setState(() => _savingDetails = false);
-    if (ok) await widget.onSaved();
+    if (ok && mounted) {
+      await context.read<AuthState>().loadProfile(); // the menu header shows the name
+      await widget.onSaved();
+    }
   }
 
   Future<void> _changePassword() async {

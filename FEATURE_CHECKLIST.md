@@ -9,7 +9,7 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 196 backend (including 5 cross-role integration workflows), 37 Flutter tests; the Flutter analyzer is clean.
+- Tests: 219 backend (including 5 cross-role integration workflows), 58 Flutter tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
 
@@ -41,6 +41,18 @@ Checked against Form 2, Form 4(i) and Chapters 1-4 on 31 Oct 2026. None of these
 | Draft report date | Form 2 says 27 Nov 2026, Ch1 says 4 Dec 2026 | **The documents disagree.** Ch1 also lists System Preview 2 on 2-11 Nov and Final System Testing on 16-20 Nov. Confirm with the supervisor which dates apply. |
 
 Checked and fine: expiry handling ("prioritized usage") is the near-expiry alert plus batches listed earliest-expiry first, which matches the wording in Ch3; goods returns exist as `return_pending` and `return_resolved` states; the seventh role (Owner) appears in Ch3 and Ch4 although Form 2 and Ch1 say six.
+
+## Supervisor feedback (system preview, 3 Nov 2026), addressed 6 Nov
+
+| Feedback | What was done |
+|---|---|
+| Confirmation before rejecting | Rejecting a purchase order or a portion review opens a confirmation. |
+| A remark section for the rejection reason | The reason is required (3 to 500 characters, checked as it is typed), saved with the decision, and sent to the officer who raised the order in their notification. |
+| A history of older approved and rejected reviews | **History** tab on the Manager's approvals screen: purchase orders and portion reviews, newest first, with who decided, when, the reason for a rejection, and where an approved order has got to; filter by approved or rejected. Decisions are now final (a decided order can no longer be approved or rejected again), and each records its decider and time. |
+| Inventory sorted by priority and categorised, reds at the top | Two groups, "Low stock: restock these" above "Well stocked", each with a count; within low stock the emptiest relative to its threshold comes first. Summary tiles at the top show the counts. |
+| More details in the staff account section | Phone number, address and an emergency contact (name and phone), all optional, with the phone number checked for shape. Shown on a staff detail screen, editable by a Manager or Owner, and asked for when creating an account. |
+| A profile page to see and edit your own information, except the role | **My profile** (see Module 1 below). |
+| The UI is bland | New look: a vivid indigo colour scheme (kept apart from the red/amber/green status colours), white cards with soft shadows on a tinted page, a coloured top bar, a gradient banner on the approvals screen, summary tiles on inventory, a branded login screen and a menu header showing who is signed in. The report's rules still hold: status is always colour plus text from the same three colours, approve is filled and reject outlined, and the typography is unchanged so the PDF reports still match. |
 
 ## Fixed since the first check
 
@@ -85,7 +97,8 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 | FR1.1 | Register with email, name, password | Done | Done |  |
 | FR1.2 | Email/password login returns a JWT | Done | Done | Rate-limited per email. |
 | FR1.3 | Role-based access control | Done | Done | Enforced server-side on every endpoint, and every one of the 7 roles now gets its own navigation. |
-| FR1.4 | Manager creates / deactivates / reassigns staff accounts | Done | Done | Staff screen. |
+| FR1.4 | Manager creates / deactivates / reassigns staff accounts | Done | Done | Staff screen. Accounts also carry phone, address and an emergency contact, which a Manager or Owner can view and correct; the Owner has the Staff screen too. |
+| Ch1 Module 1 | "Profile and credential management" | Done | Done | **My profile** (top bar and menu): everyone edits their own name and contact details and changes their password (current password required). Role, active status and email are shown but cannot be edited there. Added 6 Nov 2026; it had no screen before. |
 | FR1.5 | Log all user actions with timestamps | Done | Done | Every state-changing request by a signed-in user is logged centrally; the Staff screen has an Activity log tab. |
 | FR1.6 | Reject duplicate email on registration | Done | Done |  |
 | FR1.7 | Generic login failure message | Done | Done |  |

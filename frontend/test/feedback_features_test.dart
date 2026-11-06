@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:restaurant_ops/core/auth_state.dart';
 import 'package:restaurant_ops/core/json.dart';
+import 'package:restaurant_ops/core/theme.dart';
 import 'package:restaurant_ops/features/manager/approvals_screen.dart';
 import 'package:restaurant_ops/features/manager/staff_detail_screen.dart';
 import 'package:restaurant_ops/features/shared/inventory/inventory_list_screen.dart';
@@ -222,14 +223,20 @@ void main() {
         },
       );
 
+      // The summary tiles say how many, and the headings split the list.
+      expect(find.widgetWithText(StatTile, 'Low stock'), findsOneWidget);
+      expect(find.descendant(of: find.widgetWithText(StatTile, 'Low stock'), matching: find.text('2')), findsOneWidget);
+      expect(find.descendant(of: find.widgetWithText(StatTile, 'Ingredients'), matching: find.text('4')), findsOneWidget);
+
+      final wellStockedHeading = find.descendant(of: find.byType(SectionHeader), matching: find.text('Well stocked'));
       expect(find.text('Low stock: restock these'), findsOneWidget);
-      expect(find.text('Well stocked'), findsOneWidget);
-      double y(String text) => tester.getTopLeft(find.text(text)).dy;
-      expect(y('Low stock: restock these'), lessThan(y('Coffee Powder')));
-      expect(y('Coffee Powder'), lessThan(y('Beansprouts')));
-      expect(y('Beansprouts'), lessThan(y('Well stocked')));
-      expect(y('Well stocked'), lessThan(y('Anchovies')));
-      expect(y('Anchovies'), lessThan(y('Rice')));
+      expect(wellStockedHeading, findsOneWidget);
+      double y(Finder finder) => tester.getTopLeft(finder).dy;
+      expect(y(find.text('Low stock: restock these')), lessThan(y(find.text('Coffee Powder'))));
+      expect(y(find.text('Coffee Powder')), lessThan(y(find.text('Beansprouts'))));
+      expect(y(find.text('Beansprouts')), lessThan(y(wellStockedHeading)));
+      expect(y(wellStockedHeading), lessThan(y(find.text('Anchovies'))));
+      expect(y(find.text('Anchovies')), lessThan(y(find.text('Rice'))));
     });
   });
 

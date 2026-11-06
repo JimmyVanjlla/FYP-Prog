@@ -68,6 +68,38 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               ? null
               : const EmptyState(icon: Icons.inventory_2_outlined, message: 'No ingredients tracked yet.'),
           children: [
+            if (data.ingredients.isNotEmpty) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: StatTile(
+                      icon: groups.low.isEmpty ? Icons.check_circle_rounded : Icons.error_rounded,
+                      value: '${groups.low.length}',
+                      label: 'Low stock',
+                      color: groups.low.isEmpty ? Severity.ok : Severity.critical,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: StatTile(
+                      icon: Icons.check_circle_rounded,
+                      value: '${groups.ok.length}',
+                      label: 'Well stocked',
+                      color: Severity.ok,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: StatTile(
+                      icon: Icons.inventory_2_rounded,
+                      value: '${data.ingredients.length}',
+                      label: 'Ingredients',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+            ],
             // Low stock first, most urgent at the top, then everything else.
             if (groups.low.isNotEmpty) ...[
               SectionHeader(

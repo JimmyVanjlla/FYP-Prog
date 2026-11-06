@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/auth_state.dart';
+import '../../../core/theme.dart';
 
 /// Ch4 §4.4.1: "Authentication asks for nothing the system doesn't need" —
 /// a single email/password pair, no role selector (the JWT already encodes
@@ -70,34 +71,44 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Center(
-                        child: Container(
-                          width: 64,
-                          height: 64,
-                          decoration: BoxDecoration(
-                            color: scheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Icon(
-                            Icons.restaurant_rounded,
-                            color: scheme.onPrimaryContainer,
-                            size: 32,
-                          ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 20),
+                        decoration: BoxDecoration(
+                          gradient: brandGradient(context),
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: scheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 24,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Restaurant Ops',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Sign in to continue',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onSurfaceVariant,
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 68,
+                              height: 68,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Icon(Icons.restaurant_rounded, color: Colors.white, size: 36),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Restaurant Ops',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Sign in to continue',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 14),
+                            ),
+                          ],
                         ),
-                        textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 32),
                       TextFormField(

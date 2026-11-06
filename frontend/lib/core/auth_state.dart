@@ -47,6 +47,11 @@ class AuthState extends ChangeNotifier {
   String? _role;
   bool _restoring = true;
 
+  /// The signed-in person's name, for the menu header. Loaded after sign-in
+  /// and whenever the profile is saved; null until then, and the menu simply
+  /// shows the role.
+  String? displayName;
+
   /// Shown on the login screen after a session ends on its own (the token
   /// expired), so the person knows why they were sent back.
   String? notice;
@@ -80,6 +85,7 @@ class AuthState extends ChangeNotifier {
     } else if (stored != null) {
       _applyToken(stored);
       unawaited(_push.register(api));
+      unawaited(loadProfile());
     }
     _restoring = false;
     notifyListeners();
@@ -92,9 +98,23 @@ class AuthState extends ChangeNotifier {
     unawaited(_storage.delete(key: _tokenStorageKey));
     _token = null;
     _role = null;
+    displayName = null;
     api.setToken(null);
     notice = _expiredNotice;
     notifyListeners();
+  }
+
+  Future<void> loadProfile() async {
+    try {
+      final me = await api.getJson('/users/me');
+      final name = me is Map ? me['name'] : null;
+      if (name is String && name != displayName) {
+        displayName = name;
+        notifyListeners();
+      }
+    } catch (_) {
+      // The header falls back to the role; not worth bothering the person.
+    }
   }
 
   Future<void> login({required String email, required String password}) async {
@@ -104,6 +124,7 @@ class AuthState extends ChangeNotifier {
     notice = null;
     _applyToken(token);
     unawaited(_push.register(api));
+    unawaited(loadProfile());
     notifyListeners();
   }
 
@@ -117,6 +138,7 @@ class AuthState extends ChangeNotifier {
     await _storage.delete(key: _tokenStorageKey);
     _token = null;
     _role = null;
+    displayName = null;
     api.setToken(null);
     notifyListeners();
   }

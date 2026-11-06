@@ -154,6 +154,15 @@ class _PendingTabState extends State<_PendingTab> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              HeroBanner(
+                icon: Icons.fact_check_rounded,
+                title: 'Needs your attention',
+                subtitle:
+                    '${data.purchaseOrders.length} purchase ${data.purchaseOrders.length == 1 ? 'order' : 'orders'}'
+                    '  ·  ${data.portionRecommendations.length} portion ${data.portionRecommendations.length == 1 ? 'review' : 'reviews'}',
+                figure: '${data.purchaseOrders.length + data.portionRecommendations.length}',
+              ),
+              const SizedBox(height: 16),
               if (data.budget != null) ...[
                 _BudgetCard(budget: data.budget!),
                 const SizedBox(height: 16),
