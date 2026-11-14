@@ -177,6 +177,26 @@ void main() {
       expect(find.text('Curry Laksa'), findsNothing);
     });
 
+    testWidgets('decisions from before dates were recorded say so, sort last, and never show "Unknown"', (tester) async {
+      await _pumpApprovals(
+        tester,
+        _approvalRoutes(
+          orders: [
+            // Old record: no decided_at, no decided_by.
+            _po(1, 'awaiting_delivery', total: '530.00'),
+            _po(2, 'rejected', total: '210.00', decidedBy: 5, decidedAt: '2026-11-03T02:00:00Z'),
+          ],
+        ),
+      );
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Unknown'), findsNothing);
+      expect(find.text('Approved · date not recorded'), findsOneWidget);
+      double y(String text) => tester.getTopLeft(find.text(text)).dy;
+      expect(y('PO #2 · RM 210.00'), lessThan(y('PO #1 · RM 530.00')));
+    });
+
     testWidgets('says so when there is nothing yet', (tester) async {
       await _pumpApprovals(tester, _approvalRoutes());
       await tester.tap(find.text('History'));

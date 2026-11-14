@@ -449,8 +449,12 @@ class _Decision {
   final String title;
   final String detail;
   final bool approved;
-  final DateTime when;
-  final String decidedBy;
+  /// When it was decided; null for decisions made before the system recorded it.
+  final DateTime? when;
+  /// Created date, used only to order decisions that have no recorded time.
+  final DateTime created;
+  /// Who decided; null for decisions made before the system recorded it.
+  final String? decidedBy;
   final String? reason;
 
   _Decision({
@@ -459,6 +463,7 @@ class _Decision {
     required this.detail,
     required this.approved,
     required this.when,
+    required this.created,
     required this.decidedBy,
     required this.reason,
   });
@@ -486,8 +491,9 @@ class _HistoryTabState extends State<_HistoryTab> {
     final people = {for (final u in asJsonList(results[2])) u['user_id'] as int: u['name'] as String};
     final dishes = {for (final m in asJsonList(results[3])) m['menu_item_id'] as int: m['name'] as String};
 
-    String who(dynamic id) => id == null ? 'Unknown' : (people[id] ?? 'User #$id');
-    DateTime when(Json row) => parseDate(row['decided_at'] ?? row['created_at'])?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0);
+    String? who(dynamic id) => id == null ? null : (people[id] ?? 'User #$id');
+    DateTime? when(Json row) => parseDate(row['decided_at'])?.toLocal();
+    DateTime created(Json row) => parseDate(row['created_at'])?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0);
 
     final decisions = <_Decision>[
       for (final po in asJsonList(results[0]))
@@ -499,6 +505,7 @@ class _HistoryTabState extends State<_HistoryTab> {
             detail: po['status'] == 'rejected' ? 'Purchase order' : 'Purchase order · now ${_readable(po['status'])}',
             approved: po['status'] != 'rejected',
             when: when(po),
+            created: created(po),
             decidedBy: who(po['decided_by'] ?? po['approved_by']),
             reason: po['decision_note'] as String?,
           ),
@@ -510,10 +517,17 @@ class _HistoryTabState extends State<_HistoryTab> {
             detail: 'Portion review · ${r['leftover_rate']}% leftover, suggested ${r['suggested_portion_size']}',
             approved: r['status'] == 'approved',
             when: when(r),
+            created: created(r),
             decidedBy: who(r['decided_by']),
             reason: r['decision_note'] as String?,
           ),
-    ]..sort((a, b) => b.when.compareTo(a.when));
+    ]..sort((a, b) {
+        // Newest recorded decision first; ones with no recorded time go last.
+        if (a.when != null && b.when != null) return b.when!.compareTo(a.when!);
+        if (a.when != null) return -1;
+        if (b.when != null) return 1;
+        return b.created.compareTo(a.created);
+      });
     return decisions;
   }
 
@@ -562,6 +576,15 @@ class _DecisionCard extends StatelessWidget {
 
   const _DecisionCard({required this.decision});
 
+  /// "Approved by Sam · 2 Nov, 15:47", leaving out whatever an older record
+  /// never captured rather than showing "Unknown".
+  static String _summary(_Decision d) {
+    final verb = d.approved ? 'Approved' : 'Rejected';
+    final by = d.decidedBy == null ? verb : '$verb by ${d.decidedBy}';
+    final at = d.when == null ? 'date not recorded' : friendlyDateTime(d.when!.toIso8601String());
+    return '$by · $at';
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -595,7 +618,7 @@ class _DecisionCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${decision.approved ? 'Approved' : 'Rejected'} by ${decision.decidedBy} · ${friendlyDateTime(decision.when.toIso8601String())}',
+              _summary(decision),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
             if (decision.reason != null && decision.reason!.isNotEmpty) ...[
