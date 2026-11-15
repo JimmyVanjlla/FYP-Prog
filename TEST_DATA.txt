@@ -85,10 +85,11 @@
                                                    remaining budget shown beside
                                                    Approve
     Tap Approve.                                  Expect: PO moves to History as
-                                                   Approved; budget used rises to
-                                                   RM 1,800.00 of RM 8,000.00
-                                                   (22%); the Procurement Officer
-                                                   gets a notification
+                                                   Approved; the budget bar stays at
+                                                   RM 1,270.00 of RM 8,000.00
+                                                   (16%) because a pending order
+                                                   already counts; the Procurement
+                                                   Officer gets a notification
 
  C. Manager rejects with a reason (use the Curry Laksa review, see D)
     Tap Reject, then Reject again with no text.   Expect: "Required."
