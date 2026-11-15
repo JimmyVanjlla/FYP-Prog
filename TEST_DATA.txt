@@ -84,13 +84,13 @@
     Enter  empty email                             Expect: "Enter your email."
 
  B. Manager approves a purchase order  (manager@test.com > Needs attention)
-    Open PO #5, check the line items.             Expect: RM 530.00 total and the
+    Open PO #4, check the line items.             Expect: RM 530.00 total and the
                                                    remaining budget shown beside
                                                    Approve
     Tap Approve.                                  Expect: PO moves to History as
                                                    Approved; the budget bar stays at
-                                                   RM 1,800.00 of RM 8,000.00
-                                                   (23%) because an order counts from
+                                                   RM 1,270.00 of RM 8,000.00
+                                                   (16%) because an order counts from
                                                    the moment it is raised (a rejected
                                                    one drops out); the Procurement
                                                    Officer gets a notification
