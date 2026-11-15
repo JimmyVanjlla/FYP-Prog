@@ -1,8 +1,8 @@
 """Module 5: Kitchen Operations business logic. FR5.1-FR5.5."""
-from datetime import date
+from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import meal_periods
@@ -235,8 +235,9 @@ class NoPrepQuantityError(Exception):
 
 
 def _prepared_quantity_for(db: Session, *, menu_item_id: int, meal_period: str, day: date) -> Decimal | None:
-    """How much of a dish was prepared for a meal period: what Kitchen Staff
-    confirmed, else what was recommended. None if nothing was recorded."""
+    """How much of a dish was prepared for a meal period: the quantity Kitchen
+    Staff confirmed in Prep. None if it was not confirmed (a recommendation
+    nobody confirmed is not a record of what was prepared)."""
     recommendation = db.scalars(
         select(PrepRecommendation)
         .where(PrepRecommendation.menu_item_id == menu_item_id)
@@ -249,8 +250,9 @@ def _prepared_quantity_for(db: Session, *, menu_item_id: int, meal_period: str, 
     confirmation = db.scalars(
         select(PrepConfirmation).where(PrepConfirmation.recommendation_id == recommendation.recommendation_id)
     ).first()
-    quantity = confirmation.confirmed_quantity if confirmation is not None else recommendation.recommended_quantity
-    return quantity if quantity > 0 else None
+    if confirmation is None:
+        return None
+    return confirmation.confirmed_quantity if confirmation.confirmed_quantity > 0 else None
 
 
 def log_leftover(db: Session, *, staff_id: int, data: LeftoverLogCreate) -> LeftoverLog:
@@ -299,6 +301,31 @@ def list_leftover_logs(
     if menu_item_id is not None:
         stmt = stmt.where(LeftoverLog.menu_item_id == menu_item_id)
     return list(db.scalars(stmt))
+
+
+def unread_notification_count(db: Session, *, recipient_id: int) -> int:
+    return (
+        db.scalar(
+            select(func.count())
+            .select_from(Notification)
+            .where(Notification.recipient_id == recipient_id)
+            .where(Notification.read_at.is_(None))
+        )
+        or 0
+    )
+
+
+def mark_notifications_read(db: Session, *, recipient_id: int) -> int:
+    """The person has opened their inbox: everything in it counts as seen."""
+    unread = db.scalars(
+        select(Notification).where(Notification.recipient_id == recipient_id).where(Notification.read_at.is_(None))
+    ).all()
+    now = datetime.now(timezone.utc)
+    for n in unread:
+        n.read_at = now
+    if unread:
+        db.commit()
+    return len(unread)
 
 
 def list_notifications(

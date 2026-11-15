@@ -127,3 +127,8 @@ class NotificationOut(BaseModel):
     message: str
     status: str
     created_at: datetime
+    read_at: datetime | None = None
+
+
+class UnreadCountOut(BaseModel):
+    unread: int

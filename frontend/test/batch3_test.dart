@@ -247,9 +247,9 @@ void main() {
       expect(leftoverLevels, [0, 25, 50, 75, 100]);
     });
 
-    test('the basis is what Prep confirmed, else what was recommended, else nothing', () {
+    test('the basis is what Prep confirmed; a recommendation nobody confirmed is nothing', () {
       expect(leftoverPrepBasis({'confirmed': true, 'confirmed_quantity': '40.00', 'recommended_quantity': '35.00'}), 40);
-      expect(leftoverPrepBasis({'confirmed': false, 'recommended_quantity': '35.00'}), 35);
+      expect(leftoverPrepBasis({'confirmed': false, 'recommended_quantity': '35.00'}), isNull);
       expect(leftoverPrepBasis(null), isNull);
       expect(leftoverPrepBasis({'confirmed': true, 'confirmed_quantity': '0.00'}), isNull);
     });
@@ -261,9 +261,9 @@ void main() {
       'GET /kitchen/prep-recommendations': (_, _) => prep,
     };
 
-    testWidgets('with no prep recorded it explains, and the log cannot be saved', (tester) async {
+    testWidgets('with no confirmed prep it explains, and the log cannot be saved', (tester) async {
       await pumpAs(tester, Roles.kitchenStaff, const Scaffold(body: LeftoverLogScreen()), routes: leftoverRoutes());
-      expect(find.textContaining('No prep was recorded for this dish'), findsOneWidget);
+      expect(find.textContaining('was not confirmed'), findsOneWidget);
       expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save log')).onPressed, isNull);
       // No typed quantities, and no vague levels.
       expect(find.text('Quantity prepared'), findsNothing);
@@ -281,7 +281,7 @@ void main() {
           ],
         ),
       );
-      expect(find.textContaining('Based on the 40 portions prepared for Lunch'), findsOneWidget);
+      expect(find.textContaining('Based on the 40 portions confirmed in Prep for Lunch'), findsOneWidget);
       expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save log')).onPressed, isNull); // nothing chosen yet
 
       await tester.tap(find.text('25%'));
@@ -298,5 +298,23 @@ void main() {
       expect(body['menu_item_id'], 1);
       expect(body.containsKey('prepared_quantity'), isFalse);
     });
+  });
+
+  testWidgets('a dish whose prep was only recommended, not confirmed, cannot be logged', (tester) async {
+    await pumpAs(
+      tester,
+      Roles.kitchenStaff,
+      const Scaffold(body: LeftoverLogScreen()),
+      routes: {
+        'GET /menu-items': (_, _) => [
+          {'menu_item_id': 2, 'name': 'Roti Telur', 'meal_periods': ['Lunch', 'Dinner']},
+        ],
+        'GET /kitchen/prep-recommendations': (_, _) => [
+          {'recommendation_id': 4, 'menu_item_id': 2, 'confirmed': false, 'recommended_quantity': '9.00'},
+        ],
+      },
+    );
+    expect(find.textContaining('was not confirmed'), findsOneWidget);
+    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save log')).onPressed, isNull);
   });
 }

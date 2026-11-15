@@ -12,14 +12,12 @@ import '../../core/theme.dart';
 /// kitchen prepared for that dish and meal period.
 const leftoverLevels = [0, 25, 50, 75, 100];
 
-/// The quantity a leftover percentage is taken of: what was confirmed in Prep,
-/// else what was recommended; null if nothing was recorded for the dish.
+/// The quantity a leftover percentage is taken of: what Kitchen Staff confirmed
+/// in Prep. Null if the dish's prep was not confirmed: a recommendation that
+/// nobody confirmed is not a record of what was prepared.
 double? leftoverPrepBasis(Json? recommendation) {
-  if (recommendation == null) return null;
-  final quantity = recommendation['confirmed'] == true
-      ? recommendation['confirmed_quantity']
-      : recommendation['recommended_quantity'];
-  final q = asDouble(quantity);
+  if (recommendation == null || recommendation['confirmed'] != true) return null;
+  final q = asDouble(recommendation['confirmed_quantity']);
   return q > 0 ? q : null;
 }
 
@@ -221,9 +219,9 @@ class _BasisCard extends StatelessWidget {
           Expanded(
             child: Text(
               ok
-                  ? 'Based on the ${basis!.round()} portions prepared for $period.'
-                  : 'No prep was recorded for this dish at $period on ${friendlyDate(fmtDate(date))}. '
-                      'Confirm it in Prep first, so there is something to take a percentage of.',
+                  ? 'Based on the ${basis!.round()} portions confirmed in Prep for $period.'
+                  : 'The prep for this dish at $period on ${friendlyDate(fmtDate(date))} was not confirmed. '
+                      'Confirm it in Prep first, so there is a quantity to take a percentage of.',
             ),
           ),
         ],

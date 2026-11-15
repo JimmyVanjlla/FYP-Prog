@@ -42,7 +42,19 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final api = context.read<AuthState>().api;
     return AsyncView<List<Json>>(
-      load: () async => asJsonList(await api.getJson('/kitchen/notifications', query: {'limit': 100})),
+      load: () async {
+        final items = asJsonList(await api.getJson('/kitchen/notifications', query: {'limit': 100}));
+        // Opening the inbox counts as seeing everything in it. (The list above
+        // still says which ones were new, so they can be picked out below.)
+        if (items.any((n) => n['read_at'] == null)) {
+          try {
+            await api.postJson('/kitchen/notifications/read');
+          } catch (_) {
+            // Not being able to mark them read must not hide the notifications.
+          }
+        }
+        return items;
+      },
       builder: (context, items, reload) => RefreshableList(
         onRefresh: reload,
         empty: const EmptyState(
@@ -58,9 +70,12 @@ class NotificationsScreen extends StatelessWidget {
                   icon: _style(n['type'] as String).icon,
                   color: _style(n['type'] as String).color,
                 ),
-                title: Text(n['message'] as String),
+                title: Text(
+                  n['message'] as String,
+                  style: TextStyle(fontWeight: n['read_at'] == null ? FontWeight.w800 : FontWeight.w500),
+                ),
                 subtitle: Text(
-                  '${_style(n['type'] as String).label}  ·  ${friendlyDateTime(n['created_at'])}',
+                  '${n['read_at'] == null ? 'New  ·  ' : ''}${_style(n['type'] as String).label}  ·  ${friendlyDateTime(n['created_at'])}',
                 ),
                 isThreeLine: (n['message'] as String).length > 60,
               ),

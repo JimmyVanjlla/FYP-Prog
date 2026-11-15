@@ -11,6 +11,7 @@ from app.schemas.kitchen import (
     LeftoverLogCreate,
     LeftoverLogOut,
     NotificationOut,
+    UnreadCountOut,
     PrepConfirmationCreate,
     PrepConfirmationOut,
     PrepRecommendationOut,
@@ -138,8 +139,8 @@ def log_leftover(
     except kitchen_service.NoPrepQuantityError:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"No prep quantity was recorded for this dish at {data.meal_period} on "
-            f"{data.service_period_date}. Confirm the prep first, so there is something to take a percentage of.",
+            detail=f"The prep for this dish at {data.meal_period} on {data.service_period_date} was not "
+            "confirmed. Confirm the prep first, so there is a quantity to take a percentage of.",
         )
 
 
@@ -152,6 +153,25 @@ def list_leftover_logs(
     _user: User = Depends(get_current_user),
 ) -> list[LeftoverLogOut]:
     return kitchen_service.list_leftover_logs(db, menu_item_id=menu_item_id, limit=limit, offset=offset)
+
+
+@router.get("/notifications/unread-count", response_model=UnreadCountOut)
+def unread_notifications(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> UnreadCountOut:
+    """How many notifications the user has not opened yet (the bell's badge)."""
+    return UnreadCountOut(unread=kitchen_service.unread_notification_count(db, recipient_id=user.user_id))
+
+
+@router.post("/notifications/read", response_model=UnreadCountOut)
+def mark_notifications_read(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> UnreadCountOut:
+    """Mark everything in the user's inbox as read."""
+    kitchen_service.mark_notifications_read(db, recipient_id=user.user_id)
+    return UnreadCountOut(unread=0)
 
 
 @router.get("/notifications", response_model=list[NotificationOut])

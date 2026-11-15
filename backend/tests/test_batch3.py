@@ -334,3 +334,43 @@ def test_a_percentage_needs_a_meal_period_and_the_old_quantities_still_work(clie
         headers=kitchen,
     )
     assert legacy.status_code == 201 and legacy.json()["leftover_percent"] is None
+
+
+def test_a_recommendation_nobody_confirmed_is_not_a_prep_quantity(client):
+    """The percentage is of what was confirmed in Prep. A dish that only has a
+    recommendation (someone opened the Prep screen) has nothing confirmed."""
+    manager, kitchen, item = _dish_with_confirmed_prep(client)
+    other = client.post(
+        "/menu-items", json={"name": "Roti Telur", "price": "4.00", "category": "Bread"}, headers=manager
+    ).json()
+    client.post(
+        "/kitchen/prep-recommendations",
+        json={"menu_item_id": other["menu_item_id"], "meal_period": "Lunch", "forecast_date": "2026-10-01", "manual_quantity": 9},
+        headers=kitchen,
+    )
+    resp = client.post(
+        "/kitchen/leftover-logs",
+        json={"menu_item_id": other["menu_item_id"], "service_period_date": "2026-10-01", "meal_period": "Lunch", "leftover_percent": 25},
+        headers=kitchen,
+    )
+    assert resp.status_code == 422 and "not confirmed" in resp.json()["detail"]
+
+
+# ---------------------------------------------------------------- notification bell
+def test_the_bell_counts_unread_notifications_until_the_inbox_is_opened(client):
+    inv, kitchen, request = _restock_setup(client)
+    assert client.get("/kitchen/notifications/unread-count", headers=kitchen).json() == {"unread": 0}
+    client.patch(f"/inventory/restocking-requests/{request['request_id']}", json={"status": "fulfilled"}, headers=inv)
+    assert client.get("/kitchen/notifications/unread-count", headers=kitchen).json() == {"unread": 1}
+    unread = client.get("/kitchen/notifications", headers=kitchen).json()
+    assert unread[0]["read_at"] is None
+
+    assert client.post("/kitchen/notifications/read", headers=kitchen).json() == {"unread": 0}
+    assert client.get("/kitchen/notifications/unread-count", headers=kitchen).json() == {"unread": 0}
+    assert client.get("/kitchen/notifications", headers=kitchen).json()[0]["read_at"] is not None
+
+
+def test_one_persons_notifications_do_not_count_for_another(client):
+    inv, kitchen, request = _restock_setup(client)
+    client.patch(f"/inventory/restocking-requests/{request['request_id']}", json={"status": "fulfilled"}, headers=inv)
+    assert client.get("/kitchen/notifications/unread-count", headers=inv).json() == {"unread": 0}

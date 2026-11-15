@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -104,6 +106,45 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
+  int _unread = 0;
+  Timer? _poll;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshUnread();
+    // New notifications arrive while the app is open (a shift was published, a
+    // request was decided), so the bell checks again every so often.
+    _poll = Timer.periodic(const Duration(seconds: 45), (_) => _refreshUnread());
+  }
+
+  @override
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshUnread() async {
+    try {
+      final result = await context.read<AuthState>().api.getJson('/kitchen/notifications/unread-count');
+      final count = result is Map ? (result['unread'] as num?)?.toInt() ?? 0 : 0;
+      if (mounted && count != _unread) setState(() => _unread = count);
+    } catch (_) {
+      // The badge is a convenience; a failed check just leaves it as it was.
+    }
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Notifications')),
+          body: const NotificationsScreen(),
+        ),
+      ),
+    );
+    if (mounted) await _refreshUnread();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,16 +169,13 @@ class _HomeShellState extends State<HomeShell> {
             ),
           ),
           IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => Scaffold(
-                  appBar: AppBar(title: const Text('Notifications')),
-                  body: const NotificationsScreen(),
-                ),
-              ),
+            tooltip: _unread == 0 ? 'Notifications' : 'Notifications, $_unread unread',
+            icon: Badge.count(
+              count: _unread,
+              isLabelVisible: _unread > 0,
+              child: Icon(_unread > 0 ? Icons.notifications_active_rounded : Icons.notifications_none_rounded),
             ),
+            onPressed: _openNotifications,
           ),
           IconButton(
             tooltip: 'Log out',
