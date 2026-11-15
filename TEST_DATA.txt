@@ -84,14 +84,15 @@
     Enter  empty email                             Expect: "Enter your email."
 
  B. Manager approves a purchase order  (manager@test.com > Needs attention)
-    Open PO #4, check the line items.             Expect: RM 530.00 total and the
+    Open PO #5, check the line items.             Expect: RM 530.00 total and the
                                                    remaining budget shown beside
                                                    Approve
     Tap Approve.                                  Expect: PO moves to History as
                                                    Approved; the budget bar stays at
-                                                   RM 1,270.00 of RM 8,000.00
-                                                   (16%) because a pending order
-                                                   already counts; the Procurement
+                                                   RM 1,800.00 of RM 8,000.00
+                                                   (23%) because an order counts from
+                                                   the moment it is raised (a rejected
+                                                   one drops out); the Procurement
                                                    Officer gets a notification
 
  C. Manager rejects with a reason (use the Curry Laksa review, see D)
@@ -129,11 +130,16 @@
     Confirm the Curry Laksa quantity for Lunch (for example 40).
     Leftovers: Lunch, Curry Laksa, today, choose 25%.
                                                    Expect: "Based on the 40 portions
-                                                   prepared for Lunch", "About 10 of 40
-                                                   portions", then "Leftover log saved."
+                                                   confirmed in Prep for Lunch", "About 10
+                                                   of 40 portions", then "Leftover log saved."
                                                    There are no quantities to type.
-    Leftovers for a dish with no prep recorded.   Expect: a warning to confirm Prep first,
-                                                   and Save log stays disabled
+    Leftovers for a dish whose prep was NOT confirmed (even if its recommendation is shown in
+    Prep).                                         Expect: "The prep for this dish ... was not
+                                                   confirmed", and Save log stays disabled
+    Bell (top right).                              Expect: a number badge when notifications are
+                                                   unread (for example after the supervisor
+                                                   publishes a shift that includes you); opening
+                                                   the inbox clears it
     Prep screen, meal period Breakfast.           Expect: "No dishes are served at
                                                    Breakfast." (until a dish is set to
                                                    be served at breakfast, see R)
