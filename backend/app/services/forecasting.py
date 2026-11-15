@@ -22,6 +22,7 @@ import pandas as pd
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.dates import restaurant_today
 from app.models.forecasting import Forecast, ForecastAccuracy, Order
 from app.models.menu import MenuItem
 from app.services import notifications as notification_service
@@ -112,7 +113,7 @@ def train_and_generate_forecasts(
     ensure_windows_cmdstan_toolchain()
     from prophet import Prophet
 
-    today = today or date.today()
+    today = today or restaurant_today()
     grouped = _load_grouped_orders(db)
 
     # A Forecast is keyed by (menu_item_id, meal_period, forecast_date). Each
@@ -123,7 +124,7 @@ def train_and_generate_forecasts(
     # staffing and procurement rows that reference it.
     existing_forecasts: dict[tuple[int, str, date], Forecast] = {
         (f.menu_item_id, f.meal_period, f.forecast_date): f
-        for f in db.scalars(select(Forecast).where(Forecast.forecast_date > today))
+        for f in db.scalars(select(Forecast).where(Forecast.forecast_date >= today))
     }
 
     created_forecasts: list[Forecast] = []
@@ -165,7 +166,7 @@ def train_and_generate_forecasts(
         # Only the newly-forecasted future dates get stored — historical
         # dates are already in `group`, we don't re-store predictions for
         # days we already have real order data for.
-        future_rows = forecast_df[forecast_df["ds"].dt.date > today]
+        future_rows = forecast_df[forecast_df["ds"].dt.date >= today]
 
         # FR4.5 — computed once per (item, meal_period) rather than per
         # row, since it's the same leftover history regardless of which
@@ -357,7 +358,7 @@ def forecast_availability(db: Session, *, menu_item_id: int | None = None, today
     and, if not, why, including the minimum data threshold. Previously an
     item without enough history just had no forecast rows and nothing told
     the user why."""
-    today = today or date.today()
+    today = today or restaurant_today()
 
     items = db.execute(
         select(MenuItem.menu_item_id, MenuItem.name).where(MenuItem.is_active.is_(True)).order_by(MenuItem.name)
@@ -376,7 +377,7 @@ def forecast_availability(db: Session, *, menu_item_id: int | None = None, today
     forecasted = {
         (mid, period)
         for mid, period in db.execute(
-            select(Forecast.menu_item_id, Forecast.meal_period).where(Forecast.forecast_date > today).distinct()
+            select(Forecast.menu_item_id, Forecast.meal_period).where(Forecast.forecast_date >= today).distinct()
         )
     }
 

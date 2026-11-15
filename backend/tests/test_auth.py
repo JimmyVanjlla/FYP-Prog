@@ -188,11 +188,12 @@ def test_self_registering_a_second_manager_is_rejected(client):
     assert second.status_code == 403
 
 
-def test_manager_can_provision_another_manager_account(client):
-    """Beyond the bootstrap window, an existing Manager creates further
-    Manager/Owner accounts via POST /users rather than open self-service."""
+def test_owner_can_provision_another_manager_account(client):
+    """Beyond the bootstrap window, an Owner creates further Manager/Owner
+    accounts via POST /users rather than open self-service. (A Manager no
+    longer can: see tests/test_account_rules.py.)"""
     manager_token = register_and_login(
-        client, email="bootstrap.manager@restaurant.com", role="Restaurant Manager"
+        client, email="bootstrap.owner@restaurant.com", role="Restaurant Owner"
     )
     resp = client.post(
         "/users",

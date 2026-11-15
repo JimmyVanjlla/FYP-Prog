@@ -5,7 +5,13 @@ from app.db.session import get_db
 from app.deps import get_current_user, require_role
 from app.models.roles import Role
 from app.models.user import User
-from app.schemas.waste import WasteLogCreate, WasteLogOut, WasteReductionTrendOut, WasteTrendRequest
+from app.schemas.waste import (
+    WasteLogCreate,
+    WasteLogOut,
+    WasteReductionTrendOut,
+    WasteSummaryOut,
+    WasteTrendRequest,
+)
 from app.services import waste as waste_service
 
 router = APIRouter(prefix="/waste", tags=["waste"])
@@ -21,6 +27,16 @@ def list_waste_logs(
 ) -> list[WasteLogOut]:
     """FR6.1."""
     return waste_service.list_waste_logs(db, ingredient_id=ingredient_id, limit=limit, offset=offset)
+
+
+@router.get("/summary", response_model=WasteSummaryOut)
+def waste_summary(
+    weeks: int = Query(default=8, ge=1, le=26),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> WasteSummaryOut:
+    """FR6.3 — cost per week and the biggest sources of waste, from the logs."""
+    return WasteSummaryOut(**waste_service.waste_summary(db, weeks=weeks))
 
 
 @router.post("/logs", response_model=WasteLogOut, status_code=status.HTTP_201_CREATED)

@@ -3,6 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.core.dates import restaurant_today
 from app.db.session import get_db
 from app.deps import get_current_user, require_role
 from app.models.roles import Role
@@ -103,5 +104,5 @@ def trigger_training(
     operation this runs automatically via Celery Beat (see
     app/tasks/forecasting_tasks.py), but a Manager can force a re-run
     rather than waiting for the next scheduled 06:00 pass."""
-    result = forecasting_service.train_and_generate_forecasts(db, today=date.today())
+    result = forecasting_service.train_and_generate_forecasts(db, today=restaurant_today())
     return ForecastTrainingResult(**result)

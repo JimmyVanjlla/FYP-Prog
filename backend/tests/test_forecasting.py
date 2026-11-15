@@ -1,3 +1,4 @@
+from app.core.dates import restaurant_today
 from datetime import date, timedelta
 
 from tests.conftest import auth_headers, register_and_login
@@ -71,7 +72,7 @@ def test_training_generates_forecasts_with_enough_data(client):
     # hardcoded date — train_and_generate_forecasts only stores rows for
     # forecast_date > today, so historical data has to actually be in the
     # past relative to the real clock for any forecast rows to be created.
-    base = date.today() - timedelta(days=30)
+    base = restaurant_today() - timedelta(days=30)
     for i in range(30):  # comfortably over MIN_DATA_POINTS
         client.post(
             "/forecasting/orders",
@@ -105,7 +106,7 @@ def test_retraining_updates_forecasts_in_place_instead_of_duplicating(client):
     rows (same forecast_id) and create none."""
     token = _manager_token(client)
     item = _create_menu_item(client, token)
-    base = date.today() - timedelta(days=30)
+    base = restaurant_today() - timedelta(days=30)
     for i in range(30):
         client.post(
             "/forecasting/orders",
@@ -140,7 +141,7 @@ def test_availability_explains_why_a_forecast_is_missing(client):
         json={"name": "Mee Goreng", "price": "8.00", "category": "Noodles"},
         headers=auth_headers(token),
     ).json()
-    base = date.today() - timedelta(days=10)
+    base = restaurant_today() - timedelta(days=10)
     for i in range(3):
         client.post(
             "/forecasting/orders",
@@ -169,7 +170,7 @@ def test_availability_explains_why_a_forecast_is_missing(client):
 def test_availability_and_date_filter_once_a_forecast_exists(client):
     token = _manager_token(client)
     item = _create_menu_item(client, token)
-    base = date.today() - timedelta(days=30)
+    base = restaurant_today() - timedelta(days=30)
     for i in range(30):
         client.post(
             "/forecasting/orders",
@@ -220,7 +221,7 @@ def test_high_leftover_rate_pulls_forecast_down(client, db_session):
         headers=auth_headers(token),
     ).json()
 
-    base = date.today() - timedelta(days=30)
+    base = restaurant_today() - timedelta(days=30)
     for item in (item_normal, item_high_leftover):
         for i in range(30):
             client.post(
@@ -244,7 +245,7 @@ def test_high_leftover_rate_pulls_forecast_down(client, db_session):
     db_session.add(
         LeftoverLog(
             menu_item_id=item_high_leftover["menu_item_id"],
-            service_period_date=date.today() - timedelta(days=1),
+            service_period_date=restaurant_today() - timedelta(days=1),
             prepared_quantity=Decimal("100"),
             leftover_quantity=Decimal("40"),
             leftover_level="Mostly Uneaten",
@@ -335,7 +336,7 @@ def test_high_demand_forecast_triggers_alert(client):
     # sharp step up for the last few days, so Prophet's near-term forecast
     # continues near the recent high — well above the overall historical
     # mean (which is dragged down by the long flat stretch at the start).
-    base = date.today() - timedelta(days=28)
+    base = restaurant_today() - timedelta(days=28)
     for i in range(28):
         quantity = 10 if i < 21 else 200
         client.post(

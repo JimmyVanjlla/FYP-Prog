@@ -8,6 +8,7 @@ import '../../../core/format.dart';
 import '../../../core/json.dart';
 import '../../../core/status.dart';
 import '../../../core/theme.dart';
+import '../../../core/clock.dart';
 import 'delivery_detail_screen.dart';
 
 /// FR10.1 / FR10.4 — the delivery calendar: what's still to arrive or be
@@ -82,7 +83,7 @@ class _BodyState extends State<_Body> {
       return;
     }
     int poId = orders.first['po_id'] as int;
-    DateTime date = DateTime.now().add(const Duration(days: 1));
+    DateTime date = restaurantToday().add(const Duration(days: 1));
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -110,7 +111,7 @@ class _BodyState extends State<_Body> {
                 subtitle: Text(friendlyDate(fmtDate(date))),
                 trailing: const Icon(Icons.calendar_today_rounded),
                 onTap: () async {
-                  final d = await pickDate(context, initial: date, first: DateTime.now());
+                  final d = await pickDate(context, initial: date, first: restaurantToday());
                   if (d != null) setState(() => date = d);
                 },
               ),
@@ -142,7 +143,7 @@ class _BodyState extends State<_Body> {
         final open = data.deliveries.where((d) => !_isDone(d)).toList()
           ..sort((a, b) => (a['scheduled_date'] as String).compareTo(b['scheduled_date'] as String));
         final done = data.deliveries.where(_isDone).toList();
-        final today = fmtDate(DateTime.now());
+        final today = fmtDate(restaurantToday());
 
         final byDate = <String, List<Json>>{};
         for (final d in open) {

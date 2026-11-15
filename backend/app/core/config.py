@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     # enforced below when environment=="production".
     jwt_secret: str = _INSECURE_DEFAULT_JWT_SECRET
     jwt_algorithm: str = "HS256"
+    # The restaurant's clock: "today" for forecasts and prep means today where the
+    # restaurant is (Malaysia, UTC+8), not the server's UTC date.
+    restaurant_utc_offset_hours: int = 8
     jwt_expire_minutes: int = 60 * 24  # 24h, generous for a staff-facing internal tool
 
     environment: str = "development"

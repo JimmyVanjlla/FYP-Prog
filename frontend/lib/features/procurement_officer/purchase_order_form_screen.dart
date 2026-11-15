@@ -15,7 +15,13 @@ import '../../core/theme.dart';
 /// Quantities pre-fill from the system's purchase recommendations but stay
 /// fully editable.
 class PurchaseOrderFormScreen extends StatelessWidget {
-  const PurchaseOrderFormScreen({super.key});
+  /// Opened from one recommendation: start the order with just that
+  /// ingredient and its recommended quantity, from the cheapest supplier that
+  /// prices it. Without these the order starts from every recommendation.
+  final int? initialIngredientId;
+  final String? initialQuantity;
+
+  const PurchaseOrderFormScreen({super.key, this.initialIngredientId, this.initialQuantity});
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +45,11 @@ class PurchaseOrderFormScreen extends StatelessWidget {
             remainingBudget: asDouble(asJson(results[4])['remaining']),
           );
         },
-        builder: (context, data, _) => _OrderForm(data: data),
+        builder: (context, data, _) => _OrderForm(
+          data: data,
+          initialIngredientId: initialIngredientId,
+          initialQuantity: initialQuantity,
+        ),
       ),
     );
   }
@@ -72,8 +82,10 @@ class _Line {
 
 class _OrderForm extends StatefulWidget {
   final _FormData data;
+  final int? initialIngredientId;
+  final String? initialQuantity;
 
-  const _OrderForm({required this.data});
+  const _OrderForm({required this.data, this.initialIngredientId, this.initialQuantity});
 
   @override
   State<_OrderForm> createState() => _OrderFormState();
@@ -84,13 +96,41 @@ class _OrderFormState extends State<_OrderForm> {
   final List<_Line> _lines = [];
   bool _submitting = false;
 
+  /// Started from a single recommendation: changing supplier keeps the items
+  /// they can supply rather than refilling the whole recommendation list.
+  bool get _fromOneRecommendation => widget.initialIngredientId != null;
+
   _FormData get d => widget.data;
 
   @override
   void initState() {
     super.initState();
     if (d.suppliers.isNotEmpty) _supplierId = d.suppliers.first['supplier_id'] as int;
-    _prefillFromRecommendations();
+    if (_fromOneRecommendation) {
+      _supplierId = _cheapestSupplierFor(widget.initialIngredientId!) ?? _supplierId;
+      if (_prices.containsKey(widget.initialIngredientId)) {
+        _lines.add(_Line(ingredientId: widget.initialIngredientId, quantity: widget.initialQuantity));
+      }
+    } else {
+      _prefillFromRecommendations();
+    }
+  }
+
+  /// The active supplier with the lowest price for [ingredientId], or null if
+  /// nobody prices it.
+  int? _cheapestSupplierFor(int ingredientId) {
+    final active = {for (final s in d.suppliers) s['supplier_id'] as int};
+    int? best;
+    double bestPrice = double.infinity;
+    for (final p in d.pricing) {
+      if (p['ingredient_id'] != ingredientId || !active.contains(p['supplier_id'])) continue;
+      final price = asDouble(p['unit_price']);
+      if (price < bestPrice) {
+        bestPrice = price;
+        best = p['supplier_id'] as int;
+      }
+    }
+    return best;
   }
 
   @override
@@ -195,7 +235,16 @@ class _OrderFormState extends State<_OrderForm> {
                 ],
                 onChanged: (v) => setState(() {
                   _supplierId = v;
-                  _prefillFromRecommendations();
+                  if (_fromOneRecommendation) {
+                    final priced = _prices;
+                    _lines.removeWhere((l) {
+                      final gone = !priced.containsKey(l.ingredientId);
+                      if (gone) l.quantity.dispose();
+                      return gone;
+                    });
+                  } else {
+                    _prefillFromRecommendations();
+                  }
                 }),
               ),
               const SizedBox(height: 16),

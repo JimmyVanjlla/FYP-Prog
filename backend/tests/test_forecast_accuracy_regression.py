@@ -8,6 +8,7 @@ Prophet's own 'auto' setting leaves the yearly term off until there are two
 years of history.
 """
 import random
+from app.core.dates import restaurant_today
 from datetime import date, timedelta
 
 from tests.conftest import auth_headers, register_and_login
@@ -29,7 +30,7 @@ def test_forecasts_with_weeks_of_history_stay_close_to_the_weekly_pattern(client
     ).json()
 
     rng = random.Random(7)  # fixed seed: the same noisy history every run
-    start = date.today() - timedelta(days=HISTORY_DAYS)
+    start = restaurant_today() - timedelta(days=HISTORY_DAYS)
     for i in range(HISTORY_DAYS):
         day = start + timedelta(days=i)
         quantity = max(1, round(rng.gauss(_expected(day), _expected(day) * 0.15)))
@@ -48,8 +49,8 @@ def test_forecasts_with_weeks_of_history_stay_close_to_the_weekly_pattern(client
     forecasts = client.get(
         "/forecasting/forecasts", params={"menu_item_id": item["menu_item_id"]}, headers=headers
     ).json()
-    # History ends yesterday and only dates after today are stored: 6 days.
-    assert len(forecasts) == 6
+    # History ends yesterday; today and the six days after it are stored: 7 days.
+    assert len(forecasts) == 7
 
     errors = [
         abs(float(f["predicted_quantity"]) - _expected(date.fromisoformat(f["forecast_date"])))
@@ -83,7 +84,7 @@ def test_yearly_seasonality_is_left_to_prophets_auto_rule(client, monkeypatch):
     item = client.post(
         "/menu-items", json={"name": "Nasi Lemak", "price": "6.50", "category": "Main"}, headers=headers
     ).json()
-    start = date.today() - timedelta(days=20)
+    start = restaurant_today() - timedelta(days=20)
     for i in range(20):
         client.post(
             "/forecasting/orders",

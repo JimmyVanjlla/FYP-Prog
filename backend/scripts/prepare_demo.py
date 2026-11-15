@@ -8,8 +8,9 @@ evening before (and again on the morning of) a presentation:
 extend_demo_orders.py fills order history up to yesterday; this script then
 does everything that depends on that history or that a demo flow needs waiting:
 
-  1. adds leftover logs for the last 7 days (each one also records its waste
-     cost), so the waste section of a report and Algorithm 2 have data;
+  1. fills in leftover logs for the last 8 weeks (each one also records its waste
+     cost, dated to its service day), so the Waste screen, the weekly report and
+     Algorithm 2 have data;
   2. retrains forecasts (they cover the 7 days after the last order);
   3. re-runs the leftover analysis (Algorithm 2), so portion reviews exist;
   4. regenerates the procurement "recommended to buy" list;
@@ -37,6 +38,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--base-url", default="http://127.0.0.1:8000")
     ap.add_argument("--password", default=seed.PASSWORD)
+    ap.add_argument("--leftover-days", type=int, default=56, help="how many days of leftover logs to make sure exist")
     args = ap.parse_args()
 
     c = httpx.Client(base_url=args.base_url, timeout=240)
@@ -56,20 +58,30 @@ def main() -> int:
         r.raise_for_status()
         return r.json()
 
-    print("0. Leftover logs for the last 7 days")
+    print(f"0. Leftover logs for the last {args.leftover_days} days (each also records its waste cost)")
     menu = {m["name"]: m["menu_item_id"] for m in rows("/menu-items", manager)}
     demand = {name: avg for name, _c, _p, _r, avg in seed.MENU_ITEMS}
-    logs = rows("/kitchen/leftover-logs", manager)
-    last_logged = max((date.fromisoformat(l["service_period_date"]) for l in logs), default=date.today() - timedelta(days=8))
-    rng = random.Random(date.today().toordinal())
+    have: set[tuple[int, date]] = set()
+    offset = 0
+    while True:  # the list is paged
+        page = rows("/kitchen/leftover-logs", manager, offset=offset)
+        have |= {(l["menu_item_id"], date.fromisoformat(l["service_period_date"])) for l in page}
+        if len(page) < 500:
+            break
+        offset += 500
     added = 0
-    day = max(last_logged + timedelta(days=1), date.today() - timedelta(days=7))
+    first_day = date.today() - timedelta(days=args.leftover_days)
+    day = first_day
     while day < date.today():
+        # Same generator for every day, so a re-run produces the same numbers.
+        rng = random.Random(day.toordinal())
         for name, mid in menu.items():
             if name not in demand:
                 continue
             prepared = max(2, round(demand[name] * 0.5 * rng.uniform(0.9, 1.1)))
             rate = rng.uniform(0.25, 0.38) if name in seed.HIGH_LEFTOVER_ITEMS else rng.uniform(0.03, 0.12)
+            if (mid, day) in have:
+                continue
             c.post(
                 "/kitchen/leftover-logs",
                 headers=kitchen,

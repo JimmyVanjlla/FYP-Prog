@@ -67,6 +67,9 @@
                       Milo Powder 10 kg, Tea Leaves 8 kg expected.
  Restock requests     1 from the kitchen (Beansprouts, 20, urgent).
  Procurement list     15 "recommended to buy" items, driven by the forecast.
+ Waste history        Leftover logs for the 8 weeks to 14 Nov (12 dishes a day), each
+                      dated to its service day, so the Waste screen shows a real weekly
+                      trend, with Curry Laksa and Roti Telur as the biggest sources.
  Reports              Weekly report #4 for 9 to 15 Nov 2026 (forecast error 14.0%,
                       waste RM 220.30, budget 7%), plus #3 (8 to 14 Nov) and two older.
  Shift schedules      1 draft for 4 Nov Lunch (supervisor).
@@ -105,12 +108,17 @@
     Expect: both move to History with who decided, when, and the reason
 
  E. Forecasts  (manager@test.com > Forecasts)
-    Pick Nasi Lemak.                              Expect: values for 16 to 21 Nov,
-                                                   higher on Sat 21 Nov than on
-                                                   weekdays
-    Open the Accuracy tab.                        Expect: predicted vs actual
-                                                   error rows (older rows are
-                                                   from the first model version)
+    Pick Nasi Lemak.                              Expect: whole-number portions for
+                                                   16 to 21 Nov, higher on Sat 21 Nov
+                                                   than on weekdays (no 24.77s)
+    Open the Accuracy tab.                        Expect: an overall average, a
+                                                   "Choose a date" button and a "By day"
+                                                   list, newest day first, each with its
+                                                   average error
+    Tap a day (or choose a date).                 Expect: that day's forecasts, furthest
+                                                   off first; a yellow exclamation for
+                                                   11-40% error, red for over 40%,
+                                                   nothing at 10% or less
 
  F. Kitchen prep and leftovers  (kitchen@test.com)
     Prep > today > Lunch.                         Expect: a recommended quantity
@@ -134,7 +142,18 @@
                                                    flag; Publish notifies them
 
  H. Procurement  (procurement@test.com)
-    Purchasing > Recommended to buy.              Expect: 15 items
+    Purchasing > Recommended to buy.              Expect: 15 items, each with "Tap to
+                                                   start an order"
+    Tap one (for example Chicken).                Expect: a new order with just that item
+                                                   and its recommended quantity filled in,
+                                                   from the cheapest supplier that prices it
+    Open any purchase order in the list.          Expect: a formal PO: "PO-0004" number,
+                                                   supplier name and contact, date issued,
+                                                   an item table (qty, unit price, amount),
+                                                   the total, and an Authorisation section
+                                                   (approved or rejected, when, and why)
+    On that PO: Flag a supplier issue, type 4444. Expect: "Write it in words: it needs at
+                                                   least one letter"; real words are accepted
     Suppliers: tap a price and change it to 13.00, then change it back.
     New purchase order: supplier Pasar Besar Trading, Rice 30, Cooking Oil 15
                                                    Expect: a total from that
@@ -187,6 +206,27 @@
         python scripts/demo_push.py --base-url https://fyp-prog.onrender.com
                                                    Expect: a "Prep update"
                                                    notification within seconds
+
+ O. Waste  (manager@test.com > Waste; also owner@test.com)
+    Open Waste.                                   Expect: tiles for this week, last week and
+                                                   the change; a bar chart of the last 8
+                                                   weeks (leftovers blue, expired orange);
+                                                   "Most wasted dishes" (Curry Laksa and
+                                                   Roti Telur at the top) and "Most wasted
+                                                   ingredients" for the last 4 weeks; the
+                                                   recent log with ingredient names
+
+ P. Account rules  (manager@test.com, then owner@test.com > Staff)
+    As Manager: Add staff account.                Expect: the Role list has no Restaurant
+                                                   Manager or Restaurant Owner
+    As Manager: look at a Manager or Owner row.   Expect: no menu (cannot change or
+                                                   deactivate them)
+    As Owner: Add staff account.                  Expect: every role is offered
+
+ Q. Dates and time  (any screen with a date)
+    All "today" dates use Malaysia time (UTC+8), even if the emulator's clock is set to GMT.
+    Prep: the calendar starts today. Leftovers: the last 7 days up to today.
+    Shift schedule: no past dates. The Prep screen shows a forecast for today.
 
  N. Reports  (manager@test.com > Reports)
     Open report #4 (9 to 15 Nov).                 Expect: a header with the period,

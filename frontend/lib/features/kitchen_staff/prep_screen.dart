@@ -7,6 +7,7 @@ import '../../core/dialogs.dart';
 import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
+import '../../core/clock.dart';
 
 /// FR5.1 / FR5.2 / FR5.5 — what to prep for a service. Each dish's quantity
 /// comes pre-filled from the forecast but is always editable ("a starting
@@ -33,7 +34,7 @@ class _PrepData {
 }
 
 class _PrepScreenState extends State<PrepScreen> {
-  DateTime _date = DateTime.now();
+  DateTime _date = restaurantToday();
   String _period = 'Lunch';
 
   Future<_PrepData> _load() async {
@@ -100,8 +101,8 @@ class _PrepScreenState extends State<PrepScreen> {
                     final picked = await showDatePicker(
                       context: context,
                       initialDate: _date,
-                      firstDate: DateTime.now().subtract(const Duration(days: 7)),
-                      lastDate: DateTime.now().add(const Duration(days: 14)),
+                      firstDate: restaurantToday(),
+                      lastDate: restaurantToday().add(const Duration(days: 14)),
                     );
                     if (picked != null) setState(() => _date = picked);
                   },

@@ -7,6 +7,7 @@ import '../../../core/dialogs.dart';
 import '../../../core/format.dart';
 import '../../../core/json.dart';
 import '../../../core/theme.dart';
+import '../../../core/clock.dart';
 
 /// One ingredient: stock against its threshold (FR3.1/FR3.3), batches and
 /// their expiry (FR3.2), manual adjustments (FR3.4), waste recording
@@ -257,8 +258,8 @@ class IngredientDetailScreen extends StatelessWidget {
   Future<void> _addBatch(BuildContext context, Json ing, Future<void> Function() reload) async {
     final api = context.read<AuthState>().api;
     final qty = TextEditingController();
-    DateTime received = DateTime.now();
-    DateTime expiry = DateTime.now().add(const Duration(days: 7));
+    DateTime received = restaurantToday();
+    DateTime expiry = restaurantToday().add(const Duration(days: 7));
     final formKey = GlobalKey<FormState>();
 
     final confirmed = await showDialog<bool>(
@@ -451,7 +452,7 @@ class _BatchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final expiry = parseDate(batch['expiry_date']);
-    final today = DateTime.now();
+    final today = restaurantToday();
     final daysLeft = expiry == null
         ? null
         : DateTime(expiry.year, expiry.month, expiry.day)

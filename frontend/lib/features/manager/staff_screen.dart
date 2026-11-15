@@ -111,7 +111,8 @@ class _UserTile extends StatelessWidget {
               label: active ? 'Active' : 'Deactivated',
               color: active ? Severity.ok : Severity.critical,
             ),
-            PopupMenuButton<String>(
+            if (Roles.canManage(context.read<AuthState>().role, user['role'] as String))
+              PopupMenuButton<String>(
               tooltip: 'Manage account',
               onSelected: (choice) => _onSelected(context, choice),
               itemBuilder: (_) => [
@@ -147,7 +148,9 @@ class _UserTile extends StatelessWidget {
           content: DropdownButtonFormField<String>(
             initialValue: role,
             decoration: const InputDecoration(labelText: 'Role'),
-            items: Roles.all.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+            items: Roles.assignableBy(context.read<AuthState>().role)
+                .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                .toList(),
             onChanged: (v) => setState(() => role = v ?? role),
           ),
           actions: [

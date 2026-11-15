@@ -5,6 +5,7 @@ import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/format.dart';
 import '../../core/theme.dart';
+import '../../core/clock.dart';
 import '../../models/report.dart';
 import 'report_summary_screen.dart';
 
@@ -25,7 +26,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
+    final now = restaurantToday();
     _range = DateTimeRange(
       start: now.subtract(const Duration(days: 7)),
       end: now,

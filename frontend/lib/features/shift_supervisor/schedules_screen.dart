@@ -7,6 +7,7 @@ import '../../core/dialogs.dart';
 import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
+import '../../core/clock.dart';
 import 'schedule_builder_screen.dart';
 
 /// FR8.2 — the Shift Supervisor's shift schedules, newest first, and a way to
@@ -29,7 +30,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
   }
 
   Future<void> _create(BuildContext context) async {
-    DateTime date = DateTime.now();
+    DateTime date = restaurantToday();
     String period = 'Lunch';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -45,7 +46,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
                 subtitle: Text(friendlyDate(fmtDate(date))),
                 trailing: const Icon(Icons.calendar_today_rounded),
                 onTap: () async {
-                  final d = await pickDate(context, initial: date, first: DateTime.now().subtract(const Duration(days: 1)));
+                  final d = await pickDate(context, initial: date, first: restaurantToday(), last: restaurantToday().add(const Duration(days: 60)));
                   if (d != null) setState(() => date = d);
                 },
               ),

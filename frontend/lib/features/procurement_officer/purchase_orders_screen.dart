@@ -8,6 +8,8 @@ import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/status.dart';
 import '../../core/theme.dart';
+import '../../core/clock.dart';
+import 'purchase_order_document_screen.dart';
 import 'purchase_order_form_screen.dart';
 
 /// FR9.2-FR9.6 for the Procurement Officer (and the Manager's read of it):
@@ -83,7 +85,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
     );
     if (value == null || !context.mounted) return;
     final api = context.read<AuthState>().api;
-    final now = DateTime.now();
+    final now = restaurantToday();
     final ok = await runAction(
       context,
       () => api.postJson('/procurement/budget', {
@@ -164,9 +166,31 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
                     dense: true,
                     leading: const IconBadge(icon: Icons.shopping_basket_rounded),
                     title: Text(data.ingredients[r['ingredient_id']]?['name'] as String? ?? 'Ingredient #${r['ingredient_id']}'),
-                    trailing: Text(
-                      '${trimNum(r['recommended_quantity'])} ${data.ingredients[r['ingredient_id']]?['unit'] ?? ''}',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    subtitle: _isOfficer ? const Text('Tap to start an order') : null,
+                    // The Procurement Officer taps a recommendation to start an
+                    // order with that item and quantity already filled in.
+                    onTap: _isOfficer
+                        ? () async {
+                            final created = await Navigator.of(context).push<bool>(
+                              MaterialPageRoute(
+                                builder: (_) => PurchaseOrderFormScreen(
+                                  initialIngredientId: r['ingredient_id'] as int,
+                                  initialQuantity: trimNum(r['recommended_quantity']),
+                                ),
+                              ),
+                            );
+                            if (created == true && mounted) setState(() => _version++);
+                          }
+                        : null,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${trimNum(r['recommended_quantity'])} ${data.ingredients[r['ingredient_id']]?['unit'] ?? ''}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        if (_isOfficer) const Icon(Icons.chevron_right_rounded),
+                      ],
                     ),
                   ),
                 ),
@@ -185,7 +209,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
             for (final po in data.orders) ...[
               _OrderTile(
                 order: po,
-                supplierName: data.suppliers[po['supplier_id']]?['name'] as String?,
+                supplier: data.suppliers[po['supplier_id']],
                 ingredients: data.ingredients,
               ),
               const SizedBox(height: 10),
@@ -204,75 +228,17 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
 
 class _OrderTile extends StatelessWidget {
   final Json order;
-  final String? supplierName;
+  final Json? supplier;
   final Map<int, Json> ingredients;
 
-  const _OrderTile({required this.order, required this.supplierName, required this.ingredients});
+  const _OrderTile({required this.order, required this.supplier, required this.ingredients});
+
+  String? get supplierName => supplier?['name'] as String?;
 
   Future<void> _open(BuildContext context) async {
-    final api = context.read<AuthState>().api;
-    final canFlag = context.read<AuthState>().role == Roles.procurementOfficer ||
-        context.read<AuthState>().role == Roles.manager;
-    await showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: AsyncView<List<Json>>(
-          load: () async => asJsonList(await api.getJson('/procurement/purchase-orders/${order['po_id']}/items')),
-          builder: (context, items, _) => ListView(
-            shrinkWrap: true,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            children: [
-              Text('PO #${order['po_id']}  ·  ${supplierName ?? 'Supplier #${order['supplier_id']}'}',
-                  style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              for (final item in items)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(ingredients[item['ingredient_id']]?['name'] as String? ?? 'Ingredient #${item['ingredient_id']}'),
-                  subtitle: Text(
-                    '${trimNum(item['quantity'])} ${ingredients[item['ingredient_id']]?['unit'] ?? ''} at ${money(item['unit_price'])}',
-                  ),
-                  trailing: Text(money(asDouble(item['quantity']) * asDouble(item['unit_price']))),
-                ),
-              const Divider(),
-              Row(
-                children: [
-                  const Expanded(child: Text('Total', style: TextStyle(fontWeight: FontWeight.w700))),
-                  Text(money(order['total_cost']), style: const TextStyle(fontWeight: FontWeight.w700)),
-                ],
-              ),
-              if (canFlag) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.flag_outlined),
-                  label: const Text('Flag a supplier issue'),
-                  onPressed: () async {
-                    final description = await promptText(
-                      sheetContext,
-                      title: 'Flag a supplier issue',
-                      label: 'What went wrong?',
-                      confirmLabel: 'Flag',
-                    );
-                    if (description == null || !sheetContext.mounted) return;
-                    final ok = await runAction(
-                      sheetContext,
-                      () => api.postJson('/procurement/discrepancies', {
-                        'po_id': order['po_id'],
-                        'supplier_id': order['supplier_id'],
-                        'description': description,
-                      }),
-                      success: 'Issue flagged against the supplier.',
-                    );
-                    if (ok && sheetContext.mounted) Navigator.pop(sheetContext);
-                  },
-                ),
-              ],
-            ],
-          ),
-        ),
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PurchaseOrderDocumentScreen(order: order, supplier: supplier, ingredients: ingredients),
       ),
     );
   }
@@ -284,7 +250,7 @@ class _OrderTile extends StatelessWidget {
       child: ListTile(
         onTap: () => _open(context),
         leading: IconBadge(icon: Icons.receipt_long_rounded, color: style.color),
-        title: Text('PO #${order['po_id']}  ·  ${money(order['total_cost'])}'),
+        title: Text('${poNumber(order['po_id'])}  ·  ${money(order['total_cost'])}'),
         subtitle: Text('${supplierName ?? 'Supplier #${order['supplier_id']}'}  ·  ${friendlyDate(order['created_at'])}'),
         trailing: SeverityChip(label: style.label, color: style.color),
       ),

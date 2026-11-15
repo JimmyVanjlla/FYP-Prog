@@ -6,6 +6,7 @@ import '../../../core/auth_state.dart';
 import '../../../core/format.dart';
 import '../../../core/json.dart';
 import '../../../core/theme.dart';
+import '../../../core/clock.dart';
 
 /// UC-DF-01 — demand forecasts by menu item, meal period and date, with a
 /// plain explanation (and the minimum-data threshold) wherever a forecast
@@ -58,7 +59,7 @@ class _ForecastsTabState extends State<_ForecastsTab> {
   @override
   void initState() {
     super.initState();
-    final today = DateTime.now();
+    final today = restaurantToday();
     _range = DateTimeRange(start: today, end: today.add(const Duration(days: 7)));
   }
 
@@ -360,6 +361,32 @@ class _ForecastRow extends StatelessWidget {
   }
 }
 
+/// One day of scored forecasts.
+class AccuracyDay {
+  final DateTime date;
+  final List<Json> rows;
+
+  AccuracyDay(this.date, this.rows);
+
+  double get meanError => rows.isEmpty ? 0 : rows.map((r) => asDouble(r['accuracy_error'])).reduce((a, b) => a + b) / rows.length;
+}
+
+/// Groups accuracy records by forecast date, newest day first.
+List<AccuracyDay> groupAccuracyByDay(List<Json> rows) {
+  final byDay = <String, List<Json>>{};
+  for (final r in rows) {
+    final date = parseDate(r['forecast_date']);
+    if (date == null) continue;
+    byDay.putIfAbsent(fmtDate(date), () => []).add(r);
+  }
+  final days = [for (final e in byDay.entries) AccuracyDay(parseDate(e.key)!, e.value)];
+  days.sort((a, b) => b.date.compareTo(a.date));
+  return days;
+}
+
+/// FR4.4 — how close past forecasts were. The days that have been scored are
+/// listed newest first; tap a day (or choose one from the calendar, the way a
+/// report period is chosen) to see that day's forecasts dish by dish.
 class _AccuracyTab extends StatelessWidget {
   const _AccuracyTab();
 
@@ -368,13 +395,19 @@ class _AccuracyTab extends StatelessWidget {
     final api = context.read<AuthState>().api;
     return AsyncView<({List<Json> rows, Map<int, String> names})>(
       load: () async {
-        final rows = asJsonList(await api.getJson('/forecasting/accuracy', query: {'limit': 200}));
+        final rows = asJsonList(await api.getJson('/forecasting/accuracy', query: {'limit': 500}));
         final items = asJsonList(await api.getJson('/menu-items', query: {'limit': 500}));
         return (rows: rows, names: {for (final i in items) i['menu_item_id'] as int: i['name'] as String});
       },
       builder: (context, data, reload) {
+        final days = groupAccuracyByDay(data.rows);
         final errors = data.rows.map((r) => asDouble(r['accuracy_error'])).toList();
         final mean = errors.isEmpty ? 0.0 : errors.reduce((a, b) => a + b) / errors.length;
+
+        void openDay(AccuracyDay day) => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => AccuracyDayScreen(day: day, names: data.names)),
+        );
+
         return RefreshableList(
           onRefresh: reload,
           empty: const EmptyState(
@@ -384,12 +417,12 @@ class _AccuracyTab extends StatelessWidget {
                 'predicted vs actual shows up here.',
           ),
           children: [
-            if (data.rows.isNotEmpty) ...[
+            if (days.isNotEmpty) ...[
               Card(
                 child: ListTile(
                   leading: const IconBadge(icon: Icons.track_changes_rounded),
                   title: Text('Average error ${(mean * 100).toStringAsFixed(1)}%'),
-                  subtitle: Text('Across ${data.rows.length} scored forecasts'),
+                  subtitle: Text('${data.rows.length} scored forecasts over ${days.length} ${days.length == 1 ? 'day' : 'days'}'),
                   trailing: SeverityChip(
                     label: mean <= 0.15 ? 'On track' : (mean <= 0.30 ? 'Fair' : 'Review'),
                     color: mean <= 0.15 ? Severity.ok : (mean <= 0.30 ? Severity.warning : Severity.critical),
@@ -397,27 +430,111 @@ class _AccuracyTab extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.calendar_month_rounded),
+                label: const Text('Choose a date'),
+                onPressed: () async {
+                  final available = {for (final d in days) fmtDate(d.date)};
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: days.first.date,
+                    firstDate: days.last.date,
+                    lastDate: days.first.date,
+                    helpText: 'Days with scored forecasts',
+                    selectableDayPredicate: (d) => available.contains(fmtDate(d)),
+                  );
+                  if (picked == null || !context.mounted) return;
+                  openDay(days.firstWhere((d) => fmtDate(d.date) == fmtDate(picked)));
+                },
+              ),
+              const SizedBox(height: 16),
+              const SectionHeader(icon: Icons.event_rounded, label: 'By day'),
             ],
-            for (final r in data.rows)
+            for (final day in days)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Card(
                   child: ListTile(
-                    dense: true,
-                    title: Text(
-                      '${data.names[r['menu_item_id']] ?? 'Item #${r['menu_item_id']}'}  ·  ${r['meal_period']}',
+                    onTap: () => openDay(day),
+                    leading: const IconBadge(icon: Icons.event_rounded),
+                    title: Text(friendlyDate(fmtDate(day.date)), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text('${day.rows.length} forecasts'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [_ErrorBadge(error: day.meanError), const Icon(Icons.chevron_right_rounded)],
                     ),
-                    subtitle: Text(
-                      '${friendlyDate(r['forecast_date'])}: predicted ${portions(r['predicted_quantity'])}, '
-                      'actual ${portions(r['actual_quantity'])}',
-                    ),
-                    trailing: _ErrorBadge(error: asDouble(r['accuracy_error'])),
                   ),
                 ),
               ),
           ],
         );
       },
+    );
+  }
+}
+
+/// One day's forecasts against what was actually ordered, furthest off first.
+class AccuracyDayScreen extends StatelessWidget {
+  final AccuracyDay day;
+  final Map<int, String> names;
+
+  const AccuracyDayScreen({super.key, required this.day, required this.names});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rows = [...day.rows]..sort((a, b) => asDouble(b['accuracy_error']).compareTo(asDouble(a['accuracy_error'])));
+    final predicted = rows.fold<double>(0, (s, r) => s + asDouble(r['predicted_quantity']));
+    final actual = rows.fold<double>(0, (s, r) => s + asDouble(r['actual_quantity']));
+    return Scaffold(
+      appBar: AppBar(title: Text(friendlyDate(fmtDate(day.date)))),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(gradient: brandGradient(context), borderRadius: BorderRadius.circular(22)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'AVERAGE ERROR',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${(day.meanError * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(color: Colors.white, fontSize: 34, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${rows.length} forecasts  ·  ${portions(predicted)} portions predicted, ${portions(actual)} ordered',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.9)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const SectionHeader(icon: Icons.rule_rounded, label: 'Furthest off first'),
+          for (final r in rows)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Card(
+                child: ListTile(
+                  title: Text(
+                    '${names[r['menu_item_id']] ?? 'Item #${r['menu_item_id']}'}  ·  ${r['meal_period']}',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    'Predicted ${portions(r['predicted_quantity'])}, ordered ${portions(r['actual_quantity'])}',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                  trailing: _ErrorBadge(error: asDouble(r['accuracy_error'])),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

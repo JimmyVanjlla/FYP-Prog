@@ -40,3 +40,34 @@ class WasteLogCreate(BaseModel):
     source_ref_id: int
     ingredient_id: int
     quantity_wasted: Decimal = Field(gt=0)
+
+
+class WasteWeekOut(BaseModel):
+    period_start: date
+    period_end: date
+    leftover_cost: Decimal
+    expiry_cost: Decimal
+    total_cost: Decimal
+    entries: int
+
+
+class WasteTopIngredientOut(BaseModel):
+    ingredient_id: int
+    name: str
+    unit: str
+    quantity: Decimal
+    cost: Decimal
+
+
+class WasteTopDishOut(BaseModel):
+    menu_item_id: int
+    name: str
+    cost: Decimal
+
+
+class WasteSummaryOut(BaseModel):
+    """Cost per week, and the biggest sources of waste over the last four weeks."""
+
+    weeks: list[WasteWeekOut]
+    top_ingredients: list[WasteTopIngredientOut]
+    top_dishes: list[WasteTopDishOut]

@@ -18,6 +18,26 @@ router = APIRouter(prefix="/users", tags=["users"])
 # app/services/auth.py::register_user_self_service).
 _ACCOUNT_ADMINS = (Role.RESTAURANT_MANAGER, Role.RESTAURANT_OWNER)
 
+# Accounts for the people who run the restaurant. A Manager can create and
+# manage every other role, but only an Owner can create a Manager or Owner, or
+# change one.
+_TOP_ROLES = {Role.RESTAURANT_MANAGER.value, Role.RESTAURANT_OWNER.value}
+
+
+def _role_value(role) -> str:
+    return role.value if isinstance(role, Role) else str(role)
+
+
+def _require_owner_for_top_roles(actor: User, *, roles: list) -> None:
+    """403 if a Manager is touching a Manager or Owner role; Owners may do anything."""
+    if _role_value(actor.role) == Role.RESTAURANT_OWNER.value:
+        return
+    if any(_role_value(r) in _TOP_ROLES for r in roles if r is not None):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a Restaurant Owner can create or change Manager and Owner accounts.",
+        )
+
 
 @router.get("/me", response_model=UserOut)
 def read_current_user(current_user: User = Depends(get_current_user)) -> UserOut:
@@ -72,15 +92,17 @@ def list_users(
 def create_staff_account(
     data: UserRegister,
     db: Session = Depends(get_db),
-    _admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
+    admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
 ) -> UserOut:
-    """FR1.1/FR1.4 — a Manager or Owner provisioning a staff account directly,
-    for any role including another Restaurant Owner/Manager. This is the
+    """FR1.1/FR1.4 — a Manager or Owner provisioning a staff account directly.
+    A Manager can create every role except Manager and Owner; an Owner can
+    create any. This is the
     counterpart to POST /auth/register's self-service path, which only
     allows Owner/Manager once (see
     app/services/auth.py::register_user_self_service) — beyond that
     bootstrap window, an existing Manager has to be the one creating
     further Manager/Owner accounts."""
+    _require_owner_for_top_roles(admin, roles=[data.role])
     try:
         return auth_service.register_user(db, data)
     except auth_service.DuplicateEmailError:
@@ -104,6 +126,8 @@ def update_user(
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    # A Manager cannot touch a Manager or Owner account, nor promote anyone to one.
+    _require_owner_for_top_roles(manager, roles=[target.role, data.role])
 
     changes = data.model_dump(exclude_unset=True)
     # name, role and is_active are required on an account: sending null for one

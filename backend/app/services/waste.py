@@ -6,19 +6,29 @@ Waste cost = wasted ingredient quantity × ingredient unit price, via
 Module 9's SupplierPricing (Sprint 4) — see app/services/procurement.py's
 get_unit_price (cheapest active supplier, 0.00 if nobody prices it yet).
 """
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.dates import end_of_day
-from app.models.inventory import StockBatch
+from app.core.dates import end_of_day, restaurant_today
+from app.models.inventory import Ingredient, StockBatch
 from app.models.kitchen import LeftoverLog
-from app.models.menu import RecipeIngredientLink
+from app.models.menu import MenuItem, RecipeIngredientLink
 from app.models.waste import WasteLog, WasteReductionTrend
 from app.schemas.waste import WasteLogCreate
 from app.services.procurement import get_unit_price as _get_unit_price
+
+
+def service_day_stamp(service_date: date) -> datetime:
+    """When a leftover's waste is recorded as having happened: the service day
+    it belongs to (midday UTC), not the moment someone typed it in. A log
+    entered a day late then still counts towards the right week. Today's (or a
+    future) service date is stamped with the actual time."""
+    if service_date >= restaurant_today():
+        return datetime.now(timezone.utc)
+    return datetime(service_date.year, service_date.month, service_date.day, 12, 0, tzinfo=timezone.utc)
 
 
 def record_leftover_waste(db: Session, leftover_log: LeftoverLog) -> list[WasteLog]:
@@ -44,6 +54,7 @@ def record_leftover_waste(db: Session, leftover_log: LeftoverLog) -> list[WasteL
             ingredient_id=link.ingredient_id,
             quantity_wasted=ingredient_qty_wasted,
             waste_cost=cost,
+            logged_at=service_day_stamp(leftover_log.service_period_date),
         )
         db.add(waste_log)
         created.append(waste_log)
@@ -177,3 +188,91 @@ def create_manual_waste_log(db: Session, data: WasteLogCreate) -> WasteLog:
     db.commit()
     db.refresh(waste_log)
     return waste_log
+
+
+def _utc(moment: datetime) -> datetime:
+    """A timestamp as timezone-aware UTC (SQLite hands back naive ones)."""
+    return moment.replace(tzinfo=timezone.utc) if moment.tzinfo is None else moment.astimezone(timezone.utc)
+
+
+def waste_summary(db: Session, *, weeks: int = 8, today: date | None = None) -> dict:
+    """What the Waste screen shows: cost per calendar week (Monday to Sunday,
+    oldest first, the current week last), and what was wasted most over the
+    last four weeks, by ingredient and by dish. Worked out from the waste logs
+    each time, so it is never stale; the stored trend rows are only what the
+    weekly job saves."""
+    today = today or restaurant_today()
+    this_monday = today - timedelta(days=today.weekday())
+    first_monday = this_monday - timedelta(weeks=weeks - 1)
+
+    logs = db.scalars(
+        select(WasteLog)
+        .where(WasteLog.logged_at >= datetime(first_monday.year, first_monday.month, first_monday.day, tzinfo=timezone.utc))
+        .where(WasteLog.logged_at <= end_of_day(today))
+    ).all()
+
+    buckets = []
+    for i in range(weeks):
+        start = first_monday + timedelta(weeks=i)
+        buckets.append(
+            {
+                "period_start": start,
+                "period_end": start + timedelta(days=6),
+                "leftover_cost": Decimal("0.00"),
+                "expiry_cost": Decimal("0.00"),
+                "total_cost": Decimal("0.00"),
+                "entries": 0,
+            }
+        )
+    for log in logs:
+        index = (_utc(log.logged_at).date() - first_monday).days // 7
+        if not 0 <= index < weeks:
+            continue
+        bucket = buckets[index]
+        key = "expiry_cost" if log.source_type == "expiry" else "leftover_cost"
+        bucket[key] += log.waste_cost
+        bucket["total_cost"] += log.waste_cost
+        bucket["entries"] += 1
+
+    recent_from = datetime.combine(today - timedelta(days=27), datetime.min.time(), tzinfo=timezone.utc)
+    recent = [l for l in logs if _utc(l.logged_at) >= recent_from]
+
+    by_ingredient: dict[int, dict] = {}
+    for log in recent:
+        row = by_ingredient.setdefault(log.ingredient_id, {"cost": Decimal("0.00"), "quantity": Decimal("0")})
+        row["cost"] += log.waste_cost
+        row["quantity"] += log.quantity_wasted
+    ingredients = {i.ingredient_id: i for i in db.scalars(select(Ingredient).where(Ingredient.ingredient_id.in_(by_ingredient)))} if by_ingredient else {}
+    top_ingredients = sorted(
+        (
+            {
+                "ingredient_id": iid,
+                "name": ingredients[iid].name if iid in ingredients else f"Ingredient #{iid}",
+                "unit": ingredients[iid].unit if iid in ingredients else "",
+                "quantity": row["quantity"],
+                "cost": row["cost"],
+            }
+            for iid, row in by_ingredient.items()
+        ),
+        key=lambda r: r["cost"],
+        reverse=True,
+    )[:5]
+
+    leftover_ids = [l.source_ref_id for l in recent if l.source_type == "leftover"]
+    by_dish: dict[int, Decimal] = {}
+    if leftover_ids:
+        dish_of = dict(
+            db.execute(select(LeftoverLog.log_id, LeftoverLog.menu_item_id).where(LeftoverLog.log_id.in_(set(leftover_ids)))).all()
+        )
+        for log in recent:
+            if log.source_type == "leftover" and log.source_ref_id in dish_of:
+                dish = dish_of[log.source_ref_id]
+                by_dish[dish] = by_dish.get(dish, Decimal("0.00")) + log.waste_cost
+    names = {m.menu_item_id: m.name for m in db.scalars(select(MenuItem).where(MenuItem.menu_item_id.in_(by_dish)))} if by_dish else {}
+    top_dishes = sorted(
+        ({"menu_item_id": d, "name": names.get(d, f"Menu item #{d}"), "cost": c} for d, c in by_dish.items()),
+        key=lambda r: r["cost"],
+        reverse=True,
+    )[:5]
+
+    return {"weeks": buckets, "top_ingredients": top_ingredients, "top_dishes": top_dishes}

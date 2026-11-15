@@ -124,6 +124,7 @@ void main() {
           'GET /inventory/ingredients': (_, _) => [
             {'ingredient_id': 14, 'name': 'Coconut Milk', 'unit': 'litre'},
           ],
+          'GET /waste/summary': (_, _) => {'weeks': [], 'top_dishes': [], 'top_ingredients': []},
         },
       );
       expect(find.textContaining('Coconut Milk'), findsOneWidget);

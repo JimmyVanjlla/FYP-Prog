@@ -6,6 +6,7 @@ import '../../../core/auth_state.dart';
 import '../../../core/format.dart';
 import '../../../core/json.dart';
 import '../../../core/theme.dart';
+import '../../../core/clock.dart';
 
 /// UC-SS-05 — any staff member's own published shifts, without needing to
 /// know a schedule id or go through the Shift Supervisor.
@@ -18,7 +19,7 @@ class MyScheduleScreen extends StatelessWidget {
     return AsyncView<List<Json>>(
       load: () async => asJsonList(await api.getJson('/staffing/my-schedule')),
       builder: (context, shifts, reload) {
-        final today = fmtDate(DateTime.now());
+        final today = fmtDate(restaurantToday());
         final upcoming = shifts.where((s) => (s['date'] as String).compareTo(today) >= 0).toList();
         final past = shifts.where((s) => (s['date'] as String).compareTo(today) < 0).toList();
         return RefreshableList(

@@ -101,7 +101,9 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
               isExpanded: true,
               initialValue: _role,
               decoration: const InputDecoration(labelText: 'Role', prefixIcon: Icon(Icons.badge_outlined)),
-              items: Roles.all.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              items: Roles.assignableBy(context.read<AuthState>().role)
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
               onChanged: (v) => setState(() => _role = v ?? _role),
             ),
             const SizedBox(height: 24),
@@ -180,7 +182,7 @@ class _StaffDetailScreenState extends State<StaffDetailScreen> {
         title: Text(_editing ? 'Edit details' : 'Staff details'),
         leading: BackButton(onPressed: () => Navigator.pop(context, true)),
         actions: [
-          if (!_editing)
+          if (!_editing && Roles.canManage(context.read<AuthState>().role, _user['role'] as String))
             IconButton(tooltip: 'Edit details', icon: const Icon(Icons.edit_rounded), onPressed: () => setState(() => _editing = true)),
         ],
       ),

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
 import '../../core/theme.dart';
+import '../../core/clock.dart';
 import '../../models/menu_item.dart';
 
 /// Module 5 — FR5.3: Kitchen Staff log end-of-service leftover quantities.
@@ -22,7 +23,7 @@ class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
   final _formKey = GlobalKey<FormState>();
   final _preparedController = TextEditingController();
   final _leftoverController = TextEditingController();
-  DateTime _serviceDate = DateTime.now();
+  DateTime _serviceDate = restaurantToday();
   String _leftoverLevel = 'Partially Eaten';
   MenuItem? _selectedItem;
 
@@ -140,8 +141,8 @@ class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
                           final picked = await showDatePicker(
                             context: context,
                             initialDate: _serviceDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2100),
+                            firstDate: restaurantToday().subtract(const Duration(days: 7)),
+                            lastDate: restaurantToday(),
                           );
                           if (picked != null) {
                             setState(() => _serviceDate = picked);

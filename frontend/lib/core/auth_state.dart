@@ -30,6 +30,23 @@ class Roles {
     deliveryStaff,
   ];
 
+  /// The roles [actor] may give to an account they create or edit. An Owner
+  /// can give any; a Manager only the roles below Manager. (The server
+  /// enforces the same rule.)
+  static List<String> assignableBy(String? actor) {
+    if (actor == owner) return all;
+    if (actor == manager) return [for (final r in all) if (r != owner && r != manager) r];
+    return const [];
+  }
+
+  /// Whether [actor] may change or deactivate an account whose role is [target]:
+  /// a Manager cannot touch a Manager or an Owner.
+  static bool canManage(String? actor, String target) {
+    if (actor == owner) return true;
+    if (actor == manager) return target != owner && target != manager;
+    return false;
+  }
+
   const Roles._();
 }
 
