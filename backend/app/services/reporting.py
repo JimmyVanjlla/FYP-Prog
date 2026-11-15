@@ -336,9 +336,9 @@ def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, bud
         for d in dishes[:14]:  # a summary, not a raw dump
             c.drawString(margin + 4, y, d["name"])
             c.setFillColor(COLOR_PREDICTED)
-            c.drawRightString(col_pred, y, f"{d['predicted']:.1f}")
+            c.drawRightString(col_pred, y, f"{d['predicted']:.0f}")
             c.setFillColor(COLOR_ACTUAL)
-            c.drawRightString(col_act, y, f"{d['actual']:.1f}")
+            c.drawRightString(col_act, y, f"{d['actual']:.0f}")
             c.setFillColor(black)
             c.drawRightString(col_err - 4, y, f"{d['error'] * 100:.1f}%")
             c.setStrokeColor(rule)

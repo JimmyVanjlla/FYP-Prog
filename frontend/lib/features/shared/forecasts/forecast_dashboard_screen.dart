@@ -283,6 +283,36 @@ class _UnavailableCard extends StatelessWidget {
   }
 }
 
+/// How far off a forecast was, as a severity: up to 10% is fine and shows
+/// nothing extra, 11 to 40% is yellow, over 40% is red. (The percentage is
+/// always written next to the icon, so colour is never the only signal.)
+Color? accuracySeverity(double error) {
+  final pct = error * 100;
+  if (pct <= 10) return null;
+  return pct <= 40 ? Severity.warning : Severity.critical;
+}
+
+class _ErrorBadge extends StatelessWidget {
+  final double error;
+
+  const _ErrorBadge({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = accuracySeverity(error);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (color != null) ...[Icon(Icons.error_rounded, color: color, size: 20), const SizedBox(width: 6)],
+        Text(
+          '${(error * 100).toStringAsFixed(1)}%',
+          style: TextStyle(fontWeight: FontWeight.w700, color: color),
+        ),
+      ],
+    );
+  }
+}
+
 class _ForecastRow extends StatelessWidget {
   final String name;
   final String period;
@@ -308,7 +338,7 @@ class _ForecastRow extends StatelessWidget {
                     child: Text('$name  ·  $period', style: Theme.of(context).textTheme.titleSmall),
                   ),
                   Text(
-                    '${trimNum(quantity)} portions',
+                    '${portions(quantity)} portions',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ],
@@ -378,10 +408,10 @@ class _AccuracyTab extends StatelessWidget {
                       '${data.names[r['menu_item_id']] ?? 'Item #${r['menu_item_id']}'}  ·  ${r['meal_period']}',
                     ),
                     subtitle: Text(
-                      '${friendlyDate(r['forecast_date'])}: predicted ${trimNum(r['predicted_quantity'])}, '
-                      'actual ${trimNum(r['actual_quantity'])}',
+                      '${friendlyDate(r['forecast_date'])}: predicted ${portions(r['predicted_quantity'])}, '
+                      'actual ${portions(r['actual_quantity'])}',
                     ),
-                    trailing: Text('${(asDouble(r['accuracy_error']) * 100).toStringAsFixed(1)}%'),
+                    trailing: _ErrorBadge(error: asDouble(r['accuracy_error'])),
                   ),
                 ),
               ),

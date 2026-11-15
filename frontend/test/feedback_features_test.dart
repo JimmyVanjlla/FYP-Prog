@@ -116,13 +116,38 @@ void main() {
       expect(sent.body, {'reason': 'Guests like the bigger portion'});
     });
 
-    testWidgets('approving needs no reason and goes straight through', (tester) async {
+    testWidgets('approving asks for confirmation first, and cancelling approves nothing', (tester) async {
       final api = await _pumpApprovals(tester, _approvalRoutes(orders: [_po(4, 'pending_approval')]));
 
       await tester.tap(find.text('Approve'));
       await tester.pumpAndSettle();
+      expect(find.text('Approve PO #4?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(api.calls.where((c) => c.method == 'POST'), isEmpty);
 
+      await tester.tap(find.text('Approve'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.widgetWithText(FilledButton, 'Approve')));
+      await tester.pumpAndSettle();
       expect(api.calls.singleWhere((c) => c.method == 'POST').path, '/procurement/purchase-orders/4/approve');
+    });
+
+    testWidgets('a reason made only of numbers or symbols is refused', (tester) async {
+      final api = await _pumpApprovals(tester, _approvalRoutes(orders: [_po(4, 'pending_approval')]));
+
+      await tester.tap(find.text('Reject'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '123123123');
+      await tester.tap(find.widgetWithText(FilledButton, 'Reject'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('at least one letter'), findsOneWidget);
+      expect(api.calls.where((c) => c.method == 'POST'), isEmpty);
+
+      await tester.enterText(find.byType(TextFormField), 'Over budget 2');
+      await tester.tap(find.widgetWithText(FilledButton, 'Reject'));
+      await tester.pumpAndSettle();
+      expect(api.calls.singleWhere((c) => c.method == 'POST').body, {'reason': 'Over budget 2'});
     });
   });
 

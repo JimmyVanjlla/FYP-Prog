@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.schemas.validators import require_letter
+
 
 class SupplierCreate(BaseModel):
     name: str = Field(min_length=1, max_length=150)
@@ -73,7 +75,7 @@ class RejectionReason(BaseModel):
         value = value.strip()
         if len(value) < 3:
             raise ValueError("Give a reason of at least 3 characters.")
-        return value
+        return require_letter(value)
 
 
 class PurchaseOrderOut(BaseModel):
@@ -114,6 +116,11 @@ class SupplierDiscrepancyCreate(BaseModel):
     po_id: int
     supplier_id: int
     description: str = Field(min_length=1)
+
+    @field_validator("description")
+    @classmethod
+    def _needs_words(cls, value: str) -> str:
+        return require_letter(value)
 
 
 class SupplierDiscrepancyOut(BaseModel):

@@ -1,6 +1,6 @@
 """Module 5: Kitchen Operations business logic. FR5.1-FR5.5."""
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -12,6 +12,11 @@ from app.services import notifications as notification_service
 from app.services import waste as waste_service
 from app.services.config import get_or_create_config
 from app.services.forecasting import get_latest_forecast
+
+
+def _whole_portions(quantity) -> Decimal:
+    """Portions are counted in whole dishes: 24.77 is prepared as 25, not 24.77."""
+    return Decimal(str(quantity)).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
 
 
 class NoForecastAvailableError(Exception):
@@ -80,10 +85,10 @@ def generate_prep_recommendation(
         if not already_confirmed:
             if forecast is not None:
                 existing.forecast_id = forecast.forecast_id
-                existing.recommended_quantity = forecast.predicted_quantity
+                existing.recommended_quantity = _whole_portions(forecast.predicted_quantity)
             elif manual_quantity is not None:
                 existing.forecast_id = None
-                existing.recommended_quantity = manual_quantity
+                existing.recommended_quantity = _whole_portions(manual_quantity)
             db.commit()
             db.refresh(existing)
         return existing
@@ -96,7 +101,7 @@ def generate_prep_recommendation(
             forecast_id=None,
             meal_period=meal_period,
             forecast_date=forecast_date,
-            recommended_quantity=manual_quantity,
+            recommended_quantity=_whole_portions(manual_quantity),
         )
         db.add(recommendation)
         db.commit()
@@ -108,7 +113,7 @@ def generate_prep_recommendation(
         forecast_id=forecast.forecast_id,
         meal_period=meal_period,
         forecast_date=forecast_date,
-        recommended_quantity=forecast.predicted_quantity,
+        recommended_quantity=_whole_portions(forecast.predicted_quantity),
     )
     db.add(recommendation)
     db.commit()

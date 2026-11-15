@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/async_view.dart';
 import '../../core/auth_state.dart';
+import '../../core/dialogs.dart';
 import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
@@ -181,13 +182,13 @@ class _PrepRowState extends State<_PrepRow> {
   Json? get _rec => widget.recommendation;
   bool get _confirmed => _rec?['confirmed'] == true;
   bool get _isManual => _rec != null && _rec!['forecast_id'] == null;
-  double? get _recommended => _rec == null ? null : asDouble(_rec!['recommended_quantity']);
+  double? get _recommended => _rec == null ? null : asDouble(_rec!['recommended_quantity']).roundToDouble();
 
   @override
   void initState() {
     super.initState();
     final start = _confirmed ? _rec!['confirmed_quantity'] : _rec?['recommended_quantity'];
-    _quantity = TextEditingController(text: start == null ? '' : trimNum(start));
+    _quantity = TextEditingController(text: start == null ? '' : portions(start));
     _quantity.addListener(() => setState(() {}));
   }
 
@@ -218,7 +219,7 @@ class _PrepRowState extends State<_PrepRow> {
   }
 
   bool get _canSubmit =>
-      !_busy && !_confirmed && _entered != null && _entered! >= 0 && (!_needsReason || _reason.text.trim().isNotEmpty) && (_rec != null || _entered! > 0);
+      !_busy && !_confirmed && _entered != null && _entered! >= 0 && (!_needsReason || hasLetter(_reason.text)) && (_rec != null || _entered! > 0);
 
   Future<void> _submit() async {
     setState(() => _busy = true);
@@ -282,7 +283,7 @@ class _PrepRowState extends State<_PrepRow> {
             Text(
               rec == null
                   ? 'No forecast for this service yet. Enter what you plan to prep.'
-                  : 'Recommended: ${trimNum(rec)} portions',
+                  : 'Recommended: ${portions(rec)} portions',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 10),
@@ -309,7 +310,9 @@ class _PrepRowState extends State<_PrepRow> {
                 decoration: InputDecoration(
                   labelText: 'Reason for the change (required)',
                   helperText: 'Changes over ${trimNum(widget.threshold)}% need a reason.',
-                  errorText: _reason.text.trim().isEmpty ? 'Please explain the change.' : null,
+                  errorText: _reason.text.trim().isEmpty
+                      ? 'Please explain the change.'
+                      : (hasLetter(_reason.text) ? null : needsWordsMessage),
                 ),
               ),
             ],

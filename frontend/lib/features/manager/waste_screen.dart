@@ -31,7 +31,12 @@ class _WasteScreenState extends State<WasteScreen> {
     final api = context.read<AuthState>().api;
     final logs = await api.listWasteLogs();
     final trends = await api.listWasteTrends();
-    return _WasteData(logs: logs, trends: trends);
+    final ingredients = await api.listIngredients();
+    return _WasteData(
+      logs: logs,
+      trends: trends,
+      ingredients: {for (final i in ingredients) (i as Map<String, dynamic>)['ingredient_id'] as int: i},
+    );
   }
 
   Future<void> _refresh() async {
@@ -107,9 +112,13 @@ class _WasteScreenState extends State<WasteScreen> {
                         color: Severity.warning,
                       ),
                       title: Text(
-                        'Ingredient #${log['ingredient_id']} — ${log['source_type']}',
+                        '${data.ingredients[log['ingredient_id']]?['name'] ?? 'Ingredient #${log['ingredient_id']}'}'
+                        '  ·  ${log['source_type'] == 'expiry' ? 'expired' : 'leftover'}',
                       ),
-                      subtitle: Text('${log['quantity_wasted']} wasted'),
+                      subtitle: Text(
+                        '${trimNum(log['quantity_wasted'])} ${data.ingredients[log['ingredient_id']]?['unit'] ?? ''} wasted'
+                        '  ·  ${friendlyDate(log['logged_at'])}',
+                      ),
                       trailing: Text(
                         'RM ${log['waste_cost']}',
                         style: const TextStyle(fontWeight: FontWeight.w700),
@@ -129,8 +138,9 @@ class _WasteScreenState extends State<WasteScreen> {
 class _WasteData {
   final List<dynamic> logs;
   final List<dynamic> trends;
+  final Map<int, dynamic> ingredients;
 
-  _WasteData({required this.logs, required this.trends});
+  _WasteData({required this.logs, required this.trends, required this.ingredients});
 }
 
 

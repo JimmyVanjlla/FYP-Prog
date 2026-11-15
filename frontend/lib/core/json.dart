@@ -25,4 +25,7 @@ String trimNum(dynamic value) {
   return s.endsWith('.') ? s.substring(0, s.length - 1) : s;
 }
 
+/// Portions are counted in whole dishes: "24.77" -> "25" (nearest).
+String portions(dynamic value) => asDouble(value).round().toString();
+
 String money(dynamic value) => 'RM ${asDouble(value).toStringAsFixed(2)}';

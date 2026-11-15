@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.validators import require_letter
 
 
 class PrepRecommendationRequest(BaseModel):
@@ -41,6 +43,15 @@ class PrepConfirmationCreate(BaseModel):
     # SystemConfig.prep_deviation_threshold (FR5.5) — enforced in the
     # service layer, where the threshold and the recommendation both live.
     deviation_reason: str | None = None
+
+    @field_validator("deviation_reason")
+    @classmethod
+    def _needs_words(cls, value: str | None) -> str | None:
+        # A blank reason means "none given" and is handled by the service;
+        # anything typed must be words.
+        if value is None or not value.strip():
+            return value
+        return require_letter(value)
 
 
 class PrepConfirmationOut(BaseModel):

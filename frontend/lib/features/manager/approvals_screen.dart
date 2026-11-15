@@ -46,7 +46,15 @@ class ApprovalsScreen extends StatelessWidget {
 /// Approves with a confirmation toast, or rejects only after the Manager has
 /// confirmed and given a reason (kept with the decision, and sent to whoever
 /// raised it).
-Future<void> _approve(BuildContext context, String path, Future<void> Function() onChanged) async {
+Future<void> _approve(
+  BuildContext context,
+  String path, {
+  required String title,
+  required String message,
+  required Future<void> Function() onChanged,
+}) async {
+  final sure = await confirmAction(context, title: title, message: message, confirmLabel: 'Approve');
+  if (!sure || !context.mounted) return;
   final api = context.read<AuthState>().api;
   final ok = await runAction(context, () => api.postJson(path), success: 'Approved.');
   if (ok) await onChanged();
@@ -370,7 +378,14 @@ class _PurchaseOrderTile extends StatelessWidget {
             PrimarySecondaryActions(
               primaryLabel: 'Approve',
               secondaryLabel: 'Reject',
-              onPrimary: () => _approve(context, '/procurement/purchase-orders/${po.poId}/approve', onChanged),
+              onPrimary: () => _approve(
+                context,
+                '/procurement/purchase-orders/${po.poId}/approve',
+                title: 'Approve PO #${po.poId}?',
+                message: 'The order for ${money(po.totalCost)} goes ahead and the Procurement Officer is told. '
+                    'You can no longer change this decision.',
+                onChanged: onChanged,
+              ),
               onSecondary: () => _reject(
                 context,
                 '/procurement/purchase-orders/${po.poId}/reject',
@@ -428,7 +443,13 @@ class _PortionRecommendationTile extends StatelessWidget {
             PrimarySecondaryActions(
               primaryLabel: 'Approve',
               secondaryLabel: 'Reject',
-              onPrimary: () => _approve(context, '$path/approve', onChanged),
+              onPrimary: () => _approve(
+                context,
+                '$path/approve',
+                title: 'Approve the portion change for $name?',
+                message: 'The suggested smaller portion is adopted for this dish. You can no longer change this decision.',
+                onChanged: onChanged,
+              ),
               onSecondary: () => _reject(
                 context,
                 '$path/reject',

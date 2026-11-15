@@ -45,7 +45,9 @@ class _AccountsTab extends StatelessWidget {
       builder: (context, users, reload) => RefreshableList(
         onRefresh: reload,
         children: [
-          for (final u in users) ...[
+          // Deactivated accounts first, so they are not forgotten at the
+          // bottom of a long list; then by name within each group.
+          for (final u in _deactivatedFirst(users)) ...[
             _UserTile(user: u, onChanged: reload),
             const SizedBox(height: 10),
           ],
@@ -63,6 +65,18 @@ class _AccountsTab extends StatelessWidget {
     );
   }
 
+}
+
+/// Deactivated accounts first, then by name (case-insensitive).
+List<Json> _deactivatedFirst(List<Json> users) {
+  final sorted = [...users];
+  sorted.sort((a, b) {
+    final aActive = a['is_active'] as bool;
+    final bActive = b['is_active'] as bool;
+    if (aActive != bActive) return aActive ? 1 : -1;
+    return (a['name'] as String).toLowerCase().compareTo((b['name'] as String).toLowerCase());
+  });
+  return sorted;
 }
 
 class _UserTile extends StatelessWidget {

@@ -5,6 +5,12 @@ import 'package:flutter/material.dart';
 /// submission). Returns the entered text, or null if cancelled.
 ///
 /// [check] returns an error message for an invalid value, or null if fine.
+/// True when [text] has at least one letter, so "123123" or "???" is not
+/// accepted as an explanation (the server checks the same rule).
+bool hasLetter(String text) => RegExp(r'\p{L}', unicode: true).hasMatch(text);
+
+const needsWordsMessage = 'Write it in words: it needs at least one letter.';
+
 Future<String?> promptNumber(
   BuildContext context, {
   required String title,
@@ -99,6 +105,7 @@ Future<String?> promptText(
                 final text = v?.trim() ?? '';
                 if (text.isEmpty) return required ? 'Required.' : null;
                 if (text.length < minLength) return 'Please write at least $minLength characters.';
+                if (!hasLetter(text)) return needsWordsMessage;
                 return null;
               },
             ),
