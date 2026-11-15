@@ -8,18 +8,21 @@ evening before (and again on the morning of) a presentation:
 extend_demo_orders.py fills order history up to yesterday; this script then
 does everything that depends on that history or that a demo flow needs waiting:
 
-  1. retrains forecasts (they cover the 7 days after the last order);
-  2. re-runs the leftover analysis (Algorithm 2), so portion reviews exist;
-  3. regenerates the procurement "recommended to buy" list;
-  4. makes sure the Manager has a purchase order waiting for approval;
-  5. makes sure there is a delivery waiting for Delivery staff to confirm;
-  6. makes sure Inventory staff has a (kitchen-raised) restock request to look at;
-  7. generates a weekly report for the last full week.
+  1. adds leftover logs for the last 7 days (each one also records its waste
+     cost), so the waste section of a report and Algorithm 2 have data;
+  2. retrains forecasts (they cover the 7 days after the last order);
+  3. re-runs the leftover analysis (Algorithm 2), so portion reviews exist;
+  4. regenerates the procurement "recommended to buy" list;
+  5. makes sure the Manager has a purchase order waiting for approval;
+  6. makes sure there is a delivery waiting for Delivery staff to confirm;
+  7. makes sure Inventory staff has a (kitchen-raised) restock request to look at;
+  8. generates a weekly report for the 7 days ending today.
 
 It only adds what is missing, so running it twice is safe. It never deletes
 anything, and it uses the seed accounts (password from seed_dev_data.py).
 """
 import argparse
+import random
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -52,6 +55,35 @@ def main() -> int:
         r = c.get(path, headers=headers, params={"limit": 500, **query})
         r.raise_for_status()
         return r.json()
+
+    print("0. Leftover logs for the last 7 days")
+    menu = {m["name"]: m["menu_item_id"] for m in rows("/menu-items", manager)}
+    demand = {name: avg for name, _c, _p, _r, avg in seed.MENU_ITEMS}
+    logs = rows("/kitchen/leftover-logs", manager)
+    last_logged = max((date.fromisoformat(l["service_period_date"]) for l in logs), default=date.today() - timedelta(days=8))
+    rng = random.Random(date.today().toordinal())
+    added = 0
+    day = max(last_logged + timedelta(days=1), date.today() - timedelta(days=7))
+    while day < date.today():
+        for name, mid in menu.items():
+            if name not in demand:
+                continue
+            prepared = max(2, round(demand[name] * 0.5 * rng.uniform(0.9, 1.1)))
+            rate = rng.uniform(0.25, 0.38) if name in seed.HIGH_LEFTOVER_ITEMS else rng.uniform(0.03, 0.12)
+            c.post(
+                "/kitchen/leftover-logs",
+                headers=kitchen,
+                json={
+                    "menu_item_id": mid,
+                    "service_period_date": day.isoformat(),
+                    "prepared_quantity": prepared,
+                    "leftover_quantity": max(0, round(prepared * rate)),
+                    "leftover_level": "Mostly Uneaten" if rate > 0.2 else "Partially Eaten",
+                },
+            ).raise_for_status()
+            added += 1
+        day += timedelta(days=1)
+    print(f"   added {added} leftover logs")
 
     print("1. Training forecasts (about a minute on the free server)")
     print("  ", c.post("/forecasting/train", headers=manager).raise_for_status().json())
@@ -119,8 +151,8 @@ def main() -> int:
             ).raise_for_status()
             print(f"   requested {low[0]['name']}")
 
-    print("7. Weekly report for the last full week")
-    end = date.today() - timedelta(days=1)
+    print("7. Weekly report for the 7 days ending today")
+    end = date.today()
     start = end - timedelta(days=6)
     existing = rows("/reports", manager)
     if any(r["period_start"] == start.isoformat() for r in existing):

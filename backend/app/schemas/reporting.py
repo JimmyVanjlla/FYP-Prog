@@ -57,6 +57,7 @@ class ReportSummaryOut(BaseModel):
     status: str
     period_start: date
     period_end: date
+    generated_at: datetime | None = None
     forecast_accuracy: ForecastAccuracySectionOut
     waste: WasteSectionOut
     budget: BudgetSectionOut

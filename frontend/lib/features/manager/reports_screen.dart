@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_state.dart';
+import '../../core/format.dart';
 import '../../core/theme.dart';
 import '../../models/report.dart';
 import 'report_summary_screen.dart';
@@ -136,7 +137,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               return RefreshIndicator(
                 onRefresh: _refresh,
                 child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(16),
                   itemCount: reports.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
@@ -150,9 +151,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               : Severity.critical,
                         ),
                         title: Text(
-                          '${report.periodStart} → ${report.periodEnd}',
+                          '${friendlyDate(report.periodStart)} to ${friendlyDate(report.periodEnd)}',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
-                        subtitle: Text(report.type),
+                        subtitle: Text('Weekly report #${report.reportId}'),
                         trailing: report.status == 'generated'
                             ? SeverityChip(
                                 label: 'View',

@@ -58,13 +58,17 @@
                       #3 approved, awaiting delivery (RM 740.00)
                       #2 delivered (RM 193.50), #1 approved (RM 530.00)
  Budget               November budget RM 8,000.00; RM 1,270.00 spent so far.
- Portion reviews      1 pending (Roti Telur, 30.66% leftover, suggested
-                      portion 0.090); 1 rejected earlier (Curry Laksa).
+ Leftover logs        12 dishes x 7 days (9 to 14 Nov) added on 15 Nov, each with
+                      its waste cost (about RM 220 of leftover waste in total).
+ Portion reviews      2 pending after the 15 Nov analysis: Roti Telur and Curry
+                      Laksa (both over the 15% leftover threshold). One rejected
+                      earlier (Curry Laksa, an older review).
  Deliveries           #2 for PO #3 awaiting receipt: Coffee Powder 10 kg,
                       Milo Powder 10 kg, Tea Leaves 8 kg expected.
  Restock requests     1 from the kitchen (Beansprouts, 20, urgent).
  Procurement list     15 "recommended to buy" items, driven by the forecast.
- Reports              Weekly report for 8 to 14 Nov 2026 (plus two older).
+ Reports              Weekly report #4 for 9 to 15 Nov 2026 (forecast error 14.0%,
+                      waste RM 220.30, budget 7%), plus #3 (8 to 14 Nov) and two older.
  Shift schedules      1 draft for 4 Nov Lunch (supervisor).
 
 ------------------------------------------------------------------------------
@@ -86,7 +90,7 @@
                                                    (22%); the Procurement Officer
                                                    gets a notification
 
- C. Manager rejects with a reason (use only if a second item is pending)
+ C. Manager rejects with a reason (use the Curry Laksa review, see D)
     Tap Reject, then Reject again with no text.   Expect: "Required."
     Type  no                                       Expect: "at least 3 characters"
     Type  Over this month's budget                 Expect: item moves to History
@@ -94,9 +98,10 @@
                                                    who decided and when
     Tap Cancel in the dialog instead.             Expect: nothing is rejected
 
- D. Portion review  (manager@test.com > Needs attention > Roti Telur)
-    Approve to accept the smaller portion 0.090, or reject with the reason
-    Guests like the bigger portion
+ D. Portion reviews  (manager@test.com > Needs attention)
+    Roti Telur: approve to accept the smaller portion 0.090.
+    Curry Laksa: reject with the reason  Guests like the bigger portion
+    Expect: both move to History with who decided, when, and the reason
 
  E. Forecasts  (manager@test.com > Forecasts)
     Pick Nasi Lemak.                              Expect: values for 16 to 21 Nov,
@@ -117,7 +122,7 @@
                                                    Expect: "Leftover log saved."; a
                                                    high rate feeds the portion
                                                    review check
-    Restock request: Beansprouts, quantity 20, urgent
+    Restock request: Beansprouts, quantity 20, urgent (one is already there)
                                                    Expect: appears for Inventory
 
  G. Shift schedule  (supervisor@test.com > Schedules)
@@ -183,8 +188,12 @@
                                                    notification within seconds
 
  N. Reports  (manager@test.com > Reports)
-    Open the 8 to 14 Nov weekly report.           Expect: forecast accuracy, waste
-                                                   and budget sections; the PDF opens
+    Open report #4 (9 to 15 Nov).                 Expect: a header with the period,
+                                                   three key figures, an "In summary"
+                                                   box, a by-day table, dishes ranked
+                                                   by forecast error, waste and budget
+                                                   sections; Open PDF shows a 2-page
+                                                   report with dish names
 
 ------------------------------------------------------------------------------
  5. IF THE DATA NEEDS REFRESHING (the morning of the presentation)
@@ -194,9 +203,12 @@
     python scripts/extend_demo_orders.py --base-url https://fyp-prog.onrender.com
     python scripts/prepare_demo.py       --base-url https://fyp-prog.onrender.com
 
- The first adds order history up to yesterday. The second retrains forecasts
- (about a minute), regenerates the "recommended to buy" list, and makes sure a
- purchase order, a delivery, a restock request and a weekly report exist. Both
+ The first adds order history up to yesterday. The second adds the last 7 days of
+ leftover logs, retrains forecasts (about a minute), reruns the leftover analysis,
+ regenerates the "recommended to buy" list, and makes sure a purchase order, a
+ delivery, a restock request and a weekly report for the 7 days ending today exist.
+ Running the second script each day until the presentation also gives the weekly
+ report more scored days (forecasts only exist for days after each training run). Both
  are safe to run twice. A purchase order you approved is not recreated until
  you run the second script again, which adds a new pending one.
 
