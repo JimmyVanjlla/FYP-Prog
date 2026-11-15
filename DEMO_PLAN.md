@@ -99,13 +99,15 @@ the demo: Fresh Farm Poultry & Seafood supplies PO #1, and Kedai Runcit Supplies
 - Do not run the push command twice in a row for the same screen without checking; each run uses up a recommendation.
 - Do not log out and in repeatedly on the emulator; each login is slow on the free server.
 
-## State the database was left in (2 Nov, night)
+## State the database is left in
 
-- Order history 2 Sep to 2 Nov; forecasts stored for 3 to 9 Nov (trained with the fixed model).
-- Purchase order #1 (RM 530) pending approval, for the Manager to approve in beat 2; two portion reviews pending.
-- Purchase order #3 (RM 740: Coffee Powder, Milo Powder, Tea Leaves) approved, with its delivery scheduled for 3 Nov and waiting for Delivery staff to confirm receipt (beat 6).
-- Weekly report for 27 Oct to 2 Nov generated; one older report.
-- Supervisor has one rehearsal schedule (4 Nov, Lunch) and none for 3 Nov.
-- Kitchen: one prep recommendation already confirmed for 31 Oct; 2 Nov and 3 Nov recommendations get created when the Prep screen opens.
+The state on the night of 2 Nov is superseded. The current state, test values for every flow and the refresh commands are in
+`TEST_DATA.txt` (prepared 15 Nov: orders to 14 Nov, forecasts for 16 to 21 Nov, PO #4 pending, a delivery and a restock request
+waiting, weekly report for 8 to 14 Nov). The slides are `FYP_System_Preview.pptx` (7 slides, about 6 minutes, notes carry timings).
 
-If you need the data back in this shape: `scripts/extend_demo_orders.py` (history), then Manager, Forecasts, Retrain.
+To bring the data up to date before presenting:
+
+```bash
+python scripts/extend_demo_orders.py --base-url https://fyp-prog.onrender.com
+python scripts/prepare_demo.py --base-url https://fyp-prog.onrender.com
+```

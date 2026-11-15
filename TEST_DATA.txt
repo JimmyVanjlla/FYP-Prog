@@ -1,0 +1,205 @@
+==============================================================================
+ TEST DATA - AI-Based Restaurant Resource Management and Order Demand
+ Prediction System
+ Prepared 15 Nov 2026 for the FYP presentation
+==============================================================================
+
+ Everything below is already loaded in the live system. Nothing needs typing
+ in beforehand; the "enter this" columns are the values to use while demoing
+ or testing, and "expect" says what should happen.
+
+------------------------------------------------------------------------------
+ 1. HOW TO REACH THE SYSTEM
+------------------------------------------------------------------------------
+ App          : Android app (release build) on the emulator
+ Server       : https://fyp-prog.onrender.com   (health check: /health)
+ API docs     : https://fyp-prog.onrender.com/docs
+ Note         : the free server sleeps after about 15 idle minutes and takes
+                about 50 seconds to wake. Open /health 20 minutes before.
+
+------------------------------------------------------------------------------
+ 2. TEST ACCOUNTS (all use the same test password: Password123!)
+------------------------------------------------------------------------------
+ Role                      Email                    What to show with it
+ ------------------------  -----------------------  --------------------------
+ Restaurant Manager        manager@test.com         approvals, history, forecasts,
+                                                    reports, staff accounts
+ Restaurant Owner          owner@test.com           forecasts, waste, staff
+ Kitchen Staff             kitchen@test.com         prep, leftovers, restock requests
+ Inventory Staff           inventory@test.com       stock, verify deliveries
+ Shift Supervisor          supervisor@test.com      shift schedules
+ Procurement Officer       procurement@test.com     suppliers, purchase orders
+ Delivery/Logistics Staff  delivery@test.com        confirm deliveries
+
+ Extra accounts created during development (leave alone): johnSilver@gmail.com,
+ johnGold@gmail.com (deactivated), jTest@test.com, johnnySilverhand@gmail.com.
+
+------------------------------------------------------------------------------
+ 3. DATA ALREADY IN THE SYSTEM (checked 15 Nov 2026)
+------------------------------------------------------------------------------
+ Menu                 12 dishes (Nasi Lemak, Nasi Goreng Kampung, Mee Goreng
+                      Mamak, Char Kuey Teow, Roti Canai, Roti Telur, Curry Laksa,
+                      Chicken Rice, Satay Ayam, Teh Tarik, Kopi O, Milo Ais)
+                      with recipes linking each dish to its ingredients.
+ Order history        2 Sep to 14 Nov 2026: 74 days x 12 dishes x Lunch and
+                      Dinner = 1,776 daily order records (simulated).
+ Forecasts            16 to 21 Nov 2026 for all 24 dish/meal-period pairs,
+                      trained on 15 Nov with the corrected model. Example,
+                      Nasi Lemak: Mon 16 Nov Lunch 24.8, Dinner 20.7;
+                      Sat 21 Nov Lunch 33.4, Dinner 27.6 (weekend uplift).
+ Ingredients          20, of which 8 are low on stock (shown in red):
+                        Lap Cheong 2 kg, Tea Leaves 3 kg, Coffee Powder 4 kg,
+                        Milo Powder 5 kg, Peanuts 6 kg, Curry Paste 6 kg
+                        (alert below 8), Ikan Bilis 8 kg, Beansprouts 9 kg.
+ Suppliers            3 (Fresh Farm Poultry & Seafood, Pasar Besar Trading,
+                      Kedai Runcit Supplies), each with their own prices.
+ Purchase orders      #4 pending approval (RM 530.00: Chicken 20 kg at RM 12.50
+                      + Prawns 10 kg at RM 28.00)
+                      #3 approved, awaiting delivery (RM 740.00)
+                      #2 delivered (RM 193.50), #1 approved (RM 530.00)
+ Budget               November budget RM 8,000.00; RM 1,270.00 spent so far.
+ Portion reviews      1 pending (Roti Telur, 30.66% leftover, suggested
+                      portion 0.090); 1 rejected earlier (Curry Laksa).
+ Deliveries           #2 for PO #3 awaiting receipt: Coffee Powder 10 kg,
+                      Milo Powder 10 kg, Tea Leaves 8 kg expected.
+ Restock requests     1 from the kitchen (Beansprouts, 20, urgent).
+ Procurement list     15 "recommended to buy" items, driven by the forecast.
+ Reports              Weekly report for 8 to 14 Nov 2026 (plus two older).
+ Shift schedules      1 draft for 4 Nov Lunch (supervisor).
+
+------------------------------------------------------------------------------
+ 4. TEST CASES - ENTER THIS, EXPECT THAT
+------------------------------------------------------------------------------
+ A. Login (any screen)
+    Enter  manager@test.com / Password123!        Expect: Needs attention screen
+    Enter  manager@test.com / WrongPass99          Expect: a generic "invalid
+                                                   email or password" message
+    Enter  empty email                             Expect: "Enter your email."
+
+ B. Manager approves a purchase order  (manager@test.com > Needs attention)
+    Open PO #4, check the line items.             Expect: RM 530.00 total and the
+                                                   remaining budget shown beside
+                                                   Approve
+    Tap Approve.                                  Expect: PO moves to History as
+                                                   Approved; budget used rises to
+                                                   RM 1,800.00 of RM 8,000.00
+                                                   (22%); the Procurement Officer
+                                                   gets a notification
+
+ C. Manager rejects with a reason (use only if a second item is pending)
+    Tap Reject, then Reject again with no text.   Expect: "Required."
+    Type  no                                       Expect: "at least 3 characters"
+    Type  Over this month's budget                 Expect: item moves to History
+                                                   as Rejected with the reason,
+                                                   who decided and when
+    Tap Cancel in the dialog instead.             Expect: nothing is rejected
+
+ D. Portion review  (manager@test.com > Needs attention > Roti Telur)
+    Approve to accept the smaller portion 0.090, or reject with the reason
+    Guests like the bigger portion
+
+ E. Forecasts  (manager@test.com > Forecasts)
+    Pick Nasi Lemak.                              Expect: values for 16 to 21 Nov,
+                                                   higher on Sat 21 Nov than on
+                                                   weekdays
+    Open the Accuracy tab.                        Expect: predicted vs actual
+                                                   error rows (older rows are
+                                                   from the first model version)
+
+ F. Kitchen prep and leftovers  (kitchen@test.com)
+    Prep > today > Lunch.                         Expect: a recommended quantity
+                                                   per dish, from the forecast
+    Change one quantity to about 1.8 times the recommendation.
+                                                   Expect: a "reason" box appears;
+                                                   enter  Large booking tonight
+    Leftovers: Dish Curry Laksa, service date today, Quantity prepared 40,
+    Quantity left over 14 (35%), then pick a leftover level.
+                                                   Expect: "Leftover log saved."; a
+                                                   high rate feeds the portion
+                                                   review check
+    Restock request: Beansprouts, quantity 20, urgent
+                                                   Expect: appears for Inventory
+
+ G. Shift schedule  (supervisor@test.com > Schedules)
+    New schedule: date = tomorrow, meal period = Lunch.
+                                                   Expect: recommended headcount
+                                                   per station; adding staff
+                                                   clears the "below recommendation"
+                                                   flag; Publish notifies them
+
+ H. Procurement  (procurement@test.com)
+    Purchasing > Recommended to buy.              Expect: 15 items
+    Suppliers: tap a price and change it to 13.00, then change it back.
+    New purchase order: supplier Pasar Besar Trading, Rice 30, Cooking Oil 15
+                                                   Expect: a total from that
+                                                   supplier's own prices and
+                                                   status "pending approval"
+    A deactivated supplier cannot receive a new order (Expect: error message).
+    Do NOT deactivate Fresh Farm or Kedai Runcit during the demo.
+
+ I. Delivery then Inventory  (delivery@test.com, then inventory@test.com)
+    Delivery > delivery for PO #3, enter received quantities:
+        Coffee Powder 10, Milo Powder 10, Tea Leaves 6
+                                                   Expect: Tea Leaves row turns red
+                                                   (6 of 8) and a discrepancy is
+                                                   recorded
+    Then inventory@test.com > Deliveries > verify the delivery.
+                                                   Expect: stock rises - Coffee
+                                                   Powder 4 -> 14 kg, Milo Powder
+                                                   5 -> 15 kg, Tea Leaves 3 -> 9 kg;
+                                                   the low-stock count falls
+
+ J. Inventory order  (any role with Inventory)
+    Expect: a red "Low stock: restock these" group at the top (8 items),
+    then "Well stocked" (12 items), each sorted by name; three summary tiles.
+
+ K. Staff accounts  (manager@test.com > Staff > Add staff account)
+    Name                     Test Chef
+    Email                    test.chef@example.com
+    Role                     Kitchen Staff
+    Password                 Chef12345!
+    Phone                    +60 12-345 6789
+    Address                  12 Jalan Bukit, 50450 Kuala Lumpur
+    Emergency contact        Aisha Test, +60 13-987 6543
+                                                   Expect: account appears in the
+                                                   list; tapping it shows all the
+                                                   details; others show
+                                                   "Not provided"
+    Phone  abc                                     Expect: a phone-number error
+    Password  short                                Expect: "at least 8 characters"
+    (Use a throwaway name: the account stays in the database.)
+
+ L. My profile  (any account > profile icon, top right)
+    Change phone to +60 11-222 3333 and Save       Expect: saved confirmation
+    Role and email are shown but cannot be edited.
+    Change password: Password123! -> Password123!  (same value; keeps the demo
+    password unchanged) ; a wrong current password Expect: "Your current
+    password is incorrect."
+
+ M. Push notification  (kitchen@test.com on the emulator, app in the background)
+    From backend/ with the venv active:
+        python scripts/demo_push.py --base-url https://fyp-prog.onrender.com
+                                                   Expect: a "Prep update"
+                                                   notification within seconds
+
+ N. Reports  (manager@test.com > Reports)
+    Open the 8 to 14 Nov weekly report.           Expect: forecast accuracy, waste
+                                                   and budget sections; the PDF opens
+
+------------------------------------------------------------------------------
+ 5. IF THE DATA NEEDS REFRESHING (the morning of the presentation)
+------------------------------------------------------------------------------
+ From the backend folder with the virtual environment active:
+
+    python scripts/extend_demo_orders.py --base-url https://fyp-prog.onrender.com
+    python scripts/prepare_demo.py       --base-url https://fyp-prog.onrender.com
+
+ The first adds order history up to yesterday. The second retrains forecasts
+ (about a minute), regenerates the "recommended to buy" list, and makes sure a
+ purchase order, a delivery, a restock request and a weekly report exist. Both
+ are safe to run twice. A purchase order you approved is not recreated until
+ you run the second script again, which adds a new pending one.
+
+ Cloud services on free plans: Supabase pauses after about a week without use
+ and Redis deletes inactive databases. Opening the app once a few days before
+ keeps both alive. If the app cannot log in, check the Supabase dashboard.
