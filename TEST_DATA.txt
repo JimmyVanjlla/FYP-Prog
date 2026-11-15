@@ -69,7 +69,7 @@
  Procurement list     15 "recommended to buy" items, driven by the forecast.
  Waste history        Leftover logs for the 8 weeks to 14 Nov (12 dishes a day), each
                       dated to its service day, so the Waste screen shows a real weekly
-                      trend, with Curry Laksa and Roti Telur as the biggest sources.
+                      trend, with Curry Laksa the biggest source (about RM 220 a week, flat, since the data is simulated).
  Reports              Weekly report #4 for 9 to 15 Nov 2026 (forecast error 14.0%,
                       waste RM 220.30, budget 7%), plus #3 (8 to 14 Nov) and two older.
  Shift schedules      1 draft for 4 Nov Lunch (supervisor).
@@ -221,8 +221,8 @@
     Open Waste.                                   Expect: tiles for this week, last week and
                                                    the change; a bar chart of the last 8
                                                    weeks (leftovers blue, expired orange);
-                                                   "Most wasted dishes" (Curry Laksa and
-                                                   Roti Telur at the top) and "Most wasted
+                                                   "Most wasted dishes" (Curry Laksa
+                                                   at the top) and "Most wasted
                                                    ingredients" for the last 4 weeks; the
                                                    recent log with ingredient names
 
