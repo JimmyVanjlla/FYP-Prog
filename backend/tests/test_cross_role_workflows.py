@@ -243,7 +243,8 @@ def test_shift_from_schedule_to_closing_report(client, db_session):
     ).json()
     sid = schedule["schedule_id"]
     recs = client.post(f"/staffing/schedules/{sid}/recommendations", headers=supervisor).json()
-    assert {r["station"]: r["recommended_staff_count"] for r in recs} == {"Kitchen": 2, "Front of House": 2}
+    # 120 portions need 4 Kitchen Staff (the minimum); only the Kitchen is staffed.
+    assert {r["station"]: r["recommended_staff_count"] for r in recs} == {"Kitchen": 4}
 
     # The supervisor can find the cook to assign; the cook can't assign themselves.
     assert cook_id in {s["user_id"] for s in client.get("/staffing/staff", headers=supervisor).json()}
@@ -255,7 +256,7 @@ def test_shift_from_schedule_to_closing_report(client, db_session):
     ).json()
     # No double-booking on the same shift.
     assert client.post(
-        f"/staffing/schedules/{sid}/assignments", json={"staff_id": cook_id, "station": "Front of House"}, headers=supervisor
+        f"/staffing/schedules/{sid}/assignments", json={"staff_id": cook_id, "station": "Kitchen"}, headers=supervisor
     ).status_code == 409
 
     # Before publishing the cook sees nothing; after, the shift and a notification.

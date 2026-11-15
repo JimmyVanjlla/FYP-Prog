@@ -44,6 +44,7 @@ const _myShifts = Destination('My shifts', Icons.schedule_rounded, MyScheduleScr
 List<Destination> destinationsFor(String? role) {
   switch (role) {
     case Roles.manager:
+    case Roles.owner:
       return const [
         Destination('Needs attention', Icons.fact_check_rounded, ApprovalsScreen()),
         _menu,
@@ -55,16 +56,6 @@ List<Destination> destinationsFor(String? role) {
         _deliveries,
         Destination('Staff', Icons.groups_rounded, StaffScreen()),
         Destination('Settings', Icons.tune_rounded, SettingsScreen()),
-      ];
-    case Roles.owner:
-      return const [
-        _forecasts,
-        Destination('Waste', Icons.delete_outline_rounded, WasteScreen()),
-        _menu,
-        _inventory,
-        _deliveries,
-        // Owners create and manage accounts alongside Managers.
-        Destination('Staff', Icons.groups_rounded, StaffScreen()),
       ];
     case Roles.kitchenStaff:
       return const [

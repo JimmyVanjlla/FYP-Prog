@@ -25,8 +25,7 @@ def test_create_and_publish_schedule(client):
 
 def test_staffing_recommendation_falls_back_with_no_forecast(client):
     """FR8.1 / UC-SS-01 Alt Flow 3a — no forecast for the date -> falls
-    back gracefully (0 staff recommended, not an error) rather than
-    crashing."""
+    back gracefully (the minimum, not an error) rather than crashing."""
     token = _supervisor_token(client)
     schedule = client.post(
         "/staffing/schedules", json={"date": "2026-09-01", "meal_period": "Lunch"}, headers=auth_headers(token)
@@ -35,8 +34,9 @@ def test_staffing_recommendation_falls_back_with_no_forecast(client):
     resp = client.post(f"/staffing/schedules/{schedule['schedule_id']}/recommendations", headers=auth_headers(token))
     assert resp.status_code == 200
     recos = resp.json()
-    assert len(recos) == 2  # Kitchen + Front of House
-    assert all(r["recommended_staff_count"] == 0 for r in recos)
+    assert len(recos) == 1  # only the Kitchen is staffed
+    assert recos[0]["station"] == "Kitchen"
+    assert recos[0]["recommended_staff_count"] == 4  # the minimum of 4 Kitchen Staff
 
 
 def test_staffing_recommendation_uses_forecast(client, db_session):
@@ -53,7 +53,7 @@ def test_staffing_recommendation_uses_forecast(client, db_session):
         menu_item_id=item["menu_item_id"],
         meal_period="Lunch",
         forecast_date=date(2026, 9, 2),
-        predicted_quantity=Decimal("120.00"),
+        predicted_quantity=Decimal("300.00"),
     )
     db_session.add(forecast)
     db_session.commit()
@@ -63,8 +63,8 @@ def test_staffing_recommendation_uses_forecast(client, db_session):
     ).json()
     resp = client.post(f"/staffing/schedules/{schedule['schedule_id']}/recommendations", headers=auth_headers(token))
     recos = resp.json()
-    # 120 total portions / 2 stations = 60 each; ceil(60/30) = 2 staff each.
-    assert all(r["recommended_staff_count"] == 2 for r in recos)
+    # 300 portions / 30 per staff = 10 Kitchen Staff, well above the minimum of 4.
+    assert [(r["station"], r["recommended_staff_count"]) for r in recos] == [("Kitchen", 10)]
 
 
 def test_prevent_double_assignment_to_same_shift(client):
@@ -138,7 +138,7 @@ def test_list_staffing_recommendations_after_generation(client):
 
     resp = client.get(f"/staffing/schedules/{schedule['schedule_id']}/recommendations", headers=auth_headers(token))
     assert resp.status_code == 200
-    assert len(resp.json()) == 2  # Kitchen + Front of House
+    assert len(resp.json()) == 1  # the Kitchen
 
 
 def test_list_shift_assignments_after_assigning(client):

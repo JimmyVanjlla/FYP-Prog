@@ -31,3 +31,7 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )
+    # A deleted account is hidden from the staff list and kept for 60 days so it
+    # can be restored; after that it is anonymised (purged_at) and cannot come back.
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    purged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

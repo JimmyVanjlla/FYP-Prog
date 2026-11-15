@@ -1,7 +1,10 @@
 from datetime import date, datetime
 from decimal import Decimal
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from app.schemas.validators import require_letter
 
 
 class IngredientCreate(BaseModel):
@@ -93,10 +96,29 @@ class RestockingRequestOut(BaseModel):
     quantity: Decimal
     urgency: bool
     status: str
+    decided_by: int | None = None
+    decided_at: datetime | None = None
+    decision_note: str | None = None
 
 
 class RestockingRequestStatusUpdate(BaseModel):
-    status: str = Field(min_length=1, max_length=20)
+    """Inventory Staff's decision on a restocking request: restocked, or
+    declined, in which case a reason (in words) is required and goes back to
+    the kitchen."""
+
+    status: Literal["fulfilled", "declined"]
+    note: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _declining_needs_a_reason(self) -> "RestockingRequestStatusUpdate":
+        if self.status == "declined":
+            note = (self.note or "").strip()
+            if len(note) < 3:
+                raise ValueError("Give a reason of at least 3 characters.")
+            self.note = require_letter(note)
+        elif self.note is not None:
+            self.note = self.note.strip() or None
+        return self
 
 
 class ConsumptionApplyResult(BaseModel):

@@ -56,7 +56,10 @@ class _PrepScreenState extends State<PrepScreen> {
       api.getJson('/config'),
     ]);
 
-    final items = asJsonList(results[0]);
+    // Only the dishes served at this meal period.
+    final items = asJsonList(results[0])
+        .where((i) => ((i['meal_periods'] as List<dynamic>?) ?? const ['Lunch', 'Dinner']).contains(_period))
+        .toList();
     final forecasted = asJsonList(results[1]).map((f) => f['menu_item_id'] as int).toSet();
     final recs = {for (final r in asJsonList(results[2])) r['menu_item_id'] as int: r};
 
@@ -127,9 +130,10 @@ class _PrepScreenState extends State<PrepScreen> {
             load: _load,
             builder: (context, data, reload) => RefreshableList(
               onRefresh: reload,
-              empty: const EmptyState(
+              empty: EmptyState(
                 icon: Icons.restaurant_menu_outlined,
-                message: 'No menu items.',
+                message: 'No dishes are served at $_period.',
+                detail: 'A Manager chooses which meal periods each dish is served at, on its menu page.',
               ),
               children: [
                 for (final item in data.items) ...[

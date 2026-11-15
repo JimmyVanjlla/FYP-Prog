@@ -69,6 +69,7 @@ class UserOut(BaseModel):
     emergency_contact_name: str | None = None
     emergency_contact_phone: str | None = None
     created_at: datetime
+    deleted_at: datetime | None = None
 
 
 class Token(BaseModel):

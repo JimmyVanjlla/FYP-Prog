@@ -26,6 +26,12 @@ class MenuItem(Base):
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Which meal periods this dish is served in, as a comma-separated list
+    # ("Breakfast,Lunch,Dinner"). Prep, forecasts and leftovers only consider a
+    # dish in the periods it is served.
+    meal_periods: Mapped[str] = mapped_column(
+        String(60), default="Lunch,Dinner", server_default="Lunch,Dinner", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
     )

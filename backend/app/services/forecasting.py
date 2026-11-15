@@ -22,6 +22,7 @@ import pandas as pd
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core import meal_periods
 from app.core.dates import restaurant_today
 from app.models.forecasting import Forecast, ForecastAccuracy, Order
 from app.models.menu import MenuItem
@@ -131,7 +132,11 @@ def train_and_generate_forecasts(
     updated_count = 0
     skipped: list[dict] = []
 
+    served = {mid: text for mid, text in db.execute(select(MenuItem.menu_item_id, MenuItem.meal_periods))}
+
     for (menu_item_id, meal_period), group in grouped.groupby(["menu_item_id", "meal_period"]):
+        if not meal_periods.serves(served.get(int(menu_item_id)), meal_period):
+            continue  # the dish is not served in this meal period: nothing to forecast
         if len(group) < MIN_DATA_POINTS:
             # Step 4-6 — UC-DF-02 Alt Flow 2a.
             skipped.append(
@@ -361,8 +366,11 @@ def forecast_availability(db: Session, *, menu_item_id: int | None = None, today
     today = today or restaurant_today()
 
     items = db.execute(
-        select(MenuItem.menu_item_id, MenuItem.name).where(MenuItem.is_active.is_(True)).order_by(MenuItem.name)
+        select(MenuItem.menu_item_id, MenuItem.name, MenuItem.meal_periods)
+        .where(MenuItem.is_active.is_(True))
+        .order_by(MenuItem.name)
     ).all()
+    served_by_item = {i.menu_item_id: i.meal_periods for i in items}
     if menu_item_id is not None:
         items = [i for i in items if i.menu_item_id == menu_item_id]
 
@@ -382,8 +390,10 @@ def forecast_availability(db: Session, *, menu_item_id: int | None = None, today
     }
 
     results: list[dict] = []
-    for mid, name in items:
-        periods = history.get(mid)
+    for mid, name, _served in items:
+        periods = {
+            p: d for p, d in (history.get(mid) or {}).items() if meal_periods.serves(served_by_item.get(mid), p)
+        }
         if not periods:
             results.append(
                 {
@@ -458,3 +468,61 @@ def list_forecast_accuracy(
         }
         for a, f in db.execute(stmt).all()
     ]
+
+
+# A day is "busy" when the forecast is this much above a typical day for that
+# meal period, "quiet" when it is this much below.
+BUSY_RATIO = 1.15
+QUIET_RATIO = 0.85
+
+
+def daily_outlook(db: Session, *, date_from: date, date_to: date, today: date | None = None) -> list[dict]:
+    """Total forecast portions per day and meal period with how busy that is
+    compared with a typical day (the average of the last 28 days of orders for
+    the same meal period), and the Kitchen Staff it calls for."""
+    import math
+
+    from app.services.staffing import MIN_KITCHEN_STAFF
+
+    today = today or restaurant_today()
+    rows = db.execute(
+        select(Forecast.forecast_date, Forecast.meal_period, func.sum(Forecast.predicted_quantity))
+        .where(Forecast.forecast_date >= date_from)
+        .where(Forecast.forecast_date <= date_to)
+        .group_by(Forecast.forecast_date, Forecast.meal_period)
+        .order_by(Forecast.forecast_date, Forecast.meal_period)
+    ).all()
+
+    history = db.execute(
+        select(Order.order_date, Order.meal_period, func.sum(Order.quantity))
+        .where(Order.order_date >= today - timedelta(days=28))
+        .where(Order.order_date < today)
+        .group_by(Order.order_date, Order.meal_period)
+    ).all()
+    totals_by_period: dict[str, list[float]] = {}
+    for _day, period, qty in history:
+        totals_by_period.setdefault(period, []).append(float(qty))
+    typical = {period: sum(v) / len(v) for period, v in totals_by_period.items() if v}
+
+    ratio = float(get_or_create_config(db).portions_per_staff_ratio)
+    out = []
+    for day, period, total in rows:
+        predicted = float(total)
+        base = typical.get(period)
+        if base:
+            share = predicted / base
+            level = "Busy" if share >= BUSY_RATIO else ("Quiet" if share <= QUIET_RATIO else "Normal")
+        else:
+            level = "Normal"
+        staff = max(MIN_KITCHEN_STAFF, math.ceil(predicted / ratio) if ratio else 0)
+        out.append(
+            {
+                "forecast_date": day,
+                "meal_period": period,
+                "predicted_portions": round(predicted),
+                "typical_portions": round(base) if base else None,
+                "level": level,
+                "recommended_kitchen_staff": staff,
+            }
+        )
+    return out

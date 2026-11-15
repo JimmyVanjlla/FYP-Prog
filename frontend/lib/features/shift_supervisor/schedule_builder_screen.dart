@@ -8,6 +8,7 @@ import '../../core/dialogs.dart';
 import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
+import '../shared/forecasts/forecast_dashboard_screen.dart' show LevelChip;
 
 /// The Schedule Builder (Ch4 section 4.4.1): the staffing recommendation and
 /// the roster on the *same* screen, so the supervisor sees "recommended 3,
@@ -33,7 +34,10 @@ class _BuilderData {
   final Map<int, Json> staff;
   final Json? closingReport;
 
-  _BuilderData(this.schedule, this.recommendations, this.assignments, this.staff, this.closingReport);
+  /// How busy this meal period is expected to be (null if nothing is forecast).
+  final Json? outlook;
+
+  _BuilderData(this.schedule, this.recommendations, this.assignments, this.staff, this.closingReport, [this.outlook]);
 }
 
 class _ScheduleBuilderScreenState extends State<ScheduleBuilderScreen> {
@@ -65,12 +69,23 @@ class _ScheduleBuilderScreenState extends State<ScheduleBuilderScreen> {
         closing = null; // 404: not submitted yet
       }
     }
+    Json? outlook;
+    try {
+      final day = schedule['date'] as String;
+      final rows = asJsonList(await api.getJson('/forecasting/outlook', query: {'date_from': day, 'date_to': day}));
+      for (final r in rows) {
+        if (r['meal_period'] == schedule['meal_period']) outlook = r;
+      }
+    } on ApiException {
+      outlook = null; // the outlook is a guide; the builder works without it
+    }
     return _BuilderData(
       schedule,
       recs,
       asJsonList(results[0]),
       {for (final s in asJsonList(results[1])) s['user_id'] as int: s},
       closing,
+      outlook,
     );
   }
 
@@ -255,6 +270,8 @@ class _ScheduleBuilderScreenState extends State<ScheduleBuilderScreen> {
                 ],
               ),
               const SizedBox(height: 8),
+              _ExpectedCard(outlook: data.outlook),
+              const SizedBox(height: 12),
               for (final rec in data.recommendations) ...[
                 _StationSection(
                   recommendation: rec,
@@ -283,6 +300,54 @@ class _ScheduleBuilderScreenState extends State<ScheduleBuilderScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// What this shift is expected to be like, so the roster is built from it.
+class _ExpectedCard extends StatelessWidget {
+  final Json? outlook;
+
+  const _ExpectedCard({required this.outlook});
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final o = outlook;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: o == null
+            ? Text(
+                'No forecast for this shift yet, so the minimum of 4 Kitchen Staff applies.',
+                style: TextStyle(color: muted),
+              )
+            : Row(
+                children: [
+                  const IconBadge(icon: Icons.speed_rounded),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${o['predicted_portions']} portions expected',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                        Text(
+                          o['typical_portions'] == null
+                              ? 'Needs ${o['recommended_kitchen_staff']} Kitchen Staff'
+                              : 'A typical ${o['meal_period']} is ${o['typical_portions']}. '
+                                  'Needs ${o['recommended_kitchen_staff']} Kitchen Staff.',
+                          style: TextStyle(color: muted, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  LevelChip(level: o['level'] as String),
+                ],
+              ),
       ),
     );
   }

@@ -55,7 +55,7 @@ class _MenuListScreenState extends State<MenuListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isManager = context.watch<AuthState>().role == Roles.manager;
+    final isManager = Roles.isManagement(context.watch<AuthState>().role);
 
     return AsyncView<List<Json>>(
       key: ValueKey('$_version|$_showInactive'),

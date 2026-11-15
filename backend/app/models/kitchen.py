@@ -5,7 +5,7 @@ LeftoverLog, Notification [M5] (Ch4 §4.3.1). Backs FR5.1-FR5.5.
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Numeric, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -52,7 +52,13 @@ class LeftoverLog(Base):
     service_period_date: Mapped[date] = mapped_column(Date, nullable=False)
     prepared_quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
     leftover_quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    # e.g. "Partially Eaten", "Mostly Uneaten"
+    # Kitchen Staff log how much of what was prepared was left (0, 25, 50, 75 or
+    # 100 per cent) for a meal period; the two quantities above are then worked
+    # out from the confirmed prep quantity. Older logs and imports have neither
+    # meal_period nor leftover_percent, only the quantities.
+    meal_period: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    leftover_percent: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # A readable label such as "50% left over" (older logs: "Partially Eaten").
     leftover_level: Mapped[str] = mapped_column(String(20), nullable=False)
     staff_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
 

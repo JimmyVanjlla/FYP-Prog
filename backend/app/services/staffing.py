@@ -16,11 +16,16 @@ from app.models.user import User
 from app.services import notifications as notification_service
 from app.services.config import get_or_create_config
 
-# Ch4 UI mockups reference these two stations by name (§4.4.1); Module 8's
-# data dictionary has no separate "Station" entity, so this is a fixed list
-# rather than something configured per-restaurant, consistent with the
-# scope of an individually developed FYP (Ch2 §2.2.1).
-DEFAULT_STATIONS = ["Kitchen", "Front of House"]
+# Module 8's data dictionary has no separate "Station" entity, so this is a
+# fixed list rather than something configured per-restaurant, consistent with
+# the scope of an individually developed FYP (Ch2 §2.2.1). The system has no
+# front-of-house role, so only the kitchen is staffed from it: each station
+# names the one role that can work it, and only that role counts towards it.
+DEFAULT_STATIONS = ["Kitchen"]
+STATION_ROLES = {"Kitchen": "Kitchen Staff"}
+
+# A shift never needs fewer than this many Kitchen Staff, however quiet.
+MIN_KITCHEN_STAFF = 4
 
 
 class ScheduleNotFoundError(Exception):
@@ -33,6 +38,10 @@ class OverlappingAssignmentError(Exception):
 
 class ClosingReportAlreadyExistsError(Exception):
     pass
+
+
+class WrongRoleForStationError(Exception):
+    """Someone whose role cannot work the station was put on it."""
 
 
 def calculate_staffing_recommendation(
@@ -77,6 +86,8 @@ def calculate_staffing_recommendation(
     for station in stations:
         station_share = total_forecasted_portions / station_count if station_count else Decimal("0")
         recommended_staff = math.ceil(station_share / ratio) if ratio else 0
+        if station == "Kitchen":
+            recommended_staff = max(recommended_staff, MIN_KITCHEN_STAFF)
         recommendation = StaffingRecommendation(
             schedule_id=schedule.schedule_id,
             forecast_id=representative_forecast_id,
@@ -159,6 +170,10 @@ def assign_staff(db: Session, *, schedule_id: int, staff_id: int, station: str) 
     stations on the same shift (an overlapping time slot, since one
     ShiftSchedule row is one date+meal_period)."""
     schedule = get_schedule(db, schedule_id)
+    required_role = STATION_ROLES.get(station)
+    person = db.get(User, staff_id)
+    if required_role is not None and person is not None and person.role != required_role:
+        raise WrongRoleForStationError
     existing = db.scalars(
         select(ShiftAssignment)
         .where(ShiftAssignment.schedule_id == schedule_id)
@@ -256,13 +271,14 @@ def submit_closing_report(
 
 
 def list_assignable_staff(db: Session) -> list[User]:
-    """Everyone a Shift Supervisor can put on a shift: active accounts,
-    excluding the Owner (who doesn't work a station)."""
+    """Everyone a Shift Supervisor can put on a shift: active Kitchen Staff
+    (the only role that works a station; Inventory, Procurement, Delivery and
+    management roles do their own jobs and do not count towards it)."""
     return list(
         db.scalars(
             select(User)
             .where(User.is_active.is_(True))
-            .where(User.role != "Restaurant Owner")
+            .where(User.role.in_(STATION_ROLES.values()))
             .order_by(User.name)
         )
     )

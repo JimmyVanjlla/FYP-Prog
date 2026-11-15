@@ -1,7 +1,7 @@
 """Module 3: Inventory Management business logic. FR3.1-FR3.6, plus
 Algorithm "CheckLowStockThreshold" and "CheckNearExpiryBatches" (Ch4
 §4.8.4)."""
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import func, select
@@ -171,11 +171,33 @@ def list_restocking_requests(
     return list(db.scalars(stmt))
 
 
-def update_restocking_request_status(db: Session, request_id: int, status: str) -> RestockingRequest:
+class RequestAlreadyDecidedError(Exception):
+    """A restocking request is decided once; it cannot be decided again."""
+
+
+def update_restocking_request_status(
+    db: Session, request_id: int, status: str, *, decided_by: int, note: str | None = None
+) -> RestockingRequest:
+    """Record Inventory Staff's decision (restocked, or declined with a reason),
+    keep who and when, and tell the Kitchen Staff member who asked."""
     request = db.get(RestockingRequest, request_id)
     if request is None:
         raise IngredientNotFoundError
+    if request.status != "pending":
+        raise RequestAlreadyDecidedError
     request.status = status
+    request.decided_by = decided_by
+    request.decided_at = datetime.now(timezone.utc)
+    request.decision_note = note if status == "declined" else None
+    ingredient = db.get(Ingredient, request.ingredient_id)
+    name = ingredient.name if ingredient else f"ingredient #{request.ingredient_id}"
+    if status == "fulfilled":
+        message = f"Your restocking request for {name} was approved."
+    else:
+        message = f"Your restocking request for {name} was declined: {note}"
+    notification_service.notify(
+        db, type_="restock_decided", message=message, recipient_id=request.requested_by
+    )
     db.commit()
     db.refresh(request)
     return request

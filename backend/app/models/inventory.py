@@ -60,5 +60,9 @@ class RestockingRequest(Base):
     requested_by: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(10, 3), nullable=False)
     urgency: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    # pending | fulfilled | escalated_to_procurement
+    # pending | fulfilled | declined | escalated_to_procurement
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
+    # Who decided it, when, and (for a decline) why.
+    decided_by: Mapped[int | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_note: Mapped[str | None] = mapped_column(String(500), nullable=True)

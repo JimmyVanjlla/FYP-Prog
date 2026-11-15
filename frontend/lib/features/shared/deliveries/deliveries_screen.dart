@@ -50,7 +50,7 @@ class _BodyState extends State<_Body> {
 
   bool get _canSchedule {
     final role = context.read<AuthState>().role;
-    return role == Roles.procurementOfficer || role == Roles.manager;
+    return role == Roles.procurementOfficer || Roles.isManagement(role);
   }
 
   Future<({List<Json> deliveries, List<Json> schedulable})> _load() async {

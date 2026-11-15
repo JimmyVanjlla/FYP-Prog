@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core import meal_periods
 from app.models.inventory import Ingredient
 from app.models.menu import MenuItem, RecipeIngredientLink
 from app.models.procurement import Supplier, SupplierPricing
@@ -59,6 +60,7 @@ def create_menu_item(db: Session, data: MenuItemCreate) -> MenuItem:
         price=data.price,
         category=data.category,
         is_active=True,
+        meal_periods=meal_periods.to_text(data.meal_periods),
     )
     db.add(item)
     db.commit()
@@ -96,6 +98,10 @@ def get_menu_item(db: Session, menu_item_id: int) -> MenuItem:
 def update_menu_item(db: Session, menu_item_id: int, data: MenuItemUpdate) -> MenuItem:
     item = get_menu_item(db, menu_item_id)
     for field, value in data.model_dump(exclude_unset=True).items():
+        if field == "meal_periods":
+            if value is None:
+                continue  # null means "no change"
+            value = meal_periods.to_text(value)
         setattr(item, field, value)
     db.commit()
     db.refresh(item)

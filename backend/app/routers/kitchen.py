@@ -84,6 +84,8 @@ def generate_prep_recommendation(
         return _prep_out(db, [recommendation])[0]
     except kitchen_service.MenuItemInactiveError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Menu item not found or inactive.")
+    except kitchen_service.MealPeriodNotServedError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except kitchen_service.NoForecastAvailableError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -129,7 +131,16 @@ def log_leftover(
     staff: User = Depends(require_role(Role.KITCHEN_STAFF)),
 ) -> LeftoverLogOut:
     """FR5.3."""
-    return kitchen_service.log_leftover(db, staff_id=staff.user_id, data=data)
+    try:
+        return kitchen_service.log_leftover(db, staff_id=staff.user_id, data=data)
+    except kitchen_service.MealPeriodNotServedError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    except kitchen_service.NoPrepQuantityError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"No prep quantity was recorded for this dish at {data.meal_period} on "
+            f"{data.service_period_date}. Confirm the prep first, so there is something to take a percentage of.",
+        )
 
 
 @router.get("/leftover-logs", response_model=list[LeftoverLogOut])

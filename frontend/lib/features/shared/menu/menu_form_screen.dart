@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/api_client.dart';
 import '../../../core/auth_state.dart';
+import 'meal_period_picker.dart';
 
 /// FR2.1 / FR2.5 — create a menu item. Manager-only; reachable only from
 /// the "+ Add menu item" row, which is itself only shown to Managers.
@@ -25,6 +26,7 @@ class _MenuFormScreenState extends State<MenuFormScreen> {
   final _priceController = TextEditingController();
   final _categoryController = TextEditingController(text: 'Main');
 
+  Set<String> _periods = {'Lunch', 'Dinner'};
   bool _submitting = false;
   String? _errorText;
 
@@ -58,6 +60,7 @@ class _MenuFormScreenState extends State<MenuFormScreen> {
         description: _descriptionController.text.trim(),
         price: _priceController.text.trim(),
         category: _categoryController.text.trim(),
+        mealPeriods: [for (final p in mealPeriodOptions) if (_periods.contains(p)) p],
       );
       if (mounted) Navigator.of(context).pop(true);
     } on ApiException catch (e) {
@@ -121,6 +124,8 @@ class _MenuFormScreenState extends State<MenuFormScreen> {
                         ? 'Enter a category.'
                         : null,
                   ),
+                  const SizedBox(height: 16),
+                  MealPeriodPicker(selected: _periods, onChanged: (v) => setState(() => _periods = v)),
                   if (_errorText != null) ...[
                     const SizedBox(height: 12),
                     Text(

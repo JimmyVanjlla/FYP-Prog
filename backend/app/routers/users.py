@@ -8,6 +8,7 @@ from app.models.audit import AuditLog
 from app.models.roles import Role
 from app.models.user import User
 from app.schemas.user import AuditLogOut, PasswordChange, ProfileUpdate, UserOut, UserRegister, UserUpdate
+from app.services import accounts as account_service
 from app.services import auth as auth_service
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -80,12 +81,21 @@ def change_own_password(
 
 @router.get("", response_model=list[UserOut])
 def list_users(
+    deleted: bool = False,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
     _admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
 ) -> list[UserOut]:
-    return list(db.query(User).order_by(User.name).limit(limit).offset(offset).all())
+    """The staff list, or with ?deleted=true the accounts deleted in the last
+    60 days (newest first), which can still be restored. Accounts past that
+    are purged and in neither list."""
+    query = db.query(User)
+    if deleted:
+        account_service.purge_expired_deleted_users(db)
+        query = query.filter(User.deleted_at.is_not(None)).filter(User.purged_at.is_(None))
+        return list(query.order_by(User.deleted_at.desc()).limit(limit).offset(offset).all())
+    return list(query.filter(User.deleted_at.is_(None)).order_by(User.name).limit(limit).offset(offset).all())
 
 
 @router.post("", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -145,6 +155,55 @@ def update_user(
         )
     db.commit()
     db.refresh(target)
+    return target
+
+
+@router.delete("/{user_id}", response_model=UserOut)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
+) -> UserOut:
+    """Delete a deactivated account: it leaves the staff list and can be
+    restored from the Deleted list for 60 days, then it is purged."""
+    target = db.get(User, user_id)
+    if target is None or target.purged_at is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    if target.user_id == admin.user_id:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="You cannot delete your own account.")
+    _require_owner_for_top_roles(admin, roles=[target.role])
+    try:
+        account_service.delete_account(db, target)
+    except account_service.AccountNotDeactivatedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Deactivate the account before deleting it."
+        )
+    db.add(AuditLog(user_id=admin.user_id, action=f"delete_user:{user_id}"))
+    db.commit()
+    return target
+
+
+@router.post("/{user_id}/restore", response_model=UserOut)
+def restore_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_role(*_ACCOUNT_ADMINS)),
+) -> UserOut:
+    """Bring a deleted account back (deactivated; reactivate it from the staff list)."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+    _require_owner_for_top_roles(admin, roles=[target.role])
+    try:
+        account_service.restore_account(db, target)
+    except account_service.AccountPurgedError:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE, detail="This account was removed permanently after 60 days."
+        )
+    except account_service.AccountNotDeletedError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This account is not deleted.")
+    db.add(AuditLog(user_id=admin.user_id, action=f"restore_user:{user_id}"))
+    db.commit()
     return target
 
 

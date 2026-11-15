@@ -69,3 +69,16 @@ class ForecastAvailabilityOut(BaseModel):
     minimum_required: int
     available: bool
     message: str | None
+
+
+class OutlookRowOut(BaseModel):
+    """One meal period on one day: how many portions the kitchen is expected to
+    sell in total, against a typical day, and how many Kitchen Staff that
+    calls for. The view a Shift Supervisor plans staffing from."""
+
+    forecast_date: date
+    meal_period: str
+    predicted_portions: int
+    typical_portions: int | None
+    level: str  # Quiet | Normal | Busy
+    recommended_kitchen_staff: int

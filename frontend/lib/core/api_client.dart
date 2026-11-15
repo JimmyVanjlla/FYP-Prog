@@ -98,6 +98,7 @@ class ApiClient {
     String? description,
     required String price,
     required String category,
+    List<String>? mealPeriods,
   }) async {
     final resp = await http.post(
       _uri('/menu-items'),
@@ -108,6 +109,7 @@ class ApiClient {
           'description': description,
         'price': price,
         'category': category,
+        'meal_periods': ?mealPeriods,
       }),
     );
     return _decode(resp) as Map<String, dynamic>;

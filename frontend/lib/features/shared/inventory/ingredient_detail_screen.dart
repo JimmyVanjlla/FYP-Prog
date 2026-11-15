@@ -23,7 +23,7 @@ class IngredientDetailScreen extends StatelessWidget {
     final auth = context.read<AuthState>();
     final api = auth.api;
     final role = auth.role;
-    final canManage = role == Roles.inventoryStaff || role == Roles.manager;
+    final canManage = role == Roles.inventoryStaff || Roles.isManagement(role);
     final canRequest = role == Roles.kitchenStaff;
 
     return Scaffold(

@@ -5,6 +5,7 @@ import '../../../core/async_view.dart';
 import '../../../core/auth_state.dart';
 import '../../../core/json.dart';
 import '../../../core/theme.dart';
+import 'meal_period_picker.dart';
 
 /// FR2.1 / FR2.2 — one menu item: its profit margin and availability, the
 /// recipe it's built from, and (for the Restaurant Manager) editing,
@@ -29,7 +30,7 @@ class _MenuDetailScreenState extends State<MenuDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final canEdit = context.read<AuthState>().role == Roles.manager;
+    final canEdit = Roles.isManagement(context.read<AuthState>().role);
     return Scaffold(
       appBar: AppBar(title: const Text('Menu item')),
       body: AsyncView<({Json item, List<Json> ingredients})>(
@@ -217,6 +218,11 @@ class _SummaryCard extends StatelessWidget {
             Text(item['name'] as String, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 4),
             Text('${item['category']}  ·  ${money(price)}'),
+            const SizedBox(height: 2),
+            Text(
+              'Served at ${((item['meal_periods'] as List<dynamic>?) ?? const ['Lunch', 'Dinner']).join(', ')}',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
             if ((item['description'] as String?)?.isNotEmpty ?? false) ...[
               const SizedBox(height: 8),
               Text(item['description'] as String),
@@ -265,6 +271,7 @@ class _EditFormState extends State<_EditForm> {
   late final _description = TextEditingController(text: widget.item['description'] as String? ?? '');
   late final _price = TextEditingController(text: trimNum(widget.item['price']));
   late final _category = TextEditingController(text: widget.item['category'] as String);
+  late Set<String> _periods = {...((widget.item['meal_periods'] as List<dynamic>?) ?? const ['Lunch', 'Dinner']).cast<String>()};
   bool _saving = false;
 
   @override
@@ -287,6 +294,7 @@ class _EditFormState extends State<_EditForm> {
         'description': _description.text.trim(),
         'price': _price.text.trim(),
         'category': _category.text.trim(),
+        'meal_periods': [for (final p in mealPeriodOptions) if (_periods.contains(p)) p],
       }),
       success: 'Menu item saved.',
     );
@@ -330,6 +338,8 @@ class _EditFormState extends State<_EditForm> {
             decoration: const InputDecoration(labelText: 'Category'),
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Required.' : null,
           ),
+          const SizedBox(height: 16),
+          MealPeriodPicker(selected: _periods, onChanged: (v) => setState(() => _periods = v)),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: _saving ? null : _save,

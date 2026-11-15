@@ -147,6 +147,11 @@ def assign_staff(
             status_code=status.HTTP_409_CONFLICT,
             detail="This staff member is already assigned to a station on this shift.",
         )
+    except staffing_service.WrongRoleForStationError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Only Kitchen Staff can be assigned to the Kitchen station.",
+        )
 
 
 @router.post("/schedules/{schedule_id}/publish", response_model=ShiftScheduleOut)

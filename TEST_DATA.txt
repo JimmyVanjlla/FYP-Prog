@@ -126,11 +126,17 @@
     Change one quantity to about 1.8 times the recommendation.
                                                    Expect: a "reason" box appears;
                                                    enter  Large booking tonight
-    Leftovers: Dish Curry Laksa, service date today, Quantity prepared 40,
-    Quantity left over 14 (35%), then pick a leftover level.
-                                                   Expect: "Leftover log saved."; a
-                                                   high rate feeds the portion
-                                                   review check
+    Confirm the Curry Laksa quantity for Lunch (for example 40).
+    Leftovers: Lunch, Curry Laksa, today, choose 25%.
+                                                   Expect: "Based on the 40 portions
+                                                   prepared for Lunch", "About 10 of 40
+                                                   portions", then "Leftover log saved."
+                                                   There are no quantities to type.
+    Leftovers for a dish with no prep recorded.   Expect: a warning to confirm Prep first,
+                                                   and Save log stays disabled
+    Prep screen, meal period Breakfast.           Expect: "No dishes are served at
+                                                   Breakfast." (until a dish is set to
+                                                   be served at breakfast, see R)
     Restock request: Beansprouts, quantity 20, urgent (one is already there)
                                                    Expect: appears for Inventory
 
@@ -140,6 +146,10 @@
                                                    per station; adding staff
                                                    clears the "below recommendation"
                                                    flag; Publish notifies them
+    Expect on that screen: an "N portions expected" card with Busy / Normal / Quiet and the
+    Kitchen Staff needed; only the Kitchen station (no Front of House); at least 4 Kitchen
+    Staff are recommended however quiet; the staff list offers Kitchen Staff only.
+    Forecasts > Outlook tab: each coming day and meal period with portions, how busy, and staff.
 
  H. Procurement  (procurement@test.com)
     Purchasing > Recommended to buy.              Expect: 15 items, each with "Tap to
@@ -215,6 +225,41 @@
                                                    Roti Telur at the top) and "Most wasted
                                                    ingredients" for the last 4 weeks; the
                                                    recent log with ingredient names
+
+ R. Meal periods per dish  (manager@test.com > Menu > a dish)
+    Open Roti Canai: under Edit details, tick Breakfast and Save.
+                                                   Expect: the dish page says "Served at
+                                                   Breakfast, Lunch, Dinner"; Prep for
+                                                   Breakfast now lists it; a dish with only
+                                                   Lunch ticked is not listed at Dinner
+    New menu item: the "Served at" chips start with Lunch and Dinner; the last chip cannot be
+    switched off.
+
+ S. Restock requests  (inventory@test.com > Restock requests)
+    Tap Approve, then Cancel.                     Expect: nothing changes
+    Tap Decline, type 123, tap Decline.           Expect: "Write it in words: it needs at
+                                                   least one letter"
+    Decline with  Already ordered, arrives Tuesday.
+                                                   Expect: it moves to the History tab with
+                                                   the reason; kitchen@test.com gets a
+                                                   notification with the reason
+    Approve another (confirm).                    Expect: History shows Approved; the
+                                                   kitchen is told
+
+ T. Deleting staff  (manager@test.com or owner@test.com > Staff)
+    Deactivate "Test Chef" (the account from K), then its menu > Delete account.
+                                                   Expect: a confirmation mentioning 60 days;
+                                                   the account leaves Accounts and appears in
+                                                   the Deleted tab with "59 days left to restore"
+    Deleted tab > Restore account.                Expect: it is back in Accounts, deactivated
+    An active account.                            Expect: no Delete option (deactivate first)
+    After 60 days a deleted account is removed for good and can no longer be restored.
+
+ U. Owner = Manager  (owner@test.com)
+    Expect the same drawer as the Manager: Needs attention, Menu, Inventory, Forecasts, Waste,
+    Reports, Purchasing, Deliveries, Staff, Settings; and the same controls on each (editing
+    menu items and ingredients, receiving deliveries, approving orders). Only the Owner can create
+    or change Manager and Owner accounts (see P).
 
  P. Account rules  (manager@test.com, then owner@test.com > Staff)
     As Manager: Add staff account.                Expect: the Role list has no Restaurant

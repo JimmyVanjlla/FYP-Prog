@@ -184,12 +184,16 @@ def update_restocking_request(
     request_id: int,
     data: RestockingRequestStatusUpdate,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(*_INVENTORY_WRITE_ROLES)),
+    staff: User = Depends(require_role(*_INVENTORY_WRITE_ROLES)),
 ) -> RestockingRequestOut:
     try:
-        return inventory_service.update_restocking_request_status(db, request_id, data.status)
+        return inventory_service.update_restocking_request_status(
+            db, request_id, data.status, decided_by=staff.user_id, note=data.note
+        )
     except inventory_service.IngredientNotFoundError:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found.")
+    except inventory_service.RequestAlreadyDecidedError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This request has already been decided.")
 
 
 @router.post("/consumption/apply", response_model=ConsumptionApplyResult)

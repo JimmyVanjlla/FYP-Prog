@@ -73,12 +73,15 @@ void main() {
       );
     });
 
-    testWidgets('owners can manage staff accounts as well as oversee the restaurant', (tester) async {
+    testWidgets('the owner sees everything the manager does', (tester) async {
       await expectDestinations(
         tester,
         Roles.owner,
-        ['Forecasts', 'Waste', 'Menu', 'Inventory', 'Deliveries', 'Staff'],
-        ['Prep', 'Purchasing', 'Settings'],
+        [
+          'Needs attention', 'Menu', 'Inventory', 'Forecasts', 'Waste', 'Reports',
+          'Purchasing', 'Deliveries', 'Staff', 'Settings',
+        ],
+        ['Prep'],
       );
     });
 
@@ -430,6 +433,8 @@ void main() {
         ],
       };
       await pumpAs(tester, Roles.shiftSupervisor, const Scaffold(body: ForecastDashboardScreen()), routes: routes);
+      await tester.tap(find.text('Forecasts')); // the first tab is the Outlook
+      await tester.pumpAndSettle();
 
       expect(find.textContaining('without a forecast yet'), findsOneWidget);
       expect(find.textContaining('3 of the 14 days'), findsOneWidget);

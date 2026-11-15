@@ -102,7 +102,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
   Widget build(BuildContext context) {
     final role = context.read<AuthState>().role;
     final isDeliveryStaff = role == Roles.deliveryStaff;
-    final canUpdateStatus = isDeliveryStaff || role == Roles.manager;
+    final canUpdateStatus = isDeliveryStaff || Roles.isManagement(role);
     final canResolve = canUpdateStatus || role == Roles.procurementOfficer;
     final isInventory = role == Roles.inventoryStaff;
 

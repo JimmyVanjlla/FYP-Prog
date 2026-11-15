@@ -5,6 +5,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core import meal_periods
 from app.models.kitchen import LeftoverLog, Notification, PrepConfirmation, PrepRecommendation
 from app.models.menu import MenuItem
 from app.schemas.kitchen import LeftoverLogCreate, PrepConfirmationCreate
@@ -27,6 +28,13 @@ class NoForecastAvailableError(Exception):
 class MenuItemInactiveError(Exception):
     """UC-MR-01 Alt Flow 3a — a deactivated item is removed from prep
     recommendation screens."""
+
+
+class MealPeriodNotServedError(Exception):
+    """The dish is not served in that meal period, so there is nothing to prep."""
+
+    def __init__(self, dish: str, period: str):
+        super().__init__(f"{dish} is not served at {period}.")
 
 
 class RecommendationNotFoundError(Exception):
@@ -60,6 +68,8 @@ def generate_prep_recommendation(
     item = db.get(MenuItem, menu_item_id)
     if item is None or not item.is_active:
         raise MenuItemInactiveError
+    if not meal_periods.serves(item.meal_periods, meal_period):
+        raise MealPeriodNotServedError(item.name, meal_period)
 
     forecast = get_latest_forecast(
         db, menu_item_id=menu_item_id, meal_period=meal_period, forecast_date=forecast_date
@@ -220,14 +230,51 @@ def confirm_prep(
     return confirmation
 
 
+class NoPrepQuantityError(Exception):
+    """A leftover percentage needs a prep quantity to be a percentage of."""
+
+
+def _prepared_quantity_for(db: Session, *, menu_item_id: int, meal_period: str, day: date) -> Decimal | None:
+    """How much of a dish was prepared for a meal period: what Kitchen Staff
+    confirmed, else what was recommended. None if nothing was recorded."""
+    recommendation = db.scalars(
+        select(PrepRecommendation)
+        .where(PrepRecommendation.menu_item_id == menu_item_id)
+        .where(PrepRecommendation.meal_period == meal_period)
+        .where(PrepRecommendation.forecast_date == day)
+        .order_by(PrepRecommendation.recommendation_id.desc())
+    ).first()
+    if recommendation is None:
+        return None
+    confirmation = db.scalars(
+        select(PrepConfirmation).where(PrepConfirmation.recommendation_id == recommendation.recommendation_id)
+    ).first()
+    quantity = confirmation.confirmed_quantity if confirmation is not None else recommendation.recommended_quantity
+    return quantity if quantity > 0 else None
+
+
 def log_leftover(db: Session, *, staff_id: int, data: LeftoverLogCreate) -> LeftoverLog:
     """FR5.3."""
+    prepared, leftover, level = data.prepared_quantity, data.leftover_quantity, data.leftover_level
+    if data.leftover_percent is not None:
+        item = db.get(MenuItem, data.menu_item_id)
+        if item is not None and not meal_periods.serves(item.meal_periods, data.meal_period):
+            raise MealPeriodNotServedError(item.name, data.meal_period)
+        prepared = _prepared_quantity_for(
+            db, menu_item_id=data.menu_item_id, meal_period=data.meal_period, day=data.service_period_date
+        )
+        if prepared is None:
+            raise NoPrepQuantityError
+        leftover = (prepared * data.leftover_percent / 100).quantize(Decimal("0.01"))
+        level = f"{data.leftover_percent}% left over"
     log = LeftoverLog(
         menu_item_id=data.menu_item_id,
         service_period_date=data.service_period_date,
-        prepared_quantity=data.prepared_quantity,
-        leftover_quantity=data.leftover_quantity,
-        leftover_level=data.leftover_level,
+        meal_period=data.meal_period,
+        leftover_percent=data.leftover_percent,
+        prepared_quantity=prepared,
+        leftover_quantity=leftover,
+        leftover_level=level,
         staff_id=staff_id,
     )
     db.add(log)

@@ -18,16 +18,17 @@ class ForecastDashboardScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const DefaultTabController(
-      length: 2,
+      length: 3,
       child: Column(
         children: [
           TabBar(
             tabs: [
+              Tab(icon: Icon(Icons.speed_rounded), text: 'Outlook'),
               Tab(icon: Icon(Icons.insights_rounded), text: 'Forecasts'),
               Tab(icon: Icon(Icons.rule_rounded), text: 'Accuracy'),
             ],
           ),
-          Expanded(child: TabBarView(children: [_ForecastsTab(), _AccuracyTab()])),
+          Expanded(child: TabBarView(children: [_OutlookTab(), _ForecastsTab(), _AccuracyTab()])),
         ],
       ),
     );
@@ -101,7 +102,7 @@ class _ForecastsTabState extends State<_ForecastsTab> {
 
   @override
   Widget build(BuildContext context) {
-    final isManager = context.read<AuthState>().role == Roles.manager;
+    final isManager = Roles.isManagement(context.read<AuthState>().role);
     return AsyncView<_ForecastData>(
       key: ValueKey('$_loadCount|$_itemId|$_mealPeriod|${_range.start}|${_range.end}'),
       load: _load,
@@ -280,6 +281,107 @@ class _UnavailableCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// How busy a meal period is expected to be, as a coloured label: the word
+/// is always there, so colour is never the only signal.
+class LevelChip extends StatelessWidget {
+  final String level;
+
+  const LevelChip({super.key, required this.level});
+
+  static Color colorOf(BuildContext context, String level) =>
+      level == 'Busy' ? Severity.warning : (level == 'Quiet' ? Theme.of(context).colorScheme.primary : Severity.ok);
+
+  @override
+  Widget build(BuildContext context) => SeverityChip(label: level, color: colorOf(context, level));
+}
+
+/// Day by day for the coming week: how many portions the kitchen is expected to
+/// sell in each meal period, whether that is a busy, normal or quiet day, and
+/// how many Kitchen Staff it calls for. The view staffing is planned from.
+class _OutlookTab extends StatelessWidget {
+  const _OutlookTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final api = context.read<AuthState>().api;
+    final today = restaurantToday();
+    return AsyncView<List<Json>>(
+      load: () async => asJsonList(
+        await api.getJson('/forecasting/outlook', query: {
+          'date_from': fmtDate(today),
+          'date_to': fmtDate(today.add(const Duration(days: 6))),
+        }),
+      ),
+      builder: (context, rows, reload) {
+        final byDay = <String, List<Json>>{};
+        for (final r in rows) {
+          byDay.putIfAbsent(r['forecast_date'] as String, () => []).add(r);
+        }
+        final scheme = Theme.of(context).colorScheme;
+        return RefreshableList(
+          onRefresh: reload,
+          empty: const EmptyState(
+            icon: Icons.speed_rounded,
+            message: 'No forecasts for the coming week yet.',
+            detail: 'Once forecasts are trained, each day shows how busy it is expected to be.',
+          ),
+          children: [
+            if (rows.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Total portions across the whole menu, compared with a typical day (the last four weeks).',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                ),
+              ),
+            for (final entry in byDay.entries)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${friendlyDate(entry.key)}${entry.key == fmtDate(today) ? '  ·  today' : ''}',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final r in entry.value)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Row(
+                              children: [
+                                SizedBox(width: 78, child: Text(r['meal_period'] as String, style: const TextStyle(fontWeight: FontWeight.w600))),
+                                Expanded(
+                                  child: Text(
+                                    '${r['predicted_portions']} portions'
+                                    '${r['typical_portions'] == null ? '' : '  (typical ${r['typical_portions']})'}',
+                                  ),
+                                ),
+                                LevelChip(level: r['level'] as String),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 6),
+                        for (final r in entry.value)
+                          Text(
+                            '${r['meal_period']}: ${r['recommended_kitchen_staff']} Kitchen Staff',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

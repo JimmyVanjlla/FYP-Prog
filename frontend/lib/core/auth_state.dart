@@ -30,6 +30,9 @@ class Roles {
     deliveryStaff,
   ];
 
+  /// A Restaurant Owner can do everything a Restaurant Manager can.
+  static bool isManagement(String? role) => role == manager || role == owner;
+
   /// The roles [actor] may give to an account they create or edit. An Owner
   /// can give any; a Manager only the roles below Manager. (The server
   /// enforces the same rule.)

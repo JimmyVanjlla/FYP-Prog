@@ -66,10 +66,17 @@ def get_current_user(
 
 def require_role(*allowed_roles: Role):
     """Usage: Depends(require_role(Role.RESTAURANT_MANAGER)) on any route
-    that FR1.3 restricts to specific role(s)."""
+    that FR1.3 restricts to specific role(s).
+
+    A Restaurant Owner can do everything a Restaurant Manager can, so wherever
+    Manager is allowed the Owner is too. (What only an Owner may do, such as
+    creating Manager and Owner accounts, is checked where it applies.)"""
+    allowed = {r.value for r in allowed_roles}
+    if Role.RESTAURANT_MANAGER.value in allowed:
+        allowed.add(Role.RESTAURANT_OWNER.value)
 
     def _check(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role not in {r.value for r in allowed_roles}:
+        if current_user.role not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have permission to perform this action.",

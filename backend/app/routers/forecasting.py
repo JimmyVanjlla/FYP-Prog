@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -15,6 +15,7 @@ from app.schemas.forecasting import (
     ForecastTrainingResult,
     OrderCreate,
     OrderOut,
+    OutlookRowOut,
 )
 from app.services import forecasting as forecasting_service
 
@@ -66,6 +67,21 @@ def list_forecasts(
         limit=limit,
         offset=offset,
     )
+
+
+@router.get("/outlook", response_model=list[OutlookRowOut])
+def forecast_outlook(
+    date_from: date | None = None,
+    date_to: date | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> list[OutlookRowOut]:
+    """How busy each coming meal period is expected to be: total forecast
+    portions, against a typical day, and the Kitchen Staff that calls for.
+    Defaults to today and the six days after it."""
+    start = date_from or restaurant_today()
+    end = date_to or (start + timedelta(days=6))
+    return forecasting_service.daily_outlook(db, date_from=start, date_to=end)
 
 
 @router.get("/availability", response_model=list[ForecastAvailabilityOut])

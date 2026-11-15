@@ -37,7 +37,7 @@ class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
   int _version = 0;
 
   bool get _isOfficer => context.read<AuthState>().role == Roles.procurementOfficer;
-  bool get _isManager => context.read<AuthState>().role == Roles.manager;
+  bool get _isManager => Roles.isManagement(context.read<AuthState>().role);
 
   Future<_Data> _load() async {
     final api = context.read<AuthState>().api;

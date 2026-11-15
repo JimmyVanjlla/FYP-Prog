@@ -9,7 +9,7 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 243 backend (including 5 cross-role integration workflows), 85 Flutter tests; the Flutter analyzer is clean.
+- Tests: 265 backend (including 5 cross-role integration workflows), 100 Flutter tests; the Flutter analyzer is clean.
 
 ## What is still genuinely open
 

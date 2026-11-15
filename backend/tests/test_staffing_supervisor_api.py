@@ -20,8 +20,7 @@ def test_supervisor_can_list_assignable_staff(client):
     staff = client.get("/staffing/staff", headers=supervisor).json()
     roles = {s["role"] for s in staff}
 
-    assert "Kitchen Staff" in roles
-    assert "Restaurant Owner" not in roles  # the Owner doesn't work a station
+    assert roles == {"Kitchen Staff"}  # only Kitchen Staff work the station
     # Only what's needed to pick someone: no emails or password hashes.
     assert all(set(s) == {"user_id", "name", "role"} for s in staff)
 
@@ -53,8 +52,8 @@ def test_regenerating_recommendations_replaces_rather_than_stacks(client):
     client.post(url, headers=supervisor)
     client.post(url, headers=supervisor)
 
-    # Kitchen + Front of House, once each.
-    assert len(client.get(url, headers=supervisor).json()) == 2
+    # The Kitchen, once.
+    assert len(client.get(url, headers=supervisor).json()) == 1
 
 
 def test_closing_report_compares_actual_to_forecast(client, db_session):

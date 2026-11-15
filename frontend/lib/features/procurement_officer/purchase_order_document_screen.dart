@@ -53,7 +53,7 @@ class PurchaseOrderDocumentScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final api = context.read<AuthState>().api;
     final role = context.read<AuthState>().role;
-    final canFlag = role == Roles.procurementOfficer || role == Roles.manager;
+    final canFlag = role == Roles.procurementOfficer || Roles.isManagement(role);
     return Scaffold(
       appBar: AppBar(title: Text(poNumber(order['po_id']))),
       body: AsyncView<List<Json>>(
