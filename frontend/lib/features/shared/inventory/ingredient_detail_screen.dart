@@ -348,7 +348,9 @@ class IngredientDetailScreen extends StatelessWidget {
       context,
       title: 'Record waste',
       label: 'Quantity wasted',
-      helper: 'Out of ${trimNum(available)} ${ing['unit']} in this batch.',
+      helper: 'Out of ${trimNum(available)} ${ing['unit']} in this batch. It comes off stock and is added to '
+          'waste. If the whole batch is wasted, the batch is removed.',
+      initial: trimNum(available),
       suffix: ing['unit'] as String,
       confirmLabel: 'Record',
       check: (v) {
@@ -366,7 +368,7 @@ class IngredientDetailScreen extends StatelessWidget {
         'ingredient_id': ing['ingredient_id'],
         'quantity_wasted': value,
       }),
-      success: 'Waste recorded. Adjust stock separately to remove it from the count.',
+      success: 'Waste recorded and taken off stock.',
     );
     if (ok) await reload();
   }

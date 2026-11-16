@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.dates import end_of_day, restaurant_today
-from app.models.inventory import Ingredient, StockBatch
+from app.models.inventory import Ingredient, StockAdjustment, StockBatch
 from app.models.kitchen import LeftoverLog
 from app.models.menu import MenuItem, RecipeIngredientLink
 from app.models.waste import WasteLog, WasteReductionTrend
@@ -140,15 +140,19 @@ class InvalidWasteEntryError(Exception):
     """FR6.5 — carries the validation message to show the user."""
 
 
-def create_manual_waste_log(db: Session, data: WasteLogCreate) -> WasteLog:
+def create_manual_waste_log(db: Session, data: WasteLogCreate, staff_id: int | None = None) -> WasteLog:
     """FR6.5 — a waste entry typed in by staff (rather than derived
     automatically from a leftover log or the expiry scan). Rejects anything
     that couldn't have been wasted: a negative/zero quantity (the schema
     already refuses those), or more than was originally prepared (leftover)
     or delivered (expiry batch).
 
-    Records the waste and its cost only; the matching stock change is a
-    separate stock adjustment (FR3.4), so the two aren't double-applied."""
+    A leftover entry records the waste and its cost only: that food was never
+    in stock. An expiry entry is stock being thrown away, so it also comes
+    off the ingredient's stock (as a logged "spoilage" adjustment, never below
+    zero) and off the batch, and a batch that is wholly wasted is marked
+    depleted, which takes it, and its near-expiry alert, off the screen."""
+    batch = None
     if data.source_type == "expiry":
         batch = db.get(StockBatch, data.source_ref_id)
         if batch is None:
@@ -185,6 +189,27 @@ def create_manual_waste_log(db: Session, data: WasteLogCreate) -> WasteLog:
         waste_cost=cost,
     )
     db.add(waste_log)
+
+    if batch is not None:
+        ingredient = db.get(Ingredient, data.ingredient_id)
+        taken = min(data.quantity_wasted, ingredient.current_stock)
+        if taken > 0:
+            ingredient.current_stock -= taken
+            if staff_id is not None:
+                db.add(
+                    StockAdjustment(
+                        ingredient_id=data.ingredient_id,
+                        staff_id=staff_id,
+                        adjusted_quantity=-taken,
+                        reason_category="spoilage",
+                        note=f"Expired batch #{batch.batch_id} recorded as waste",
+                    )
+                )
+        batch.quantity -= data.quantity_wasted
+        if batch.quantity <= 0:
+            batch.quantity = Decimal("0.000")
+            batch.status = "depleted"
+
     db.commit()
     db.refresh(waste_log)
     return waste_log

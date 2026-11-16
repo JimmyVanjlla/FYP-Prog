@@ -43,15 +43,15 @@ def waste_summary(
 def create_waste_log(
     data: WasteLogCreate,
     db: Session = Depends(get_db),
-    _staff: User = Depends(
+    staff: User = Depends(
         require_role(Role.KITCHEN_STAFF, Role.INVENTORY_STAFF, Role.RESTAURANT_MANAGER)
     ),
 ) -> WasteLogOut:
     """FR6.1 / FR6.5 — Kitchen Staff log leftover waste and Inventory Staff
     log expiry waste; entries are validated against what was prepared or
-    delivered."""
+    delivered. Expiry waste also comes off stock and off the batch."""
     try:
-        return waste_service.create_manual_waste_log(db, data)
+        return waste_service.create_manual_waste_log(db, data, staff_id=staff.user_id)
     except waste_service.InvalidWasteEntryError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
 

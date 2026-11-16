@@ -115,6 +115,7 @@ def list_stock_batches(
     that ever looked at StockBatch rows again after creation."""
     stmt = (
         select(StockBatch)
+        .where(StockBatch.status != "depleted")  # wholly wasted or used: nothing left to show
         .order_by(StockBatch.expiry_date, StockBatch.batch_id)
         .limit(limit)
         .offset(offset)

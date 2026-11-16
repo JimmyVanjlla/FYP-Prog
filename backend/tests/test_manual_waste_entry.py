@@ -77,6 +77,75 @@ def test_expiry_waste_within_the_delivered_amount_is_accepted_and_costed(client)
     assert "waste_cost" in body
 
 
+def _stock(client, ctx):
+    rows = client.get("/inventory/ingredients", headers=ctx["inventory"]).json()
+    return next(r for r in rows if r["ingredient_id"] == ctx["ingredient"]["ingredient_id"])["current_stock"]
+
+
+def _batches(client, ctx):
+    return client.get(
+        f"/inventory/stock-batches?ingredient_id={ctx['ingredient']['ingredient_id']}", headers=ctx["inventory"]
+    ).json()
+
+
+def test_wasting_a_whole_expiring_batch_takes_it_off_stock_and_off_the_screen(client):
+    ctx = _setup(client)
+    assert float(_stock(client, ctx)) == 25.0  # 20 in stock + the 5 kg batch
+
+    resp = client.post("/waste/logs", json=_expiry(ctx, "5"), headers=ctx["inventory"])
+
+    assert resp.status_code == 201
+    assert float(_stock(client, ctx)) == 20.0
+    assert _batches(client, ctx) == []  # the batch, and its near-expiry alert, are gone
+    adjustments = client.get(
+        f"/inventory/stock-adjustments?ingredient_id={ctx['ingredient']['ingredient_id']}", headers=ctx["inventory"]
+    ).json()
+    assert [(float(a["adjusted_quantity"]), a["reason_category"]) for a in adjustments] == [(-5.0, "spoilage")]
+    logs = client.get(f"/waste/logs?ingredient_id={ctx['ingredient']['ingredient_id']}", headers=ctx["inventory"]).json()
+    assert [(l["source_type"], float(l["quantity_wasted"])) for l in logs if l["source_type"] == "expiry"] == [("expiry", 5.0)]
+
+
+def test_wasting_part_of_a_batch_leaves_the_rest(client):
+    ctx = _setup(client)
+
+    assert client.post("/waste/logs", json=_expiry(ctx, "2"), headers=ctx["inventory"]).status_code == 201
+
+    assert float(_stock(client, ctx)) == 23.0
+    batches = _batches(client, ctx)
+    assert len(batches) == 1 and float(batches[0]["quantity"]) == 3.0
+    # the rest can still be wasted, and then the batch goes
+    assert client.post("/waste/logs", json=_expiry(ctx, "3"), headers=ctx["inventory"]).status_code == 201
+    assert _batches(client, ctx) == []
+
+
+def test_wasting_a_batch_never_drives_stock_below_zero(client):
+    ctx = _setup(client)
+    # someone already corrected the count down to 2 kg, less than the 5 kg batch
+    client.post(
+        "/inventory/stock-adjustments",
+        json={"ingredient_id": ctx["ingredient"]["ingredient_id"], "adjusted_quantity": "-23", "reason_category": "miscount"},
+        headers=ctx["inventory"],
+    )
+    assert float(_stock(client, ctx)) == 2.0
+
+    assert client.post("/waste/logs", json=_expiry(ctx, "5"), headers=ctx["inventory"]).status_code == 201
+
+    assert float(_stock(client, ctx)) == 0.0
+    assert _batches(client, ctx) == []
+
+
+def test_leftover_waste_does_not_touch_stock(client):
+    ctx = _setup(client)
+    body = {
+        "source_type": "leftover",
+        "source_ref_id": ctx["leftover"]["log_id"],
+        "ingredient_id": ctx["ingredient"]["ingredient_id"],
+        "quantity_wasted": "1",
+    }
+    assert client.post("/waste/logs", json=body, headers=ctx["kitchen"]).status_code == 201
+    assert float(_stock(client, ctx)) == 25.0
+
+
 def test_expiry_waste_beyond_the_delivered_amount_is_rejected(client):
     ctx = _setup(client)
 
