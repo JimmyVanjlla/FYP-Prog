@@ -392,10 +392,38 @@ void main() {
       };
       await pumpAs(tester, Roles.manager, const Scaffold(body: ApprovalsScreen()), routes: routes);
 
-      expect(find.textContaining('Remaining budget RM 600.00'), findsOneWidget);
-      expect(find.textContaining('RM 150.00 over'), findsOneWidget);
+      // The order is already counted in "remaining", so it is not taken off again.
+      expect(find.textContaining('Budget remaining RM 600.00, with this order counted'), findsOneWidget);
+      expect(find.textContaining('over'), findsNothing);
       expect(find.text('Approve'), findsOneWidget);
       expect(find.text('Reject'), findsOneWidget);
+    });
+
+    testWidgets('approvals say so when the month is over budget', (tester) async {
+      final routes = <String, Handler>{
+        'GET /procurement/purchase-orders': (_, _) => [
+          {
+            'po_id': 4,
+            'supplier_id': 1,
+            'created_by': 2,
+            'approved_by': null,
+            'status': 'pending_approval',
+            'total_cost': '750.00',
+            'created_at': '2026-10-30T10:00:00',
+            'exceeds_budget': true,
+          },
+        ],
+        'GET /procurement/budget/utilisation': (_, _) => {
+          'month': '2026-10-01',
+          'budget_limit': '1000.00',
+          'spent': '1150.00',
+          'remaining': '-150.00',
+          'utilisation_pct': '115.00',
+        },
+      };
+      await pumpAs(tester, Roles.manager, const Scaffold(body: ApprovalsScreen()), routes: routes);
+
+      expect(find.textContaining('Over budget by RM 150.00 this month'), findsOneWidget);
     });
 
     testWidgets('staff screen lists accounts with role and status', (tester) async {

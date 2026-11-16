@@ -352,12 +352,14 @@ class _PurchaseOrderTile extends StatelessWidget {
               const SizedBox(height: 6),
               Builder(
                 builder: (context) {
-                  final total = double.tryParse(po.totalCost.toString()) ?? 0;
-                  final over = total > remaining!;
+                  // An order counts against the budget from the moment it is
+                  // raised, so "remaining" already includes this one:
+                  // approving changes nothing, rejecting gives it back.
+                  final over = remaining! < 0;
                   return Text(
                     over
-                        ? 'Remaining budget ${money(remaining)}: this order is ${money(total - remaining!)} over'
-                        : 'Remaining budget ${money(remaining)}: ${money(remaining! - total)} left if approved',
+                        ? 'Over budget by ${money(-remaining!)} this month, with this order counted'
+                        : 'Budget remaining ${money(remaining)}, with this order counted',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
