@@ -55,9 +55,13 @@
                       Kedai Runcit Supplies), each with their own prices.
  Purchase orders      #4 pending approval (RM 530.00: Chicken 20 kg at RM 12.50
                       + Prawns 10 kg at RM 28.00)
+                      #8 pending approval (RM 210.00, Kedai Runcit Supplies:
+                      Condensed Milk 20 at RM 3.50 + Coffee Powder 5 at RM 28.00);
+                      this is the one to reject to show the budget falling
                       #3 approved, awaiting delivery (RM 740.00)
                       #2 delivered (RM 193.50), #1 approved (RM 530.00)
- Budget               November budget RM 8,000.00; RM 1,270.00 spent so far.
+ Budget               November budget RM 8,000.00; RM 1,480.00 spent so far (18.5%),
+                      RM 6,520.00 remaining. That includes both pending orders.
  Leftover logs        12 dishes x 7 days (9 to 14 Nov) added on 15 Nov, each with
                       its waste cost (about RM 220 of leftover waste in total).
  Portion reviews      2 pending after the 15 Nov analysis: Roti Telur and Curry
@@ -89,11 +93,15 @@
                                                    Approve
     Tap Approve.                                  Expect: PO moves to History as
                                                    Approved; the budget bar stays at
-                                                   RM 1,270.00 of RM 8,000.00
-                                                   (16%) because an order counts from
+                                                   RM 1,480.00 of RM 8,000.00
+                                                   (18.5%) because an order counts from
                                                    the moment it is raised (a rejected
                                                    one drops out); the Procurement
                                                    Officer gets a notification
+    Then open PO #8 and Reject it with a reason.   Expect: spent falls by RM 210.00 to
+                                                   RM 1,270.00 and the remaining budget
+                                                   rises from RM 6,520.00 to RM 6,730.00
+                                                   (approving #4 first changes nothing)
 
  C. Manager rejects with a reason (use the Curry Laksa review, see D)
     Tap Reject, then Reject again with no text.   Expect: "Required."
