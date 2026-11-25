@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:restaurant_ops/core/auth_state.dart';
 import 'package:restaurant_ops/core/json.dart';
 import 'package:restaurant_ops/features/kitchen_staff/leftover_log_screen.dart';
+import 'package:restaurant_ops/features/kitchen_staff/orders_screen.dart';
 import 'package:restaurant_ops/features/kitchen_staff/prep_screen.dart';
 import 'package:restaurant_ops/features/manager/staff_screen.dart';
 import 'package:restaurant_ops/features/shared/forecasts/forecast_dashboard_screen.dart';
@@ -36,7 +37,7 @@ void main() {
   group('restocking requests', () {
     Future<FakeApi> open(WidgetTester tester, List<Json> requests) => pumpAs(
       tester,
-      Roles.inventoryStaff,
+      Roles.shiftSupervisor,
       const Scaffold(body: RestockingRequestsScreen()),
       routes: {..._ingredients, 'GET /inventory/restocking-requests': (_, _) => requests},
     );
@@ -242,79 +243,127 @@ void main() {
     });
   });
 
-  group('leftover percentages', () {
-    test('the standard levels', () {
-      expect(leftoverLevels, [0, 25, 50, 75, 100]);
-    });
-
-    test('the basis is what Prep confirmed; a recommendation nobody confirmed is nothing', () {
-      expect(leftoverPrepBasis({'confirmed': true, 'confirmed_quantity': '40.00', 'recommended_quantity': '35.00'}), 40);
-      expect(leftoverPrepBasis({'confirmed': false, 'recommended_quantity': '35.00'}), isNull);
-      expect(leftoverPrepBasis(null), isNull);
-      expect(leftoverPrepBasis({'confirmed': true, 'confirmed_quantity': '0.00'}), isNull);
-    });
-
-    Map<String, Handler> leftoverRoutes({List<Json> prep = const []}) => {
-      'GET /menu-items': (_, _) => [
-        {'menu_item_id': 1, 'name': 'Curry Laksa', 'meal_periods': ['Lunch', 'Dinner']},
-      ],
-      'GET /kitchen/prep-recommendations': (_, _) => prep,
+  group('leftover worked out from sales', () {
+    Json dish(String name, {bool confirmed = true, double prepared = 8, int served = 5, bool recorded = false}) => {
+      'menu_item_id': name.length,
+      'menu_item_name': name,
+      'prep_confirmed': confirmed,
+      'prepared': confirmed ? prepared.toStringAsFixed(2) : null,
+      'served': served,
+      'leftover': confirmed ? (prepared - served).clamp(0, prepared).toStringAsFixed(2) : null,
+      'leftover_percent': confirmed ? ((prepared - served).clamp(0, prepared) / prepared * 100).round() : null,
+      'sold_beyond_prep': 0,
+      'recorded': recorded,
     };
 
-    testWidgets('with no confirmed prep it explains, and the log cannot be saved', (tester) async {
-      await pumpAs(tester, Roles.kitchenStaff, const Scaffold(body: LeftoverLogScreen()), routes: leftoverRoutes());
-      expect(find.textContaining('was not confirmed'), findsOneWidget);
-      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save log')).onPressed, isNull);
-      // No typed quantities, and no vague levels.
-      expect(find.text('Quantity prepared'), findsNothing);
-      expect(find.text('Partially Eaten'), findsNothing);
+    Map<String, Handler> routes(List<Json> dishes, {int open = 0}) => {
+      'GET /kitchen/leftover-summary': (_, _) => {
+        'service_date': '2026-11-16',
+        'meal_period': 'Lunch',
+        'open_orders': open,
+        'dishes': dishes,
+      },
+    };
+
+    testWidgets('shows prepared, served and left over, and nothing to type', (tester) async {
+      await pumpAs(tester, Roles.kitchenStaff, const Scaffold(body: LeftoverLogScreen()), routes: routes([dish('Curry Laksa')]));
+      expect(find.text('Curry Laksa'), findsOneWidget);
+      // 8 prepared, 5 served: 3 left over (38%).
+      expect(find.text('8'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('38% left'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(ChoiceChip), findsNothing);
     });
 
-    testWidgets('choosing a percentage shows the estimate and saves it with the meal period', (tester) async {
+    testWidgets('a dish whose prep was not confirmed is listed without a leftover', (tester) async {
+      await pumpAs(
+        tester,
+        Roles.kitchenStaff,
+        const Scaffold(body: LeftoverLogScreen()),
+        routes: routes([dish('Roti Telur', confirmed: false)]),
+      );
+      expect(find.text('Prep not confirmed'), findsOneWidget);
+      expect(find.textContaining('No dish has a confirmed prep quantity'), findsOneWidget);
+      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Record leftovers')).onPressed, isNull);
+    });
+
+    testWidgets('warns about orders that are not completed yet', (tester) async {
+      await pumpAs(
+        tester,
+        Roles.kitchenStaff,
+        const Scaffold(body: LeftoverLogScreen()),
+        routes: routes([dish('Curry Laksa')], open: 3),
+      );
+      expect(find.textContaining('3 orders are not completed yet'), findsOneWidget);
+    });
+
+    testWidgets('recording sends the date and meal period, not any quantity', (tester) async {
       final api = await pumpAs(
         tester,
         Roles.kitchenStaff,
         const Scaffold(body: LeftoverLogScreen()),
-        routes: leftoverRoutes(
-          prep: [
-            {'recommendation_id': 9, 'menu_item_id': 1, 'confirmed': true, 'confirmed_quantity': '40.00', 'recommended_quantity': '38.00'},
-          ],
-        ),
+        routes: {
+          ...routes([dish('Curry Laksa')]),
+          'POST /kitchen/leftovers/record': (_, _) => <Json>[],
+        },
       );
-      expect(find.textContaining('Based on the 40 portions confirmed in Prep for Lunch'), findsOneWidget);
-      expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save log')).onPressed, isNull); // nothing chosen yet
-
-      await tester.tap(find.text('25%'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Record leftovers'));
       await tester.pumpAndSettle();
-      expect(find.text('About 10 of 40 portions'), findsOneWidget);
-      await tester.tap(find.widgetWithText(FilledButton, 'Save log'));
-      await tester.pumpAndSettle();
-
       final sent = api.calls.singleWhere((c) => c.method == 'POST');
-      expect(sent.path, '/kitchen/leftover-logs');
+      expect(sent.path, '/kitchen/leftovers/record');
       final body = sent.body as Map;
-      expect(body['leftover_percent'], 25);
       expect(body['meal_period'], 'Lunch');
-      expect(body['menu_item_id'], 1);
-      expect(body.containsKey('prepared_quantity'), isFalse);
+      expect(body.keys.toSet(), {'service_date', 'meal_period'});
     });
   });
 
-  testWidgets('a dish whose prep was only recommended, not confirmed, cannot be logged', (tester) async {
-    await pumpAs(
-      tester,
-      Roles.kitchenStaff,
-      const Scaffold(body: LeftoverLogScreen()),
-      routes: {
-        'GET /menu-items': (_, _) => [
-          {'menu_item_id': 2, 'name': 'Roti Telur', 'meal_periods': ['Lunch', 'Dinner']},
-        ],
-        'GET /kitchen/prep-recommendations': (_, _) => [
-          {'recommendation_id': 4, 'menu_item_id': 2, 'confirmed': false, 'recommended_quantity': '9.00'},
-        ],
-      },
-    );
-    expect(find.textContaining('was not confirmed'), findsOneWidget);
-    expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Save log')).onPressed, isNull);
+  group('incoming orders', () {
+    Json order(int id, String status, {String name = 'Curry Laksa', int qty = 2}) => {
+      'order_id': id,
+      'menu_item_id': 1,
+      'menu_item_name': name,
+      'quantity': qty,
+      'meal_period': 'Lunch',
+      'order_date': '2026-11-16',
+      'status': status,
+      'created_at': '2026-11-16T04:30:00Z',
+    };
+
+    testWidgets('groups orders by status and moves one forward', (tester) async {
+      final api = await pumpAs(
+        tester,
+        Roles.kitchenStaff,
+        const Scaffold(body: OrdersScreen()),
+        routes: {
+          'GET /orders': (_, _) => [order(1, 'pending'), order(2, 'preparing', name: 'Roti Telur'), order(3, 'completed')],
+          'PATCH /orders/1/status': (_, _) => order(1, 'preparing'),
+        },
+      );
+      expect(find.text('2 × Curry Laksa'), findsNWidgets(2)); // one incoming, one completed
+      expect(find.text('2 × Roti Telur'), findsOneWidget);
+      expect(find.text('1 incoming'), findsOneWidget);
+      expect(find.text('1 preparing'), findsOneWidget);
+      expect(find.text('1 completed'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Start'));
+      await tester.pumpAndSettle();
+      final sent = api.calls.singleWhere((c) => c.method == 'PATCH');
+      expect(sent.path, '/orders/1/status');
+      expect((sent.body as Map)['status'], 'preparing');
+    });
+
+    testWidgets('with no orders it explains and offers sample orders', (tester) async {
+      await pumpAs(
+        tester,
+        Roles.kitchenStaff,
+        const Scaffold(body: OrdersScreen()),
+        routes: {'GET /orders': (_, _) => <Json>[]},
+      );
+      expect(find.textContaining('No orders for Lunch yet'), findsOneWidget);
+      expect(find.text('Add sample orders'), findsOneWidget);
+      expect(tester.widget<FilledButton>(find.ancestor(of: find.text('Complete all'), matching: find.bySubtype<FilledButton>())).onPressed, isNull);
+    });
   });
 }

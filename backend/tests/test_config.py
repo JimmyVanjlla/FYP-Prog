@@ -32,7 +32,7 @@ def test_manager_can_update_config(client):
 
 def test_non_manager_cannot_update_config(client):
     """FR1.3 RBAC applied to the config endpoint."""
-    token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     resp = client.patch(
         "/config", json={"default_low_stock_threshold": "5"}, headers=auth_headers(token)
     )
@@ -67,7 +67,7 @@ def test_updated_threshold_actually_changes_downstream_behavior(client):
     the system-wide default low-stock threshold immediately changes which
     ingredients Module 3 flags as low stock."""
     manager_token = _manager_token(client)
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
 
     ingredient = client.post(
         "/inventory/ingredients",

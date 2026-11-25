@@ -14,6 +14,7 @@ from app.routers import (
     kitchen,
     menu,
     notifications,
+    orders,
     procurement,
     reporting,
     staffing,
@@ -73,6 +74,7 @@ app.include_router(menu.router)
 app.include_router(inventory.router)
 app.include_router(forecasting.router)
 app.include_router(kitchen.router)
+app.include_router(orders.router)
 app.include_router(waste.router)
 app.include_router(feedback.router)
 app.include_router(staffing.router)

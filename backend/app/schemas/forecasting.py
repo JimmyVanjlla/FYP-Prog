@@ -24,6 +24,7 @@ class OrderOut(BaseModel):
     quantity: int
     meal_period: str
     order_date: date
+    status: str = "completed"
 
 
 class ForecastOut(BaseModel):

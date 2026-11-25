@@ -49,6 +49,36 @@ class BudgetSectionOut(BaseModel):
     utilisation_pct: Decimal
 
 
+class LeftoverDishRowOut(BaseModel):
+    menu_item_name: str
+    prepared: float
+    served: float
+    leftover: float
+    leftover_percent: float
+
+
+class LeftoverSectionOut(BaseModel):
+    """The % leftover calculation: leftover = confirmed prep - portions served."""
+
+    prepared: float = 0
+    served: float = 0
+    leftover: float = 0
+    leftover_percent: float = 0
+    dishes: list[LeftoverDishRowOut] = []
+
+
+class ShiftStaffOut(BaseModel):
+    name: str
+    station: str
+    attendance: str
+
+
+class ShiftAssignmentOut(BaseModel):
+    date: date
+    meal_period: str
+    staff: list[ShiftStaffOut]
+
+
 class ReportSummaryOut(BaseModel):
     """UC-RA-01 — a report's contents as data."""
 
@@ -61,3 +91,5 @@ class ReportSummaryOut(BaseModel):
     forecast_accuracy: ForecastAccuracySectionOut
     waste: WasteSectionOut
     budget: BudgetSectionOut
+    leftover: LeftoverSectionOut = LeftoverSectionOut()
+    staffing: list[ShiftAssignmentOut] = []

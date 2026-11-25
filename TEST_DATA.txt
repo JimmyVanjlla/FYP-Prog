@@ -1,12 +1,13 @@
 ==============================================================================
  TEST DATA - AI-Based Restaurant Resource Management and Order Demand
  Prediction System
- Prepared 15 Nov 2026 for the FYP presentation
+ Updated 25 Nov 2026 after the supervisor's review (3 roles, orders, automatic
+ leftover)
 ==============================================================================
 
- Everything below is already loaded in the live system. Nothing needs typing
- in beforehand; the "enter this" columns are the values to use while demoing
- or testing, and "expect" says what should happen.
+ Everything below is already loaded in the live system once it has been
+ redeployed and refreshed (section 5). The "enter this" columns are the values
+ to use while demoing or testing, and "expect" says what should happen.
 
 ------------------------------------------------------------------------------
  1. HOW TO REACH THE SYSTEM
@@ -20,37 +21,45 @@
 ------------------------------------------------------------------------------
  2. TEST ACCOUNTS (all use the same test password: Password123!)
 ------------------------------------------------------------------------------
- Role                      Email                    What to show with it
- ------------------------  -----------------------  --------------------------
- Restaurant Manager        manager@test.com         approvals, history, forecasts,
-                                                    reports, staff accounts
- Restaurant Owner          owner@test.com           forecasts, waste, staff
- Kitchen Staff             kitchen@test.com         prep, leftovers, restock requests
- Inventory Staff           inventory@test.com       stock, verify deliveries
- Shift Supervisor          supervisor@test.com      shift schedules
- Procurement Officer       procurement@test.com     suppliers, purchase orders
- Delivery/Logistics Staff  delivery@test.com        confirm deliveries
+ The system has three roles. The Owner, Inventory, Procurement and Delivery
+ roles were removed; their duties moved to the Manager and the Supervisor.
 
- Extra accounts created during development (leave alone): johnSilver@gmail.com,
- johnGold@gmail.com (deactivated), jTest@test.com, johnnySilverhand@gmail.com.
+ Role                 Email                    What to show with it
+ -------------------  -----------------------  ----------------------------
+ Restaurant Manager   manager@test.com         approvals, history, forecasts,
+                                               waste (view and expected waste),
+                                               reports, purchasing, suppliers,
+                                               deliveries (receive), menu, staff
+ Shift Supervisor     supervisor@test.com      shift schedules, stock and
+                                               deliveries into stock, restock
+                                               requests, purchase requests,
+                                               waste recording
+ Kitchen Staff        kitchen@test.com         prep, incoming orders, leftovers
+                                               (automatic), restock requests
+
+ The old demo logins owner@, inventory@, procurement@ and delivery@ were
+ deactivated and deleted when the system was upgraded (they sit in the Deleted
+ tab of the Staff screen for 60 days). Other accounts created during
+ development are left alone.
 
 ------------------------------------------------------------------------------
- 3. DATA ALREADY IN THE SYSTEM (checked 15 Nov 2026)
+ 3. DATA ALREADY IN THE SYSTEM
 ------------------------------------------------------------------------------
  Menu                 12 dishes (Nasi Lemak, Nasi Goreng Kampung, Mee Goreng
                       Mamak, Char Kuey Teow, Roti Canai, Roti Telur, Curry Laksa,
                       Chicken Rice, Satay Ayam, Teh Tarik, Kopi O, Milo Ais)
                       with recipes linking each dish to its ingredients.
- Order history        2 Sep to 14 Nov 2026: 74 days x 12 dishes x Lunch and
-                      Dinner = 1,776 daily order records (simulated).
- Forecasts            16 to 21 Nov 2026 for all 24 dish/meal-period pairs,
-                      trained on 15 Nov with the corrected model. Example,
-                      Nasi Lemak: Mon 16 Nov Lunch 24.8, Dinner 20.7;
-                      Sat 21 Nov Lunch 33.4, Dinner 27.6 (weekend uplift).
+ Order history        From 2 Sep 2026, every day to yesterday: 12 dishes x Lunch
+                      and Dinner, all completed (simulated).
+ Orders today         None until someone taps "Add sample orders" on the
+                      kitchen's Orders screen (there is no till connected).
+ Forecasts            For the 7 days from the last refresh (section 5), all 24
+                      dish/meal-period pairs, with a weekend uplift.
  Ingredients          20, of which 8 are low on stock (shown in red):
                         Lap Cheong 2 kg, Tea Leaves 3 kg, Coffee Powder 4 kg,
                         Milo Powder 5 kg, Peanuts 6 kg, Curry Paste 6 kg
                         (alert below 8), Ikan Bilis 8 kg, Beansprouts 9 kg.
+ Stock batches        None (so no near-expiry or expired labels until one is added).
  Suppliers            3 (Fresh Farm Poultry & Seafood, Pasar Besar Trading,
                       Kedai Runcit Supplies), each with their own prices.
  Purchase orders      #4 pending approval (RM 530.00: Chicken 20 kg at RM 12.50
@@ -62,20 +71,17 @@
                       #2 delivered (RM 193.50), #1 approved (RM 530.00)
  Budget               November budget RM 8,000.00; RM 1,480.00 spent so far (18.5%),
                       RM 6,520.00 remaining. That includes both pending orders.
- Leftover logs        12 dishes x 7 days (9 to 14 Nov) added on 15 Nov, each with
-                      its waste cost (about RM 220 of leftover waste in total).
- Portion reviews      2 pending after the 15 Nov analysis: Roti Telur and Curry
-                      Laksa (both over the 15% leftover threshold). One rejected
-                      earlier (Curry Laksa, an older review).
+ Leftover logs        12 dishes x the last weeks, each with its waste cost.
+ Portion reviews      2 pending: Roti Telur and Curry Laksa (both over the 15%
+                      leftover threshold).
  Deliveries           #2 for PO #3 awaiting receipt: Coffee Powder 10 kg,
                       Milo Powder 10 kg, Tea Leaves 8 kg expected.
  Restock requests     1 from the kitchen (Beansprouts, 20, urgent).
- Procurement list     15 "recommended to buy" items, driven by the forecast.
- Waste history        Leftover logs for the 8 weeks to 14 Nov (12 dishes a day), each
-                      dated to its service day, so the Waste screen shows a real weekly
-                      trend, with Curry Laksa the biggest source (about RM 220 a week, flat, since the data is simulated).
- Reports              Weekly report #4 for 9 to 15 Nov 2026 (forecast error 14.0%,
-                      waste RM 220.30, budget 7%), plus #3 (8 to 14 Nov) and two older.
+ Procurement list     "recommended to buy" items, driven by the forecast.
+ Waste history        Leftover waste for the weeks to the last refresh, dated to its
+                      service day, so the Waste screen shows a weekly trend, and an
+                      "expected waste, next 7 days" figure from the forecast.
+ Reports              Weekly reports, the latest for the 7 days to the last refresh.
  Shift schedules      1 draft for 4 Nov Lunch (supervisor).
 
 ------------------------------------------------------------------------------
@@ -86,18 +92,20 @@
     Enter  manager@test.com / WrongPass99          Expect: a generic "invalid
                                                    email or password" message
     Enter  empty email                             Expect: "Enter your email."
+    Enter  owner@test.com / Password123!           Expect: the same generic message
+                                                   (that account no longer exists)
 
  B. Manager approves a purchase order  (manager@test.com > Needs attention)
-    Open PO #4, check the line items.             Expect: RM 530.00 total and the
-                                                   remaining budget shown beside
-                                                   Approve
+    Open PO #4, check the line items.             Expect: RM 530.00 total and
+                                                   "Budget remaining RM 6,520.00, with
+                                                   this order counted" beside Approve
     Tap Approve.                                  Expect: PO moves to History as
                                                    Approved; the budget bar stays at
                                                    RM 1,480.00 of RM 8,000.00
                                                    (18.5%) because an order counts from
                                                    the moment it is raised (a rejected
-                                                   one drops out); the Procurement
-                                                   Officer gets a notification
+                                                   one drops out); whoever raised it
+                                                   gets a notification
     Then open PO #8 and Reject it with a reason.   Expect: spent falls by RM 210.00 to
                                                    RM 1,270.00 and the remaining budget
                                                    rises from RM 6,520.00 to RM 6,730.00
@@ -118,8 +126,8 @@
 
  E. Forecasts  (manager@test.com > Forecasts)
     Pick Nasi Lemak.                              Expect: whole-number portions for
-                                                   16 to 21 Nov, higher on Sat 21 Nov
-                                                   than on weekdays (no 24.77s)
+                                                   the coming week, higher on the
+                                                   weekend than on weekdays
     Open the Accuracy tab.                        Expect: an overall average, a
                                                    "Choose a date" button and a "By day"
                                                    list, newest day first, each with its
@@ -129,21 +137,31 @@
                                                    11-40% error, red for over 40%,
                                                    nothing at 10% or less
 
- F. Kitchen prep and leftovers  (kitchen@test.com)
+ F. Kitchen: prep, orders and leftovers  (kitchen@test.com)
     Prep > today > Lunch.                         Expect: a recommended quantity
                                                    per dish, from the forecast
     Change one quantity to about 1.8 times the recommendation.
                                                    Expect: a "reason" box appears;
                                                    enter  Large booking tonight
-    Confirm the Curry Laksa quantity for Lunch (for example 40).
-    Leftovers: Lunch, Curry Laksa, today, choose 25%.
-                                                   Expect: "Based on the 40 portions
-                                                   confirmed in Prep for Lunch", "About 10
-                                                   of 40 portions", then "Leftover log saved."
-                                                   There are no quantities to type.
-    Leftovers for a dish whose prep was NOT confirmed (even if its recommendation is shown in
-    Prep).                                         Expect: "The prep for this dish ... was not
-                                                   confirmed", and Save log stays disabled
+    Confirm the Curry Laksa quantity for Lunch (for example 8) and one or two other dishes.
+    Orders > Lunch > Add sample orders.           Expect: incoming orders for the dishes
+                                                   that have a prep or a forecast, as
+                                                   tickets of 1 to 3 portions; the chips
+                                                   show "N incoming", 0 preparing, 0 completed
+    Tap Start on an order, then Done.             Expect: it moves to Preparing, then
+                                                   Completed; the counts change
+    Tap Complete all.                              Expect: everything open becomes Completed
+    Leftovers > today > Lunch.                    Expect: per dish, Prepared (what you
+                                                   confirmed), Served (portions of completed
+                                                   orders) and Left over = prepared - served,
+                                                   with the percentage. Nothing to type.
+                                                   Example: 8 prepared, 5 served = 3 left (38%)
+    Leave some orders open, then open Leftovers.  Expect: "N orders are not completed yet,
+                                                   so they are not counted as served."
+    A dish whose prep was not confirmed.          Expect: "Prep not confirmed"; no leftover
+    Tap Record leftovers.                          Expect: "Leftovers recorded." and each dish
+                                                   shows Recorded. Tapping it again later
+                                                   (after more orders) updates, not duplicates.
     Bell (top right).                              Expect: a number badge when notifications are
                                                    unread (for example after the supervisor
                                                    publishes a shift that includes you); opening
@@ -152,7 +170,7 @@
                                                    Breakfast." (until a dish is set to
                                                    be served at breakfast, see R)
     Restock request: Beansprouts, quantity 20, urgent (one is already there)
-                                                   Expect: appears for Inventory
+                                                   Expect: appears for the Supervisor
 
  G. Shift schedule  (supervisor@test.com > Schedules)
     New schedule: date = tomorrow, meal period = Lunch.
@@ -161,16 +179,19 @@
                                                    clears the "below recommendation"
                                                    flag; Publish notifies them
     Expect on that screen: an "N portions expected" card with Busy / Normal / Quiet and the
-    Kitchen Staff needed; only the Kitchen station (no Front of House); at least 4 Kitchen
-    Staff are recommended however quiet; the staff list offers Kitchen Staff only.
+    Kitchen Staff needed; only the Kitchen station; at least 4 Kitchen Staff are
+    recommended however quiet; the staff list offers Kitchen Staff only.
     Forecasts > Outlook tab: each coming day and meal period with portions, how busy, and staff.
 
- H. Procurement  (procurement@test.com)
-    Purchasing > Recommended to buy.              Expect: 15 items, each with "Tap to
+ H. Purchasing  (supervisor@test.com raises, manager@test.com approves)
+    Supervisor: Purchasing > Recommended to buy.  Expect: items, each with "Tap to
                                                    start an order"
-    Tap one (for example Chicken).                Expect: a new order with just that item
+    Tap one (for example Chicken).                 Expect: a new order with just that item
                                                    and its recommended quantity filled in,
                                                    from the cheapest supplier that prices it
+    Submit it.                                     Expect: "pending approval", and the total
+                                                   goes into the budget straight away
+    Manager: Needs attention.                      Expect: the order is waiting to be approved
     Open any purchase order in the list.          Expect: a formal PO: "PO-0004" number,
                                                    supplier name and contact, date issued,
                                                    an item table (qty, unit price, amount),
@@ -178,7 +199,9 @@
                                                    (approved or rejected, when, and why)
     On that PO: Flag a supplier issue, type 4444. Expect: "Write it in words: it needs at
                                                    least one letter"; real words are accepted
-    Suppliers: tap a price and change it to 13.00, then change it back.
+    Manager: Suppliers: tap a price and change it to 13.00, then change it back.
+                                                   (Only the Manager changes suppliers and prices;
+                                                   the Supervisor has no Suppliers screen.)
     New purchase order: supplier Pasar Besar Trading, Rice 30, Cooking Oil 15
                                                    Expect: a total from that
                                                    supplier's own prices and
@@ -186,26 +209,29 @@
     A deactivated supplier cannot receive a new order (Expect: error message).
     Do NOT deactivate Fresh Farm or Kedai Runcit during the demo.
 
- I. Delivery then Inventory  (delivery@test.com, then inventory@test.com)
-    Delivery > delivery for PO #3, enter received quantities:
+ I. Deliveries: manager receives, supervisor books it into stock
+    manager@test.com > Deliveries > delivery for PO #3, enter received quantities:
         Coffee Powder 10, Milo Powder 10, Tea Leaves 6
                                                    Expect: Tea Leaves row turns red
                                                    (6 of 8) and a discrepancy is
                                                    recorded
-    Then inventory@test.com > Deliveries > verify the delivery.
+    Then supervisor@test.com > Deliveries > verify the delivery.
                                                    Expect: stock rises - Coffee
                                                    Powder 4 -> 14 kg, Milo Powder
                                                    5 -> 15 kg, Tea Leaves 3 -> 9 kg;
                                                    the low-stock count falls
+    (What arrived and what is booked into stock are done by two different people.)
 
- J. Inventory order  (any role with Inventory)
+ J. Inventory  (supervisor@test.com, manager@test.com or kitchen@test.com)
     Expect: a red "Low stock: restock these" group at the top (8 items),
     then "Well stocked" (12 items), each sorted by name; three summary tiles.
+    The Supervisor and Manager can adjust stock and add batches; the Kitchen can request
+    a restock.
 
  K. Staff accounts  (manager@test.com > Staff > Add staff account)
     Name                     Test Chef
     Email                    test.chef@example.com
-    Role                     Kitchen Staff
+    Role                     Kitchen Staff   (the list offers Manager, Supervisor, Kitchen)
     Password                 Chef12345!
     Phone                    +60 12-345 6789
     Address                  12 Jalan Bukit, 50450 Kuala Lumpur
@@ -231,14 +257,42 @@
                                                    Expect: a "Prep update"
                                                    notification within seconds
 
- O. Waste  (manager@test.com > Waste; also owner@test.com)
+ N. Reports  (manager@test.com > Reports)
+    Open the latest report.                       Expect: a header with the period,
+                                                   three key figures, an "In summary"
+                                                   box, then five sections: 1 Forecast
+                                                   accuracy (by-day table, dishes ranked),
+                                                   2 Waste cost, 3 Leftover calculation
+                                                   (% of what was prepared that was left,
+                                                   per dish: prepared, served, left over),
+                                                   4 Staff assignment (each published shift
+                                                   and who was on it), 5 Budget. Open PDF
+                                                   shows the same 3-page report.
+
+ O. Waste  (manager@test.com or supervisor@test.com > Waste)
     Open Waste.                                   Expect: tiles for this week, last week and
-                                                   the change; a bar chart of the last 8
+                                                   the change; an "Expected waste, next 7
+                                                   days" card (forecast x recent leftover
+                                                   rate x ingredient cost, with the top
+                                                   dishes); a bar chart of the last 8
                                                    weeks (leftovers blue, expired orange);
-                                                   "Most wasted dishes" (Curry Laksa
-                                                   at the top) and "Most wasted
+                                                   "Most wasted dishes" and "Most wasted
                                                    ingredients" for the last 4 weeks; the
                                                    recent log with ingredient names
+    Recording waste by hand is the Supervisor's: supervisor@test.com > Inventory > an
+    ingredient with a batch > the Record waste icon on the batch. The Manager has no such
+    button. See T2 for what it does.
+
+ P. Account rules  (manager@test.com > Staff)
+    Add staff account.                            Expect: the Role list has exactly three
+                                                   roles: Restaurant Manager, Shift Supervisor,
+                                                   Kitchen Staff
+    Only the Manager sees the Staff screen; the Supervisor and Kitchen do not.
+
+ Q. Dates and time  (any screen with a date)
+    All "today" dates use Malaysia time (UTC+8), even if the emulator's clock is set to GMT.
+    Prep: the calendar starts today. Leftovers: the last 7 days up to today.
+    Shift schedule: no past dates. The Prep screen shows a forecast for today.
 
  R. Meal periods per dish  (manager@test.com > Menu > a dish)
     Open Roti Canai: under Edit details, tick Breakfast and Save.
@@ -249,7 +303,7 @@
     New menu item: the "Served at" chips start with Lunch and Dinner; the last chip cannot be
     switched off.
 
- S. Restock requests  (inventory@test.com > Restock requests)
+ S. Restock requests  (supervisor@test.com > Restock requests)
     Tap Approve, then Cancel.                     Expect: nothing changes
     Tap Decline, type 123, tap Decline.           Expect: "Write it in words: it needs at
                                                    least one letter"
@@ -260,7 +314,7 @@
     Approve another (confirm).                    Expect: History shows Approved; the
                                                    kitchen is told
 
- T. Deleting staff  (manager@test.com or owner@test.com > Staff)
+ T. Deleting staff  (manager@test.com > Staff)
     Deactivate "Test Chef" (the account from K), then its menu > Delete account.
                                                    Expect: a confirmation mentioning 60 days;
                                                    the account leaves Accounts and appears in
@@ -269,36 +323,22 @@
     An active account.                            Expect: no Delete option (deactivate first)
     After 60 days a deleted account is removed for good and can no longer be restored.
 
- U. Owner = Manager  (owner@test.com)
-    Expect the same drawer as the Manager: Needs attention, Menu, Inventory, Forecasts, Waste,
-    Reports, Purchasing, Deliveries, Staff, Settings; and the same controls on each (editing
-    menu items and ingredients, receiving deliveries, approving orders). Only the Owner can create
-    or change Manager and Owner accounts (see P).
-
- P. Account rules  (manager@test.com, then owner@test.com > Staff)
-    As Manager: Add staff account.                Expect: the Role list has no Restaurant
-                                                   Manager or Restaurant Owner
-    As Manager: look at a Manager or Owner row.   Expect: no menu (cannot change or
-                                                   deactivate them)
-    As Owner: Add staff account.                  Expect: every role is offered
-
- Q. Dates and time  (any screen with a date)
-    All "today" dates use Malaysia time (UTC+8), even if the emulator's clock is set to GMT.
-    Prep: the calendar starts today. Leftovers: the last 7 days up to today.
-    Shift schedule: no past dates. The Prep screen shows a forecast for today.
-
- N. Reports  (manager@test.com > Reports)
-    Open report #4 (9 to 15 Nov).                 Expect: a header with the period,
-                                                   three key figures, an "In summary"
-                                                   box, a by-day table, dishes ranked
-                                                   by forecast error, waste and budget
-                                                   sections; Open PDF shows a 2-page
-                                                   report with dish names
+ T2. Expired stock  (supervisor@test.com > Inventory > Tea Leaves)
+    Add batch: quantity 5, received today, expires in 2 days.
+                                                   Expect: stock rises by 5 and the batch
+                                                   shows "Expires in 2 d"
+    Tap the Record waste icon on the batch, leave 5, Record.
+                                                   Expect: "Waste recorded and taken off
+                                                   stock."; the batch disappears; stock falls
+                                                   by 5; Recent adjustments shows a
+                                                   "spoilage" line; the Waste screen has an
+                                                   orange "expired" entry
+    (Remove the entry afterwards if you want the waste figures back as they were.)
 
 ------------------------------------------------------------------------------
  5. IF THE DATA NEEDS REFRESHING (the morning of the presentation)
 ------------------------------------------------------------------------------
- From the backend folder with the virtual environment active:
+ After deploying, from the backend folder with the virtual environment active:
 
     python scripts/extend_demo_orders.py --base-url https://fyp-prog.onrender.com
     python scripts/prepare_demo.py       --base-url https://fyp-prog.onrender.com
@@ -307,10 +347,10 @@
  leftover logs, retrains forecasts (about a minute), reruns the leftover analysis,
  regenerates the "recommended to buy" list, and makes sure a purchase order, a
  delivery, a restock request and a weekly report for the 7 days ending today exist.
- Running the second script each day until the presentation also gives the weekly
- report more scored days (forecasts only exist for days after each training run). Both
- are safe to run twice. A purchase order you approved is not recreated until
+ Both are safe to run twice. A purchase order you approved is not recreated until
  you run the second script again, which adds a new pending one.
+ Training only uses completed orders from finished days, so today's sample orders
+ never distort the forecast.
 
  Cloud services on free plans: Supabase pauses after about a week without use
  and Redis deletes inactive databases. Opening the app once a few days before

@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -10,6 +11,8 @@ from app.models.user import User
 from app.schemas.kitchen import (
     LeftoverLogCreate,
     LeftoverLogOut,
+    LeftoverRecordRequest,
+    LeftoverSummaryOut,
     NotificationOut,
     UnreadCountOut,
     PrepConfirmationCreate,
@@ -142,6 +145,30 @@ def log_leftover(
             detail=f"The prep for this dish at {data.meal_period} on {data.service_period_date} was not "
             "confirmed. Confirm the prep first, so there is a quantity to take a percentage of.",
         )
+
+
+@router.get("/leftover-summary", response_model=LeftoverSummaryOut)
+def leftover_summary(
+    service_date: date,
+    meal_period: Literal["Breakfast", "Lunch", "Dinner"],
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> LeftoverSummaryOut:
+    """Per dish: confirmed prep, portions served (completed orders) and the leftover
+    worked out from them. Nothing is typed in."""
+    return kitchen_service.leftover_summary(db, service_date=service_date, meal_period=meal_period)
+
+
+@router.post("/leftovers/record", response_model=list[LeftoverLogOut], status_code=status.HTTP_201_CREATED)
+def record_leftovers(
+    data: LeftoverRecordRequest,
+    db: Session = Depends(get_db),
+    staff: User = Depends(require_role(Role.KITCHEN_STAFF)),
+) -> list[LeftoverLogOut]:
+    """Save the meal period's worked-out leftovers (and cost the waste). Safe to repeat."""
+    return kitchen_service.record_leftovers(
+        db, staff_id=staff.user_id, service_date=data.service_date, meal_period=data.meal_period
+    )
 
 
 @router.get("/leftover-logs", response_model=list[LeftoverLogOut])

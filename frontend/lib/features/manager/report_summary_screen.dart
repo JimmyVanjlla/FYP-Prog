@@ -234,9 +234,21 @@ class _ReportSummaryScreenState extends State<ReportSummaryScreen> {
                 logCount: waste['log_count'] as int? ?? 0,
               ),
               const SizedBox(height: 22),
+              const SectionHeader(
+                icon: Icons.pie_chart_outline_rounded,
+                label: '3. Leftover calculation',
+              ),
+              _LeftoverSection(leftover: report['leftover'] is Map ? asJson(report['leftover']) : <String, dynamic>{}),
+              const SizedBox(height: 22),
+              const SectionHeader(
+                icon: Icons.groups_rounded,
+                label: '4. Staff assignment',
+              ),
+              _StaffingSection(shifts: report['staffing'] is List ? asJsonList(report['staffing']) : const []),
+              const SizedBox(height: 22),
               SectionHeader(
                 icon: Icons.account_balance_wallet_outlined,
-                label: '3. Budget utilisation',
+                label: '5. Budget utilisation',
                 color: budgetColor,
               ),
               _BudgetSection(
@@ -804,6 +816,121 @@ class _Legend extends StatelessWidget {
           Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
+    );
+  }
+}
+
+
+/// The % leftover calculation: leftover = confirmed prep - portions served,
+/// over the period, overall and dish by dish (highest share first).
+class _LeftoverSection extends StatelessWidget {
+  final Json leftover;
+
+  const _LeftoverSection({required this.leftover});
+
+  @override
+  Widget build(BuildContext context) {
+    final dishes = leftover['dishes'] is List ? asJsonList(leftover['dishes']) : const <Json>[];
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    if (dishes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 6),
+        child: Text('No leftovers were recorded in this period.'),
+      );
+    }
+    final percent = asDouble(leftover['leftover_percent']);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${percent.toStringAsFixed(1)}% of what was prepared was left over',
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            Text(
+              '${asDouble(leftover['leftover']).round()} of ${asDouble(leftover['prepared']).round()} portions; '
+              '${asDouble(leftover['served']).round()} served.',
+              style: TextStyle(color: muted),
+            ),
+            const SizedBox(height: 12),
+            for (final d in dishes.take(8))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: Text(d['menu_item_name'] as String)),
+                        Text(
+                          '${asDouble(d['leftover']).round()} of ${asDouble(d['prepared']).round()}  ·  '
+                          '${asDouble(d['leftover_percent']).toStringAsFixed(1)}%',
+                          style: TextStyle(color: muted),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (asDouble(d['leftover_percent']) / 100).clamp(0.0, 1.0),
+                        minHeight: 6,
+                        color: asDouble(d['leftover_percent']) > 15 ? Severity.critical : Severity.ok,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            Text(
+              'Leftover = confirmed prep minus the portions served (completed orders).',
+              style: TextStyle(color: muted, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Who was assigned to which duty: each published shift in the period.
+class _StaffingSection extends StatelessWidget {
+  final List<Json> shifts;
+
+  const _StaffingSection({required this.shifts});
+
+  @override
+  Widget build(BuildContext context) {
+    if (shifts.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 6),
+        child: Text('No shifts were published in this period.'),
+      );
+    }
+    return Column(
+      children: [
+        for (final shift in shifts.take(14))
+          Card(
+            child: ListTile(
+              dense: true,
+              leading: const IconBadge(icon: Icons.event_available_rounded),
+              title: Text('${friendlyDate(shift['date'])}  ·  ${shift['meal_period']}'),
+              subtitle: Text(
+                () {
+                  final staff = asJsonList(shift['staff']);
+                  if (staff.isEmpty) return 'No one assigned.';
+                  return staff.map((p) => '${p['name']} (${p['station']})').join(', ');
+                }(),
+              ),
+            ),
+          ),
+        if (shifts.length > 14)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('and ${shifts.length - 14} more shifts.'),
+          ),
+      ],
     );
   }
 }

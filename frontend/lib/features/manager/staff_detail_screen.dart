@@ -9,7 +9,7 @@ import '../../core/theme.dart';
 import '../shared/profile/contact_fields.dart';
 
 /// A new account: the sign-in details and role, then the optional contact
-/// details. Only a Restaurant Manager or Owner reaches this screen. Pops with
+/// details. Only a Restaurant Manager reaches this screen. Pops with
 /// `true` once the account exists.
 class StaffFormScreen extends StatefulWidget {
   const StaffFormScreen({super.key});
@@ -125,7 +125,7 @@ class _StaffFormScreenState extends State<StaffFormScreen> {
   }
 }
 
-/// One staff member's details, with a way for a Manager or Owner to correct
+/// One staff member's details, with a way for a Manager to correct
 /// them (name and contact details; the role and active status are changed
 /// from the list, as before).
 class StaffDetailScreen extends StatefulWidget {

@@ -14,7 +14,7 @@ def _report_with_data(client, db_session):
     item = client.post(
         "/menu-items", json={"name": "Nasi Lemak", "price": "6.50", "category": "Rice"}, headers=manager
     ).json()
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     ingredient = client.post(
         "/inventory/ingredients", json={"name": "Rice", "unit": "kg", "current_stock": "10"}, headers=inventory
     ).json()

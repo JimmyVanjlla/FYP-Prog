@@ -78,7 +78,7 @@ def test_approving_recommendation_shrinks_recipe_portions(client, db_session):
         json={"name": "Nasi Lemak Ayam", "price": "12.50", "category": "Main"},
         headers=auth_headers(manager_token),
     ).json()
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Rice", "unit": "kg", "current_stock": "50"},

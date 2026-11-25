@@ -42,46 +42,24 @@ void main() {
       }
     }
 
-    testWidgets('delivery staff see only deliveries and their own shifts', (tester) async {
-      await expectDestinations(tester, Roles.deliveryStaff, ['Deliveries', 'My shifts'], ['Inventory', 'Reports', 'Staff']);
-    });
-
-    testWidgets('kitchen staff get prep, leftovers, menu, inventory and shifts', (tester) async {
+    testWidgets('kitchen staff get prep, orders, leftovers, menu, inventory and shifts', (tester) async {
       await expectDestinations(
         tester,
         Roles.kitchenStaff,
-        ['Prep', 'Leftovers', 'Menu', 'Inventory', 'My shifts'],
+        ['Prep', 'Orders', 'Leftovers', 'Menu', 'Inventory', 'My shifts'],
         ['Reports', 'Settings', 'Purchasing'],
       );
     });
 
-    testWidgets('procurement officers get purchasing, suppliers and deliveries', (tester) async {
-      await expectDestinations(
-        tester,
-        Roles.procurementOfficer,
-        ['Purchasing', 'Suppliers', 'Deliveries', 'Menu', 'My shifts'],
-        ['Staff', 'Settings', 'Prep'],
-      );
-    });
-
-    testWidgets('shift supervisors get the schedule builder', (tester) async {
+    testWidgets('shift supervisors get scheduling, stock, restock requests, purchasing, deliveries and waste', (tester) async {
       await expectDestinations(
         tester,
         Roles.shiftSupervisor,
-        ['Schedules', 'Forecasts', 'Menu', 'My shifts'],
-        ['Reports', 'Settings', 'Purchasing'],
-      );
-    });
-
-    testWidgets('the owner sees everything the manager does', (tester) async {
-      await expectDestinations(
-        tester,
-        Roles.owner,
         [
-          'Needs attention', 'Menu', 'Inventory', 'Forecasts', 'Waste', 'Reports',
-          'Purchasing', 'Deliveries', 'Staff', 'Settings',
+          'Schedules', 'Forecasts', 'Inventory', 'Restock requests', 'Purchasing', 'Deliveries', 'Waste', 'Menu',
+          'My shifts',
         ],
-        ['Prep'],
+        ['Reports', 'Settings', 'Staff', 'Suppliers'],
       );
     });
 
@@ -91,7 +69,7 @@ void main() {
         Roles.manager,
         [
           'Needs attention', 'Menu', 'Inventory', 'Forecasts', 'Waste', 'Reports',
-          'Purchasing', 'Deliveries', 'Staff', 'Settings',
+          'Purchasing', 'Suppliers', 'Deliveries', 'Staff', 'Settings',
         ],
         const [],
       );
@@ -195,7 +173,7 @@ void main() {
     testWidgets('a mismatch turns critical the moment it is typed, with the reason', (tester) async {
       await pumpAs(
         tester,
-        Roles.deliveryStaff,
+        Roles.manager,
         const DeliveryDetailScreen(deliveryId: 3),
         routes: deliveryRoutes(),
       );
@@ -213,7 +191,7 @@ void main() {
     testWidgets('a quantity within tolerance is accepted as a normal receipt', (tester) async {
       final api = await pumpAs(
         tester,
-        Roles.deliveryStaff,
+        Roles.manager,
         const DeliveryDetailScreen(deliveryId: 3),
         routes: deliveryRoutes(),
       );
@@ -231,7 +209,7 @@ void main() {
     testWidgets('a negative quantity is refused inline', (tester) async {
       await pumpAs(
         tester,
-        Roles.deliveryStaff,
+        Roles.manager,
         const DeliveryDetailScreen(deliveryId: 3),
         routes: deliveryRoutes(),
       );
@@ -256,11 +234,11 @@ void main() {
             'po_total_cost': '230.00',
           },
         ];
-      await pumpAs(tester, Roles.inventoryStaff, const DeliveryDetailScreen(deliveryId: 3), routes: routes);
+      await pumpAs(tester, Roles.shiftSupervisor, const DeliveryDetailScreen(deliveryId: 3), routes: routes);
 
       expect(find.text('Verify against stock records'), findsOneWidget);
       // ...and delivery staff, who can't verify, are not offered it.
-      await pumpAs(tester, Roles.deliveryStaff, const DeliveryDetailScreen(deliveryId: 3), routes: routes);
+      await pumpAs(tester, Roles.manager, const DeliveryDetailScreen(deliveryId: 3), routes: routes);
       expect(find.text('Verify against stock records'), findsNothing);
     });
   });
@@ -289,7 +267,7 @@ void main() {
     };
 
     testWidgets('pre-fills from the recommendation and shows the running total beside the items', (tester) async {
-      await pumpAs(tester, Roles.procurementOfficer, const PurchaseOrderFormScreen(), routes: poRoutes());
+      await pumpAs(tester, Roles.shiftSupervisor, const PurchaseOrderFormScreen(), routes: poRoutes());
 
       expect(find.text('RM 46.00'), findsWidgets); // 5 kg x RM 9.20, as the line cost and the total
       expect(find.textContaining('Remaining budget RM 600.00'), findsOneWidget);
@@ -297,7 +275,7 @@ void main() {
     });
 
     testWidgets('going over budget is flagged but does not block submitting (FR9.6)', (tester) async {
-      await pumpAs(tester, Roles.procurementOfficer, const PurchaseOrderFormScreen(), routes: poRoutes());
+      await pumpAs(tester, Roles.shiftSupervisor, const PurchaseOrderFormScreen(), routes: poRoutes());
 
       await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '100'); // RM 920 > RM 600
       await tester.pump();
@@ -308,7 +286,7 @@ void main() {
     });
 
     testWidgets('a zero quantity is rejected inline and blocks submitting', (tester) async {
-      await pumpAs(tester, Roles.procurementOfficer, const PurchaseOrderFormScreen(), routes: poRoutes());
+      await pumpAs(tester, Roles.shiftSupervisor, const PurchaseOrderFormScreen(), routes: poRoutes());
 
       await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '0');
       await tester.pump();

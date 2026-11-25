@@ -132,3 +132,27 @@ class NotificationOut(BaseModel):
 
 class UnreadCountOut(BaseModel):
     unread: int
+
+
+class LeftoverDishOut(BaseModel):
+    menu_item_id: int
+    menu_item_name: str
+    prep_confirmed: bool
+    prepared: Decimal | None = None
+    served: int
+    leftover: Decimal | None = None
+    leftover_percent: int | None = None
+    sold_beyond_prep: int = 0
+    recorded: bool = False
+
+
+class LeftoverSummaryOut(BaseModel):
+    service_date: date
+    meal_period: str
+    open_orders: int
+    dishes: list[LeftoverDishOut]
+
+
+class LeftoverRecordRequest(BaseModel):
+    service_date: date
+    meal_period: Literal["Breakfast", "Lunch", "Dinner"]

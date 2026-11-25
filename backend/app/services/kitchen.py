@@ -6,8 +6,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core import meal_periods
+from app.models.forecasting import Order
 from app.models.kitchen import LeftoverLog, Notification, PrepConfirmation, PrepRecommendation
 from app.models.menu import MenuItem
+from app.models.waste import WasteLog
 from app.schemas.kitchen import LeftoverLogCreate, PrepConfirmationCreate
 from app.services import notifications as notification_service
 from app.services import waste as waste_service
@@ -287,6 +289,122 @@ def log_leftover(db: Session, *, staff_id: int, data: LeftoverLogCreate) -> Left
     # aggregation (Algorithm CalculateWasteCost), not on a separate delay.
     waste_service.record_leftover_waste(db, log)
     return log
+
+
+def leftover_summary(db: Session, *, service_date: date, meal_period: str) -> dict:
+    """What was prepared, what was actually served and what is left, per dish, for
+    one meal period. Nobody types a leftover: it is worked out as
+
+        leftover = confirmed prep quantity - portions served
+
+    where "served" is the portions of orders the kitchen has completed. A dish
+    whose prep was not confirmed has nothing to measure against, so it is listed
+    without a leftover. `open_orders` counts orders still pending or being
+    prepared, which are not yet counted as served."""
+    items = [
+        item
+        for item in db.scalars(select(MenuItem).where(MenuItem.is_active.is_(True)).order_by(MenuItem.name))
+        if meal_periods.serves(item.meal_periods, meal_period)
+    ]
+    served_by_item = {
+        mid: int(qty)
+        for mid, qty in db.execute(
+            select(Order.menu_item_id, func.sum(Order.quantity))
+            .where(Order.order_date == service_date)
+            .where(Order.meal_period == meal_period)
+            .where(Order.status == "completed")
+            .group_by(Order.menu_item_id)
+        )
+    }
+    open_orders = db.scalar(
+        select(func.count())
+        .select_from(Order)
+        .where(Order.order_date == service_date)
+        .where(Order.meal_period == meal_period)
+        .where(Order.status != "completed")
+    )
+    recorded = {
+        log.menu_item_id
+        for log in db.scalars(
+            select(LeftoverLog)
+            .where(LeftoverLog.service_period_date == service_date)
+            .where(LeftoverLog.meal_period == meal_period)
+        )
+    }
+    dishes = []
+    for item in items:
+        prepared = _prepared_quantity_for(db, menu_item_id=item.menu_item_id, meal_period=meal_period, day=service_date)
+        served = served_by_item.get(item.menu_item_id, 0)
+        row = {
+            "menu_item_id": item.menu_item_id,
+            "menu_item_name": item.name,
+            "prep_confirmed": prepared is not None,
+            "prepared": prepared,
+            "served": served,
+            "leftover": None,
+            "leftover_percent": None,
+            "sold_beyond_prep": 0,
+            "recorded": item.menu_item_id in recorded,
+        }
+        if prepared is not None:
+            leftover = max(prepared - served, Decimal("0")).quantize(Decimal("0.01"))
+            row["leftover"] = leftover
+            row["leftover_percent"] = int((leftover / prepared * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+            row["sold_beyond_prep"] = max(served - int(prepared), 0)
+        dishes.append(row)
+    return {
+        "service_date": service_date,
+        "meal_period": meal_period,
+        "open_orders": int(open_orders or 0),
+        "dishes": dishes,
+    }
+
+
+def record_leftovers(db: Session, *, staff_id: int, service_date: date, meal_period: str) -> list[LeftoverLog]:
+    """Save the day's worked-out leftovers as leftover logs, which feed the waste
+    cost, the portion reviews and the forecast adjustment exactly as the logs
+    typed in by hand used to. Safe to run again (say, after more orders were
+    completed): an existing log for the dish is updated, and its waste costed
+    again from the new figure."""
+    summary = leftover_summary(db, service_date=service_date, meal_period=meal_period)
+    logs: list[LeftoverLog] = []
+    for dish in summary["dishes"]:
+        if not dish["prep_confirmed"]:
+            continue
+        existing = db.scalars(
+            select(LeftoverLog)
+            .where(LeftoverLog.menu_item_id == dish["menu_item_id"])
+            .where(LeftoverLog.service_period_date == service_date)
+            .where(LeftoverLog.meal_period == meal_period)
+        ).first()
+        percent = dish["leftover_percent"]
+        if existing is None:
+            log = LeftoverLog(
+                menu_item_id=dish["menu_item_id"],
+                service_period_date=service_date,
+                meal_period=meal_period,
+                staff_id=staff_id,
+                prepared_quantity=dish["prepared"],
+                leftover_quantity=dish["leftover"],
+                leftover_percent=percent,
+                leftover_level=f"{percent}% left over",
+            )
+            db.add(log)
+        else:
+            log = existing
+            db.query(WasteLog).filter(
+                WasteLog.source_type == "leftover", WasteLog.source_ref_id == log.log_id
+            ).delete(synchronize_session=False)
+            log.prepared_quantity = dish["prepared"]
+            log.leftover_quantity = dish["leftover"]
+            log.leftover_percent = percent
+            log.leftover_level = f"{percent}% left over"
+            log.staff_id = staff_id
+        db.commit()
+        db.refresh(log)
+        waste_service.record_leftover_waste(db, log)
+        logs.append(log)
+    return logs
 
 
 def list_leftover_logs(

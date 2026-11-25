@@ -12,11 +12,10 @@ from app.models.user import User
 from app.schemas.user import UserRegister
 
 # Roles that can't freely self-register once one already exists — see
-# register_user_self_service below. Restaurant Owner/Manager hold the most
-# privileged, system-wide access (RBAC-wise equal to or above everyone
-# else), so an open /auth/register for them would let anyone grant
+# register_user_self_service below. The Manager holds the most privileged,
+# system-wide access, so an open /auth/register for it would let anyone grant
 # themselves manager-level access with no authorization check at all.
-_PRIVILEGED_ROLES = {Role.RESTAURANT_OWNER, Role.RESTAURANT_MANAGER}
+_PRIVILEGED_ROLES = {Role.RESTAURANT_MANAGER}
 
 
 class DuplicateEmailError(Exception):
@@ -80,13 +79,12 @@ def register_user_self_service(db: Session, data: UserRegister) -> User:
 
     1. Where public registration is closed (production, by default), the only
        account anyone can create for themselves is the very first one, and it
-       must be a Restaurant Manager or Owner, since only they can create the
+       must be a Restaurant Manager, since only a Manager can create the
        rest (POST /users). Without that, anyone who found the app could make
-       themselves a Kitchen or Procurement account.
-    2. Self-registering as Restaurant Owner or Restaurant Manager is only
-       allowed when no account with that exact role exists yet (the
-       bootstrap window); further ones come from an existing Manager or
-       Owner via POST /users."""
+       themselves a Kitchen or Supervisor account.
+    2. Self-registering as Restaurant Manager is only allowed when no
+       Manager exists yet (the bootstrap window); further ones come from an
+       existing Manager via POST /users."""
     if not _public_registration_open():
         nobody_exists_yet = db.scalar(select(User).limit(1)) is None
         if not (nobody_exists_yet and data.role in _PRIVILEGED_ROLES):

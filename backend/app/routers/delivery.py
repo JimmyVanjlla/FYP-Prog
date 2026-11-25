@@ -20,11 +20,13 @@ from app.services import delivery as delivery_service
 
 router = APIRouter(prefix="/deliveries", tags=["deliveries"])
 
-_DELIVERY_ROLES = (Role.DELIVERY_LOGISTICS_STAFF, Role.RESTAURANT_MANAGER)
+# The Manager handles deliveries (scheduling, receiving, status). The Shift
+# Supervisor then records the incoming stock (verify) after the stock check,
+# so what arrived and what is booked into stock are still done by two people.
+_DELIVERY_ROLES = (Role.RESTAURANT_MANAGER,)
 # Scheduling a delivery follows straight on from creating its purchase
-# order, so the Procurement Officer who raised the PO can also schedule
-# the delivery — not just Delivery staff/the Manager.
-_SCHEDULING_ROLES = (*_DELIVERY_ROLES, Role.PROCUREMENT_OFFICER)
+# order, so the Supervisor who raised the PO can also schedule the delivery.
+_SCHEDULING_ROLES = (Role.RESTAURANT_MANAGER, Role.SHIFT_SUPERVISOR)
 
 
 @router.get("", response_model=list[DeliveryOut])
@@ -84,7 +86,7 @@ def confirm_receipt(
     delivery_id: int,
     data: ReceiptConfirmation,
     db: Session = Depends(get_db),
-    staff: User = Depends(require_role(Role.DELIVERY_LOGISTICS_STAFF)),
+    staff: User = Depends(require_role(Role.RESTAURANT_MANAGER)),
 ) -> ReceiptConfirmationResult:
     """UC-DM-02 / FR10.2 / FR10.5. Records what was physically received
     and routes to the discrepancy flow if needed — does NOT update
@@ -116,9 +118,9 @@ def confirm_receipt(
 def verify_delivery(
     delivery_id: int,
     db: Session = Depends(get_db),
-    staff: User = Depends(require_role(Role.INVENTORY_STAFF)),
+    staff: User = Depends(require_role(Role.SHIFT_SUPERVISOR)),
 ) -> DeliveryOut:
-    """UC-IM-01 — Inventory Staff's separate verification step; this is
+    """UC-IM-01 — the Shift Supervisor's separate verification step; this is
     what actually updates Ingredient.current_stock, not confirm-receipt."""
     try:
         return delivery_service.verify_delivery(db, delivery_id=delivery_id, verified_by=staff.user_id)
@@ -175,10 +177,9 @@ def list_discrepancies(
 def resolve_discrepancy(
     discrepancy_id: int,
     db: Session = Depends(get_db),
-    # UC-DM-04 Alt Flow 2a names the Procurement Officer as who closes a
-    # discrepancy record specifically, alongside the roles that already
-    # handle deliveries generally.
-    _staff: User = Depends(require_role(*_DELIVERY_ROLES, Role.PROCUREMENT_OFFICER)),
+    # UC-DM-04 Alt Flow 2a: the person who handles purchasing closes a
+    # discrepancy record, alongside whoever handles deliveries.
+    _staff: User = Depends(require_role(Role.RESTAURANT_MANAGER, Role.SHIFT_SUPERVISOR)),
 ) -> DeliveryDiscrepancyOut:
     """FR10.3."""
     try:

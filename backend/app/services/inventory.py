@@ -293,6 +293,7 @@ def _portions_consumed(db: Session, start: date, end: date) -> dict[int, Decimal
     for menu_item_id, meal_period, order_date, qty in db.execute(
         select(Order.menu_item_id, Order.meal_period, Order.order_date, func.sum(Order.quantity))
         .where(Order.order_date.between(start, end))
+        .where(Order.status == "completed")
         .group_by(Order.menu_item_id, Order.meal_period, Order.order_date)
     ):
         per_key[(menu_item_id, meal_period, order_date)] = Decimal(qty)
@@ -357,7 +358,7 @@ def apply_forecasted_consumption(db: Session, *, today: date | None = None) -> d
         names = ", ".join(i.name for i in newly_low)
         notification_service.notify(
             db,
-            recipient_role="Inventory Staff",
+            recipient_role="Shift Supervisor",
             type_="low_stock_alert",
             message=f"{len(newly_low)} ingredient(s) dropped below their low-stock threshold: {names}.",
         )

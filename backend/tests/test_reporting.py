@@ -46,7 +46,7 @@ def test_weekly_report_generates_pdf_with_data(client, db_session):
         ForecastAccuracy(forecast_id=forecast.forecast_id, actual_quantity=Decimal("95.00"), accuracy_error=Decimal("0.05"))
     )
 
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Chicken Thigh", "unit": "kg", "current_stock": "10"},
@@ -94,7 +94,7 @@ def test_weekly_report_includes_waste_logged_today_when_period_end_is_today(clie
     period_end is today, generated right now, should still include waste
     logged earlier today (see app/services/reporting.py::_end_of_day)."""
     token = _manager_token(client)
-    inv_token = register_and_login(client, email="inv2@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv2@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Prawns", "unit": "kg", "current_stock": "10"},

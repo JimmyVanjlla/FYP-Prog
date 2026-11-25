@@ -15,7 +15,7 @@ def test_supervisor_can_list_assignable_staff(client):
     find a staff_id to assign."""
     supervisor = _supervisor(client)
     register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")
-    register_and_login(client, email="owner@restaurant.com", role="Restaurant Owner")
+    register_and_login(client, email="owner@restaurant.com", role="Restaurant Manager")
 
     staff = client.get("/staffing/staff", headers=supervisor).json()
     roles = {s["role"] for s in staff}

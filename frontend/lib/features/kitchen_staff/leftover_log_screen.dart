@@ -8,24 +8,14 @@ import '../../core/format.dart';
 import '../../core/json.dart';
 import '../../core/theme.dart';
 
-/// The standard answers to "how much was left over?": a share of what the
-/// kitchen prepared for that dish and meal period.
-const leftoverLevels = [0, 25, 50, 75, 100];
-
-/// The quantity a leftover percentage is taken of: what Kitchen Staff confirmed
-/// in Prep. Null if the dish's prep was not confirmed: a recommendation that
-/// nobody confirmed is not a record of what was prepared.
-double? leftoverPrepBasis(Json? recommendation) {
-  if (recommendation == null || recommendation['confirmed'] != true) return null;
-  final q = asDouble(recommendation['confirmed_quantity']);
-  return q > 0 ? q : null;
-}
-
-/// Module 5 — FR5.3. Kitchen Staff log how much of a dish was left at the end
-/// of a meal period: none, a quarter, half, three quarters or all of what was
-/// prepared. There are no quantities to type: the amount is a share of the
-/// quantity confirmed in Prep, so every log means the same thing whoever makes
-/// it.
+/// Module 5 — FR5.3, now worked out rather than typed in. For each dish at a
+/// meal period the screen shows what Kitchen Staff confirmed in Prep, the
+/// portions actually served (completed orders) and the leftover:
+///
+///     leftover = confirmed prep - portions served
+///
+/// Recording saves those figures, which feed the waste cost, the portion
+/// reviews and the forecast. Nobody reports a quantity by hand.
 class LeftoverLogScreen extends StatefulWidget {
   const LeftoverLogScreen({super.key});
 
@@ -36,70 +26,67 @@ class LeftoverLogScreen extends StatefulWidget {
 class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
   DateTime _date = restaurantToday();
   String _period = 'Lunch';
-  int? _dishId;
-  int? _percent;
+  int _version = 0;
   bool _saving = false;
 
-  Future<({List<Json> dishes, Map<int, Json> prep})> _load() async {
+  Future<Json> _load() async {
     final api = context.read<AuthState>().api;
-    final results = await Future.wait([
-      api.getJson('/menu-items', query: {'limit': 500}),
-      api.getJson('/kitchen/prep-recommendations', query: {
-        'forecast_date': fmtDate(_date),
+    return asJson(
+      await api.getJson('/kitchen/leftover-summary', query: {
+        'service_date': fmtDate(_date),
         'meal_period': _period,
-        'limit': 500,
       }),
-    ]);
-    return (
-      dishes: asJsonList(results[0]),
-      prep: {for (final r in asJsonList(results[1])) r['menu_item_id'] as int: r},
     );
   }
 
-  Future<void> _save(int dishId) async {
+  Future<void> _record() async {
     setState(() => _saving = true);
     final api = context.read<AuthState>().api;
     final ok = await runAction(
       context,
-      () => api.postJson('/kitchen/leftover-logs', {
-        'menu_item_id': dishId,
-        'service_period_date': fmtDate(_date),
+      () => api.postJson('/kitchen/leftovers/record', {
+        'service_date': fmtDate(_date),
         'meal_period': _period,
-        'leftover_percent': _percent,
       }),
-      success: 'Leftover log saved.',
+      success: 'Leftovers recorded.',
     );
     if (!mounted) return;
     setState(() {
       _saving = false;
-      if (ok) _percent = null;
+      if (ok) _version++;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return AsyncView<({List<Json> dishes, Map<int, Json> prep})>(
-      key: ValueKey('${fmtDate(_date)}|$_period'),
+    return AsyncView<Json>(
+      key: ValueKey('${fmtDate(_date)}|$_period|$_version'),
       load: _load,
-      builder: (context, data, reload) {
-        final served = data.dishes
-            .where((d) => ((d['meal_periods'] as List<dynamic>?) ?? const ['Lunch', 'Dinner']).contains(_period))
-            .toList();
-        final dishId = served.any((d) => d['menu_item_id'] == _dishId) ? _dishId : (served.isEmpty ? null : served.first['menu_item_id'] as int);
-        final basis = dishId == null ? null : leftoverPrepBasis(data.prep[dishId]);
+      builder: (context, summary, reload) {
+        final dishes = asJsonList(summary['dishes']);
+        final open = (summary['open_orders'] as num?)?.toInt() ?? 0;
+        final measured = dishes.where((d) => d['prep_confirmed'] == true).toList();
+        final prepared = measured.fold<double>(0, (a, d) => a + asDouble(d['prepared']));
+        final left = measured.fold<double>(0, (a, d) => a + asDouble(d['leftover']));
+        final allRecorded = measured.isNotEmpty && measured.every((d) => d['recorded'] == true);
 
-        return ListView(
-          padding: const EdgeInsets.all(20),
+        return RefreshableList(
+          onRefresh: reload,
           children: [
             Row(
               children: [
                 const IconBadge(icon: Icons.restaurant_rounded),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Log end-of-service leftovers', style: Theme.of(context).textTheme.titleLarge)),
+                Expanded(child: Text('Leftovers', style: Theme.of(context).textTheme.titleLarge)),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 6),
+            Text(
+              'Worked out for you: what was prepared minus what was served.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -133,58 +120,56 @@ class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            if (served.isEmpty)
+            if (open > 0)
+              _Note(
+                icon: Icons.hourglass_bottom_rounded,
+                color: Severity.warning,
+                text: '$open ${open == 1 ? 'order is' : 'orders are'} not completed yet, so '
+                    '${open == 1 ? 'it is' : 'they are'} not counted as served. Finish them in Orders first.',
+              ),
+            if (dishes.isEmpty)
               EmptyState(
                 icon: Icons.restaurant_menu_outlined,
                 message: 'No dishes are served at $_period.',
               )
             else ...[
-              DropdownButtonFormField<int>(
-                isExpanded: true,
-                initialValue: dishId,
-                decoration: const InputDecoration(labelText: 'Dish'),
-                items: [
-                  for (final d in served) DropdownMenuItem(value: d['menu_item_id'] as int, child: Text(d['name'] as String)),
-                ],
-                onChanged: (v) => setState(() {
-                  _dishId = v;
-                  _percent = null;
-                }),
-              ),
-              const SizedBox(height: 16),
-              _BasisCard(basis: basis, period: _period, date: _date),
-              const SizedBox(height: 20),
-              Text('How much was left over?', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  for (final level in leftoverLevels)
-                    ChoiceChip(
-                      label: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                        child: Text(level == 0 ? 'None' : '$level%', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                      ),
-                      selected: _percent == level,
-                      onSelected: basis == null ? null : (_) => setState(() => _percent = level),
+              for (final d in dishes) _DishRow(dish: d),
+              const SizedBox(height: 12),
+              if (measured.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.pie_chart_outline_rounded),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Overall ${left.round()} of ${prepared.round()} portions left over '
+                            '(${prepared == 0 ? 0 : (left / prepared * 100).round()}%).',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
                     ),
-                ],
-              ),
-              if (basis != null && _percent != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'About ${(basis * _percent! / 100).round()} of ${basis.round()} portions',
-                  style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
                 ),
-              ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               FilledButton(
-                onPressed: (_saving || dishId == null || basis == null || _percent == null) ? null : () => _save(dishId),
+                onPressed: (_saving || measured.isEmpty) ? null : _record,
                 child: _saving
                     ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Save log'),
+                    : Text(allRecorded ? 'Update recorded leftovers' : 'Record leftovers'),
               ),
+              if (measured.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    'No dish has a confirmed prep quantity for $_period on ${friendlyDate(fmtDate(_date))}. '
+                    'Confirm the prep first, so there is something to measure the leftover against.',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                ),
             ],
           ],
         );
@@ -193,19 +178,17 @@ class _LeftoverLogScreenState extends State<LeftoverLogScreen> {
   }
 }
 
-/// What the percentage will be taken of, or why there is nothing to take it of.
-class _BasisCard extends StatelessWidget {
-  final double? basis;
-  final String period;
-  final DateTime date;
+class _Note extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
 
-  const _BasisCard({required this.basis, required this.period, required this.date});
+  const _Note({required this.icon, required this.color, required this.text});
 
   @override
   Widget build(BuildContext context) {
-    final ok = basis != null;
-    final color = ok ? Severity.ok : Severity.warning;
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
@@ -214,16 +197,105 @@ class _BasisCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(ok ? Icons.check_circle_rounded : Icons.error_rounded, color: color),
+          Icon(icon, color: color),
           const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              ok
-                  ? 'Based on the ${basis!.round()} portions confirmed in Prep for $period.'
-                  : 'The prep for this dish at $period on ${friendlyDate(fmtDate(date))} was not confirmed. '
-                      'Confirm it in Prep first, so there is a quantity to take a percentage of.',
-            ),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DishRow extends StatelessWidget {
+  final Json dish;
+
+  const _DishRow({required this.dish});
+
+  @override
+  Widget build(BuildContext context) {
+    final confirmed = dish['prep_confirmed'] == true;
+    final served = asDouble(dish['served']).round();
+    final extra = (dish['sold_beyond_prep'] as num?)?.toInt() ?? 0;
+    final percent = (dish['leftover_percent'] as num?)?.toInt();
+    final color = !confirmed
+        ? Severity.warning
+        : (percent != null && percent > 15 ? Severity.critical : Severity.ok);
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      dish['menu_item_name'] as String,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (!confirmed)
+                    SeverityChip(label: 'Prep not confirmed', color: Severity.warning)
+                  else
+                    SeverityChip(label: '$percent% left', color: color),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (confirmed)
+                Row(
+                  children: [
+                    _Figure(label: 'Prepared', value: trimNum(dish['prepared'])),
+                    _Figure(label: 'Served', value: '$served'),
+                    _Figure(label: 'Left over', value: trimNum(dish['leftover'])),
+                  ],
+                )
+              else
+                Text(
+                  'Confirm the prep in Prep to measure this dish. $served served so far.',
+                  style: TextStyle(color: muted),
+                ),
+              if (confirmed && extra > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text('$extra more served than prepared.', style: TextStyle(color: muted)),
+                ),
+              if (dish['recorded'] == true)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle_rounded, size: 16, color: Severity.ok),
+                      const SizedBox(width: 6),
+                      Text('Recorded', style: TextStyle(color: muted)),
+                    ],
+                  ),
+                ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Figure extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _Figure({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
       ),
     );

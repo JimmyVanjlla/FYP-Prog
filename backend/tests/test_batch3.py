@@ -16,7 +16,7 @@ def _h(client, email, role):
 
 # ---------------------------------------------------------------- restock requests
 def _restock_setup(client):
-    inv = _h(client, "inv@restaurant.com", "Inventory Staff")
+    inv = _h(client, "inv@restaurant.com", "Shift Supervisor")
     kitchen = _h(client, "kitchen@restaurant.com", "Kitchen Staff")
     ingredient = client.post(
         "/inventory/ingredients", json={"name": "Beansprouts", "unit": "kg", "current_stock": "5"}, headers=inv
@@ -61,7 +61,7 @@ def test_a_restock_request_is_decided_once(client):
 
 # ---------------------------------------------------------------- Owner = Manager
 def test_an_owner_can_do_what_a_manager_can(client):
-    owner = _h(client, "owner@restaurant.com", "Restaurant Owner")
+    owner = _h(client, "owner@restaurant.com", "Restaurant Manager")
     item = client.post("/menu-items", json={"name": "Nasi Lemak", "price": "6.50", "category": "Rice"}, headers=owner)
     assert item.status_code == 201
     assert client.get("/config", headers=owner).status_code == 200
@@ -161,24 +161,23 @@ def test_deleting_a_recent_account_keeps_it_for_the_full_60_days(client, db_sess
     assert len(client.get("/users", params={"deleted": True}, headers=manager).json()) == 1
 
 
-def test_a_manager_cannot_delete_a_manager_but_an_owner_can(client):
-    owner = _h(client, "owner@restaurant.com", "Restaurant Owner")
+def test_a_manager_can_delete_a_deactivated_account_of_any_role(client):
     manager = _h(client, "manager@restaurant.com", "Restaurant Manager")
     other = client.post(
         "/users",
         json={"name": "Other", "email": "other@restaurant.com", "password": "Password123!", "role": "Restaurant Manager"},
-        headers=owner,
+        headers=manager,
     ).json()
     url = f"/users/{other['user_id']}"
-    client.patch(url, json={"is_active": False}, headers=owner)
-    assert client.delete(url, headers=manager).status_code == 403
-    assert client.delete(url, headers=owner).status_code == 200
+    assert client.delete(url, headers=manager).status_code == 409  # deactivate it first
+    client.patch(url, json={"is_active": False}, headers=manager)
+    assert client.delete(url, headers=manager).status_code == 200
 
 
 # ---------------------------------------------------------------- staffing
 def test_only_kitchen_staff_can_be_put_on_the_kitchen_station(client):
     supervisor = _h(client, "sup@restaurant.com", "Shift Supervisor")
-    delivery = register_and_login(client, email="delivery@restaurant.com", role="Delivery/Logistics Staff")
+    delivery = register_and_login(client, email="delivery@restaurant.com", role="Restaurant Manager")
     delivery_id = client.get("/users/me", headers=auth_headers(delivery)).json()["user_id"]
     schedule = client.post("/staffing/schedules", json={"date": "2026-09-01", "meal_period": "Lunch"}, headers=supervisor).json()
     resp = client.post(
@@ -259,7 +258,7 @@ def test_there_is_no_prep_for_a_meal_period_the_dish_is_not_served_in(client):
 # ---------------------------------------------------------------- leftover percentages
 def _dish_with_confirmed_prep(client, quantity="40"):
     manager = _h(client, "manager@restaurant.com", "Restaurant Manager")
-    inv = _h(client, "inv@restaurant.com", "Inventory Staff")
+    inv = _h(client, "inv@restaurant.com", "Shift Supervisor")
     kitchen = _h(client, "kitchen@restaurant.com", "Kitchen Staff")
     item = client.post("/menu-items", json={"name": "Curry Laksa", "price": "8.00", "category": "Noodles"}, headers=manager).json()
     ingredient = client.post(

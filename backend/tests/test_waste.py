@@ -15,7 +15,7 @@ def test_leftover_log_generates_waste_log_entries(client):
         headers=auth_headers(manager_token),
     ).json()
 
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Chicken Thigh", "unit": "kg", "current_stock": "20"},
@@ -71,7 +71,7 @@ def test_waste_trend_includes_waste_logged_on_the_last_day_of_the_period(client,
     from app.models.waste import WasteLog
 
     token = _manager_token(client)
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Prawns", "unit": "kg", "current_stock": "10"},

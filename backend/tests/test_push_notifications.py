@@ -40,7 +40,7 @@ def _notification_status(client, headers):
 
 def test_device_can_be_registered_and_moves_to_whoever_registers_it_last(client, db_session):
     kitchen, kitchen_id = _kitchen(client)
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     inventory_id = client.get("/users/me", headers=inventory).json()["user_id"]
 
     assert client.post("/notifications/devices", json={"token": "tok-1"}, headers=kitchen).status_code == 201
@@ -55,7 +55,7 @@ def test_device_can_be_registered_and_moves_to_whoever_registers_it_last(client,
 
 def test_unregister_removes_only_the_callers_device(client, db_session):
     kitchen, _ = _kitchen(client)
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     client.post("/notifications/devices", json={"token": "tok-1"}, headers=kitchen)
 
     client.post("/notifications/devices/unregister", json={"token": "tok-1"}, headers=inventory)

@@ -9,7 +9,18 @@ Columns: **Backend** is `Done` when it works and is tested, `Partial` when a nam
 - **61 functional requirements** across 11 modules.
 - **Complete end to end: 61 of 61.** FR5.4 (push notifications) was the last one: it was confirmed on 31 Oct 2026 with a real Firebase project, a push from the backend arriving on the Android emulator while the app was not running.
 - Backend: 61 done. App: 55 done, 0 partial, 0 with no screen, 6 needing none.
-- Tests: 267 backend (including 5 cross-role integration workflows), 103 Flutter tests; the Flutter analyzer is clean.
+- Tests: 289 backend (including cross-role integration workflows), 102 Flutter tests; the Flutter analyzer is clean.
+
+## Changes after the supervisor's review (25 Nov 2026)
+
+The supervisor reviewed the system after the presentation and asked for these changes, all built and tested. They change the design in Chapters 1 to 4 in the places listed.
+
+- **Three roles, not seven.** Restaurant Manager, Shift Supervisor and Kitchen Staff remain. The Restaurant Owner, Inventory Staff, Procurement Officer and Delivery/Logistics Staff interfaces were removed and their duties folded in. Manager: accounts (any of the three roles), menu and recipes, approvals, purchasing and suppliers, budget, receiving deliveries. Supervisor: staff assignment, booking incoming stock after the stock check, stock adjustments and batches, restock decisions, restock purchase requests, and recording waste. Kitchen: prep, incoming orders, restock requests. A data migration moved existing accounts onto these roles. **Deviates from Ch1 §1.5.2 and Ch4 §4.1 (7 roles; FR1.3 role list).**
+- **Incoming orders for the kitchen.** Orders now have a status (pending, preparing, completed). Kitchen Staff move them forward. There is no till, so sample orders are generated for the demonstration. Forecast training uses only completed orders from finished days.
+- **Leftover is worked out, not typed.** Leftover = confirmed prep - portions served (completed orders), per dish and meal period. Recording it feeds the waste cost, portion reviews and forecast adjustment as before. **Replaces the typed leftover log of FR5.3.**
+- **Waste recording moved to the Supervisor**, and recording expired stock now also takes it off stock and removes a wholly wasted batch.
+- **Expected waste** for the next 7 days (forecast x recent leftover rate x ingredient cost) on the Waste screen.
+- **Reports** now include the % leftover calculation and the staff assignments for the period (PDF is 3 pages).
 
 ## What is still genuinely open
 
@@ -96,7 +107,7 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 |---|---|---|---|---|
 | FR1.1 | Register with email, name, password | Done | Done |  |
 | FR1.2 | Email/password login returns a JWT | Done | Done | Rate-limited per email. |
-| FR1.3 | Role-based access control | Done | Done | Enforced server-side on every endpoint, and every one of the 7 roles now gets its own navigation. |
+| FR1.3 | Role-based access control | Done | Done | Enforced server-side on every endpoint, and each of the 3 roles gets its own navigation (reduced from 7 on 25 Nov 2026). |
 | FR1.4 | Manager creates / deactivates / reassigns staff accounts | Done | Done | Staff screen. Accounts also carry phone, address and an emergency contact, which a Manager or Owner can view and correct; the Owner has the Staff screen too. |
 | Ch1 Module 1 | "Profile and credential management" | Done | Done | **My profile** (top bar and menu): everyone edits their own name and contact details and changes their password (current password required). Role, active status and email are shown but cannot be edited there. Added 6 Nov 2026; it had no screen before. |
 | FR1.5 | Log all user actions with timestamps | Done | Done | Every state-changing request by a signed-in user is logged centrally; the Staff screen has an Activity log tab. |
@@ -227,7 +238,7 @@ Measured with `backend/scripts/measure_performance.py`; rerun it to reproduce.
 | Security | Salted bcrypt password hashes | Done |  |
 | Security | RBAC enforced at the API, not just the UI | Done | Re-checked against the database on every request; a cross-role test asserts the refusals. |
 | Security | HTTPS for client-to-server traffic | Not exercised | Provided by Render/Railway once deployed. Nothing is deployed. |
-| Usability | Each role sees only its own screens | Done | All 7 roles. |
+| Usability | Each role sees only its own screens | Done | All 3 roles (7 before 25 Nov 2026). |
 | Usability | Meaningful, actionable error messages | Done |  |
 | Usability | Android 8.0+ and iOS 13.0+ compatible | Android done, iOS untested | Android minSdk is Flutter's default (24, broader than 8.0), run on an API 36 emulator. iOS is pinned to 13.0 but never built. |
 | Reliability | Celery tasks retry up to 3 times | Done |  |

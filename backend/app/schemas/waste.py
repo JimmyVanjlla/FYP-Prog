@@ -71,3 +71,22 @@ class WasteSummaryOut(BaseModel):
     weeks: list[WasteWeekOut]
     top_ingredients: list[WasteTopIngredientOut]
     top_dishes: list[WasteTopDishOut]
+
+
+class WastePredictionDishOut(BaseModel):
+    menu_item_id: int
+    menu_item_name: str
+    forecast_portions: Decimal
+    leftover_rate: Decimal
+    expected_leftover_portions: Decimal
+    expected_cost: Decimal
+
+
+class WastePredictionOut(BaseModel):
+    """Expected leftover waste for the coming days, from the forecast and the recent leftover rate."""
+
+    period_start: date
+    period_end: date
+    total_cost: Decimal
+    total_portions: Decimal
+    dishes: list[WastePredictionDishOut]

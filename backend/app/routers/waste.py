@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.waste import (
     WasteLogCreate,
     WasteLogOut,
+    WastePredictionOut,
     WasteReductionTrendOut,
     WasteSummaryOut,
     WasteTrendRequest,
@@ -39,17 +40,28 @@ def waste_summary(
     return WasteSummaryOut(**waste_service.waste_summary(db, weeks=weeks))
 
 
+@router.get("/prediction", response_model=WastePredictionOut)
+def waste_prediction(
+    days: int = Query(default=7, ge=1, le=28),
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> WastePredictionOut:
+    """FR6.3 / Manager: the waste expected over the next few days, from the forecast and the recent leftover rate."""
+    return WastePredictionOut(**waste_service.waste_prediction(db, days=days))
+
+
 @router.post("/logs", response_model=WasteLogOut, status_code=status.HTTP_201_CREATED)
 def create_waste_log(
     data: WasteLogCreate,
     db: Session = Depends(get_db),
     staff: User = Depends(
-        require_role(Role.KITCHEN_STAFF, Role.INVENTORY_STAFF, Role.RESTAURANT_MANAGER)
+        require_role(Role.SHIFT_SUPERVISOR)
     ),
 ) -> WasteLogOut:
-    """FR6.1 / FR6.5 — Kitchen Staff log leftover waste and Inventory Staff
-    log expiry waste; entries are validated against what was prepared or
-    delivered. Expiry waste also comes off stock and off the batch."""
+    """FR6.1 / FR6.5 — the Shift Supervisor records waste by hand (expired
+    stock, or a leftover correction); entries are validated against what was
+    prepared or delivered. Expiry waste also comes off stock and off the
+    batch. Leftover waste from the kitchen's service is costed automatically."""
     try:
         return waste_service.create_manual_waste_log(db, data, staff_id=staff.user_id)
     except waste_service.InvalidWasteEntryError as exc:

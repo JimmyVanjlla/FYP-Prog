@@ -1,4 +1,4 @@
-// Accounts are created by a Manager or Owner (there is no self-registration in
+// Accounts are created by a Manager (there is no self-registration in
 // the app), and a supplier's prices can be changed and the supplier brought back.
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
@@ -32,7 +32,7 @@ Json _supplier({required bool active}) => {
 };
 
 void main() {
-  testWidgets('the login screen has no Register link; accounts come from a Manager or Owner', (tester) async {
+  testWidgets('the login screen has no Register link; accounts come from a Manager', (tester) async {
     FlutterSecureStoragePlatform.instance = FakeSecureStorage();
     await tester.pumpWidget(
       ChangeNotifierProvider<AuthState>.value(
@@ -42,14 +42,14 @@ void main() {
     );
 
     expect(find.textContaining('Register'), findsNothing);
-    expect(find.textContaining('Manager or Owner creates it'), findsOneWidget);
+    expect(find.textContaining('Manager creates it'), findsOneWidget);
   });
 
   group('supplier screen', () {
     testWidgets('tapping a price offers to change it, keeping its ingredient', (tester) async {
       final api = await pumpAs(
         tester,
-        Roles.procurementOfficer,
+        Roles.manager,
         SupplierDetailScreen(supplier: _supplier(active: true)),
         routes: _supplierRoutes(),
       );
@@ -70,7 +70,7 @@ void main() {
     testWidgets('an active supplier offers Deactivate, and the warning says what it affects', (tester) async {
       await pumpAs(
         tester,
-        Roles.procurementOfficer,
+        Roles.manager,
         SupplierDetailScreen(supplier: _supplier(active: true)),
         routes: _supplierRoutes(),
       );
@@ -86,7 +86,7 @@ void main() {
     testWidgets('a deactivated supplier can be reactivated', (tester) async {
       final api = await pumpAs(
         tester,
-        Roles.procurementOfficer,
+        Roles.manager,
         SupplierDetailScreen(supplier: _supplier(active: false)),
         routes: {
           ..._supplierRoutes(),

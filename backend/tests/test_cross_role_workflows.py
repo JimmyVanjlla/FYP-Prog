@@ -21,16 +21,16 @@ def _notifications(client, headers, type_):
 
 
 def test_ingredients_flow_from_purchase_order_to_stock(client):
-    """Procurement Officer raises a PO -> Manager approves -> Officer
+    """Shift Supervisor raises a PO -> Manager approves -> Officer
     schedules the delivery -> Delivery staff confirm what arrived -> Inventory
     Staff verify it into stock. Stock must only change at the last step."""
     manager = _who(client, "Restaurant Manager", "manager@restaurant.com")
-    officer = _who(client, "Procurement Officer", "officer@restaurant.com")
-    inventory = _who(client, "Inventory Staff", "inventory@restaurant.com")
-    delivery = _who(client, "Delivery/Logistics Staff", "delivery@restaurant.com")
+    officer = _who(client, "Shift Supervisor", "officer@restaurant.com")
+    inventory = _who(client, "Shift Supervisor", "inventory@restaurant.com")
+    delivery = _who(client, "Restaurant Manager", "delivery@restaurant.com")
 
     supplier = client.post(
-        "/procurement/suppliers", json={"name": "Fresh Farm", "contact_info": "+60 12-345 6789"}, headers=officer
+        "/procurement/suppliers", json={"name": "Fresh Farm", "contact_info": "+60 12-345 6789"}, headers=manager
     ).json()
     chicken = client.post(
         "/inventory/ingredients", json={"name": "Chicken", "unit": "kg", "current_stock": "5"}, headers=inventory
@@ -38,7 +38,7 @@ def test_ingredients_flow_from_purchase_order_to_stock(client):
     client.post(
         "/procurement/suppliers/pricing",
         json={"supplier_id": supplier["supplier_id"], "ingredient_id": chicken["ingredient_id"], "unit_price": "12.00"},
-        headers=officer,
+        headers=manager,
     )
     client.post(
         "/procurement/budget",
@@ -72,13 +72,13 @@ def test_ingredients_flow_from_purchase_order_to_stock(client):
         headers=delivery,
     ).json()
     assert received["delivery"]["status"] == "delivered"
-    # Receipt is not stock: still waiting on the Inventory Staff check.
+    # Receipt is not stock: still waiting on the Shift Supervisor check.
     stock = lambda: next(  # noqa: E731
         Decimal(i["current_stock"]) for i in client.get("/inventory/ingredients", headers=inventory).json()
     )
     assert stock() == Decimal("5")
 
-    # Delivery staff can't verify into stock; Inventory Staff can.
+    # Delivery staff can't verify into stock; Shift Supervisor can.
     assert client.post(f"/deliveries/{sched['delivery_id']}/verify", headers=delivery).status_code == 403
     assert client.post(f"/deliveries/{sched['delivery_id']}/verify", headers=inventory).status_code == 200
     assert stock() == Decimal("25")
@@ -103,15 +103,15 @@ def test_ingredients_flow_from_purchase_order_to_stock(client):
 
 
 def test_a_short_delivery_blocks_stock_until_resolved(client):
-    """A shortage routes to the discrepancy flow: Inventory Staff can't add
+    """A shortage routes to the discrepancy flow: Shift Supervisor can't add
     it to stock until it's resolved, and the return has to be closed out."""
     manager = _who(client, "Restaurant Manager", "manager@restaurant.com")
-    officer = _who(client, "Procurement Officer", "officer@restaurant.com")
-    inventory = _who(client, "Inventory Staff", "inventory@restaurant.com")
-    delivery = _who(client, "Delivery/Logistics Staff", "delivery@restaurant.com")
+    officer = _who(client, "Shift Supervisor", "officer@restaurant.com")
+    inventory = _who(client, "Shift Supervisor", "inventory@restaurant.com")
+    delivery = _who(client, "Restaurant Manager", "delivery@restaurant.com")
 
     supplier = client.post(
-        "/procurement/suppliers", json={"name": "Pasar Besar", "contact_info": "x"}, headers=officer
+        "/procurement/suppliers", json={"name": "Pasar Besar", "contact_info": "x"}, headers=manager
     ).json()
     rice = client.post(
         "/inventory/ingredients", json={"name": "Rice", "unit": "kg", "current_stock": "0"}, headers=inventory
@@ -119,7 +119,7 @@ def test_a_short_delivery_blocks_stock_until_resolved(client):
     client.post(
         "/procurement/suppliers/pricing",
         json={"supplier_id": supplier["supplier_id"], "ingredient_id": rice["ingredient_id"], "unit_price": "3.00"},
-        headers=officer,
+        headers=manager,
     )
     po = client.post(
         "/procurement/purchase-orders",
@@ -156,7 +156,7 @@ def test_kitchen_leftovers_drive_a_portion_change_the_manager_approves(client, d
     Manager approves a smaller portion -> the recipe itself changes."""
     manager = _who(client, "Restaurant Manager", "manager@restaurant.com")
     kitchen = _who(client, "Kitchen Staff", "kitchen@restaurant.com")
-    inventory = _who(client, "Inventory Staff", "inventory@restaurant.com")
+    inventory = _who(client, "Shift Supervisor", "inventory@restaurant.com")
 
     rice = client.post(
         "/inventory/ingredients", json={"name": "Rice", "unit": "kg", "current_stock": "100"}, headers=inventory
@@ -288,19 +288,21 @@ def test_roles_are_confined_to_their_own_work(client):
     """The same boundary from the other side: each role is refused the other
     roles' actions, however it's phrased."""
     kitchen = _who(client, "Kitchen Staff", "kitchen@restaurant.com")
-    delivery = _who(client, "Delivery/Logistics Staff", "delivery@restaurant.com")
-    officer = _who(client, "Procurement Officer", "officer@restaurant.com")
+    _who(client, "Restaurant Manager", "manager@restaurant.com")
     supervisor = _who(client, "Shift Supervisor", "supervisor@restaurant.com")
 
     forbidden = [
         ("kitchen creating a menu item", client.post("/menu-items", json={"name": "x", "price": "1", "category": "x"}, headers=kitchen)),
         ("kitchen reading the audit trail", client.get("/users/audit-logs", headers=kitchen)),
         ("kitchen approving a purchase order", client.post("/procurement/purchase-orders/1/approve", headers=kitchen)),
-        ("delivery staff changing settings", client.patch("/config", json={"leftover_rate_threshold": "5"}, headers=delivery)),
-        ("delivery staff creating accounts", client.post("/users", json={"name": "n", "email": "n@x.com", "password": "password123", "role": "Kitchen Staff"}, headers=delivery)),
-        ("procurement logging leftovers", client.post("/kitchen/leftover-logs", json={"menu_item_id": 1, "service_period_date": "2026-01-01", "prepared_quantity": "1", "leftover_quantity": "0", "leftover_level": "x"}, headers=officer)),
-        ("procurement reading reports", client.get("/reports", headers=officer)),
-        ("supervisor adjusting stock", client.post("/inventory/stock-adjustments", json={"ingredient_id": 1, "adjusted_quantity": "1", "reason_category": "miscount"}, headers=supervisor)),
+        ("kitchen changing settings", client.patch("/config", json={"leftover_rate_threshold": "5"}, headers=kitchen)),
+        ("supervisor creating accounts", client.post("/users", json={"name": "n", "email": "n@x.com", "password": "password123", "role": "Kitchen Staff"}, headers=supervisor)),
+        ("supervisor logging leftovers", client.post("/kitchen/leftover-logs", json={"menu_item_id": 1, "service_period_date": "2026-01-01", "prepared_quantity": "1", "leftover_quantity": "0", "leftover_level": "x"}, headers=supervisor)),
+        ("supervisor reading reports", client.get("/reports", headers=supervisor)),
+        ("supervisor approving a purchase order", client.post("/procurement/purchase-orders/1/approve", headers=supervisor)),
+        ("supervisor changing supplier prices", client.post("/procurement/suppliers/pricing", json={"supplier_id": 1, "ingredient_id": 1, "unit_price": "1"}, headers=supervisor)),
+        ("kitchen adjusting stock", client.post("/inventory/stock-adjustments", json={"ingredient_id": 1, "adjusted_quantity": "1", "reason_category": "miscount"}, headers=kitchen)),
+        ("kitchen recording waste", client.post("/waste/logs", json={"source_type": "expiry", "source_ref_id": 1, "ingredient_id": 1, "quantity_wasted": "1"}, headers=kitchen)),
         ("supervisor generating reports", client.post("/reports/weekly", json={"period_start": "2026-01-01", "period_end": "2026-01-07"}, headers=supervisor)),
     ]
     for label, response in forbidden:

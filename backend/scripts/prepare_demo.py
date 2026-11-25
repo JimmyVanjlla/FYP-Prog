@@ -49,8 +49,8 @@ def main() -> int:
         return {"Authorization": "Bearer " + r.json()["access_token"]}
 
     manager = login("manager@test.com")
-    procurement = login("procurement@test.com")
-    inventory = login("inventory@test.com")
+    procurement = login("supervisor@test.com")  # raises purchase orders for the Manager to approve
+    inventory = login("supervisor@test.com")  # works through restock requests
     kitchen = login("kitchen@test.com")
 
     def rows(path: str, headers: dict, **query) -> list:

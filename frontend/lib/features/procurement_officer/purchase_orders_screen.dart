@@ -36,7 +36,12 @@ class _Data {
 class _PurchaseOrdersScreenState extends State<PurchaseOrdersScreen> {
   int _version = 0;
 
-  bool get _isOfficer => context.read<AuthState>().role == Roles.procurementOfficer;
+  // The Shift Supervisor submits restock purchase requests; the Manager can raise
+  // orders too and is the one who approves them.
+  bool get _isOfficer {
+    final role = context.read<AuthState>().role;
+    return role == Roles.shiftSupervisor || Roles.isManagement(role);
+  }
   bool get _isManager => Roles.isManagement(context.read<AuthState>().role);
 
   Future<_Data> _load() async {

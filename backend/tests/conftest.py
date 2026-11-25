@@ -47,13 +47,21 @@ def client(db_session):
 
 
 def register_and_login(client: TestClient, *, email: str, role: str, password: str = "password123") -> str:
-    """Returns a bearer access token for a freshly registered user."""
-    client.post(
-        "/auth/register",
-        json={"name": "Test User", "email": email, "password": password, "role": role},
-    )
-    resp = client.post("/auth/login", json={"email": email, "password": password})
-    return resp.json()["access_token"]
+    """Returns a bearer access token for a freshly registered user.
+
+    Only the first Restaurant Manager can register themselves; further Managers
+    are created by an existing one (POST /users), as they are in the real
+    system, so the helper does the same."""
+    body = {"name": "Test User", "email": email, "password": password, "role": role}
+    resp = client.post("/auth/register", json=body)
+    if resp.status_code != 201 and role == "Restaurant Manager":
+        first = getattr(client, "_first_manager_token", None)
+        if first is not None:
+            client.post("/users", json=body, headers=auth_headers(first))
+    token = client.post("/auth/login", json={"email": email, "password": password}).json()["access_token"]
+    if role == "Restaurant Manager" and getattr(client, "_first_manager_token", None) is None:
+        client._first_manager_token = token
+    return token
 
 
 def auth_headers(token: str) -> dict:

@@ -76,13 +76,18 @@ class InsufficientDataError(Exception):
     don't see this directly — see `skipped` in its return value instead."""
 
 
-def _load_grouped_orders(db: Session) -> pd.DataFrame:
+def _load_grouped_orders(db: Session, today: date | None = None) -> pd.DataFrame:
     """Step 1-2 of Algorithm 1: fetch all orders, group by
     (menu_item_id, meal_period, date), aggregate quantity as the daily
-    order count (Prophet's `y`), date as `ds`."""
-    rows = db.execute(
-        select(Order.menu_item_id, Order.meal_period, Order.order_date, Order.quantity)
-    ).all()
+    order count (Prophet's `y`), date as `ds`. Only completed orders from days
+    that have finished count: today's orders are still coming in, and training
+    on half a day would teach the model that today was quiet."""
+    query = select(Order.menu_item_id, Order.meal_period, Order.order_date, Order.quantity).where(
+        Order.status == "completed"
+    )
+    if today is not None:
+        query = query.where(Order.order_date < today)
+    rows = db.execute(query).all()
     if not rows:
         return pd.DataFrame(columns=["menu_item_id", "meal_period", "ds", "y"])
 
@@ -115,7 +120,7 @@ def train_and_generate_forecasts(
     from prophet import Prophet
 
     today = today or restaurant_today()
-    grouped = _load_grouped_orders(db)
+    grouped = _load_grouped_orders(db, today)
 
     # A Forecast is keyed by (menu_item_id, meal_period, forecast_date). Each
     # daily run re-predicts the dates still ahead of it, so existing rows are
@@ -258,6 +263,7 @@ def _backfill_forecast_accuracy(db: Session, *, today: date) -> int:
             .where(Order.menu_item_id == forecast.menu_item_id)
             .where(Order.meal_period == forecast.meal_period)
             .where(Order.order_date == forecast.forecast_date)
+            .where(Order.status == "completed")
         ).scalars().all()
         if not actual:
             continue  # no real order data for that date yet — nothing to score against
@@ -497,6 +503,7 @@ def daily_outlook(db: Session, *, date_from: date, date_to: date, today: date | 
         select(Order.order_date, Order.meal_period, func.sum(Order.quantity))
         .where(Order.order_date >= today - timedelta(days=28))
         .where(Order.order_date < today)
+        .where(Order.status == "completed")
         .group_by(Order.order_date, Order.meal_period)
     ).all()
     totals_by_period: dict[str, list[float]] = {}

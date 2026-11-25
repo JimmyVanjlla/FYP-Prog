@@ -11,8 +11,16 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.db.base import Base
 
 
+ORDER_STATUSES = ("pending", "preparing", "completed")
+
+
 class Order(Base):
-    """Historical order record — the raw input Algorithm 1 trains on (FR4.1)."""
+    """An order for portions of one dish at a meal period. It is the raw input
+    Algorithm 1 trains on (FR4.1) and, now, the sales record the kitchen works
+    through: it arrives as "pending", Kitchen Staff move it to "preparing" and
+    then "completed", and the portions of completed orders are what was
+    actually served (leftover = confirmed prep minus served). Historical rows
+    are all "completed"."""
 
     __tablename__ = "orders"
 
@@ -21,6 +29,10 @@ class Order(Base):
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
     meal_period: Mapped[str] = mapped_column(String(20), nullable=False)
     order_date: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="completed", server_default="completed", nullable=False)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=True
+    )
 
 
 class Forecast(Base):

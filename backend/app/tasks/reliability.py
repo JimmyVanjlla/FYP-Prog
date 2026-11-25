@@ -14,7 +14,7 @@ from app.services import notifications as notification_service
 
 logger = get_logger(__name__)
 
-_ALERT_ROLES = ("Restaurant Manager", "Restaurant Owner")
+_ALERT_ROLES = ("Restaurant Manager",)
 
 
 def retry_or_alert(task: Task, exc: Exception, db: Session, job_name: str) -> None:

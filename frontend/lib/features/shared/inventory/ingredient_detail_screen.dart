@@ -23,7 +23,7 @@ class IngredientDetailScreen extends StatelessWidget {
     final auth = context.read<AuthState>();
     final api = auth.api;
     final role = auth.role;
-    final canManage = role == Roles.inventoryStaff || Roles.isManagement(role);
+    final canManage = role == Roles.shiftSupervisor || Roles.isManagement(role);
     final canRequest = role == Roles.kitchenStaff;
 
     return Scaffold(
@@ -126,7 +126,7 @@ class IngredientDetailScreen extends StatelessWidget {
                     batch: b,
                     unit: unit,
                     windowDays: windowDays,
-                    onRecordWaste: canManage ? () => _recordWaste(context, ing, b, reload) : null,
+                    onRecordWaste: role == Roles.shiftSupervisor ? () => _recordWaste(context, ing, b, reload) : null,
                   ),
                 ),
               if (canManage) AddRow(label: 'Add batch', onTap: () => _addBatch(context, ing, reload)),

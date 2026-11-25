@@ -20,14 +20,17 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib.utils import simpleSplit
 from reportlab.pdfgen import canvas
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.dates import end_of_day
 from app.models.forecasting import Forecast, ForecastAccuracy
+from app.models.kitchen import LeftoverLog
 from app.models.menu import MenuItem
 from app.models.procurement import Budget, PurchaseOrder
 from app.models.report import Report
+from app.models.staffing import ShiftAssignment, ShiftSchedule
+from app.models.user import User
 from app.models.waste import WasteLog
 from app.services.config import get_or_create_config
 
@@ -95,6 +98,83 @@ def _budget_data(db: Session, period_start: date, period_end: date) -> dict:
     return {"limit": limit, "spent": spent, "utilisation_pct": utilisation_pct}
 
 
+def _leftover_data(db: Session, period_start: date, period_end: date) -> dict:
+    """The % leftover calculation for the period: per dish, what was prepared, what
+    was served (prepared minus leftover) and what was left, from the leftover logs
+    the kitchen's orders produce (leftover = confirmed prep - portions served)."""
+    rows = db.execute(
+        select(
+            MenuItem.name,
+            func.sum(LeftoverLog.prepared_quantity),
+            func.sum(LeftoverLog.leftover_quantity),
+        )
+        .join(MenuItem, MenuItem.menu_item_id == LeftoverLog.menu_item_id)
+        .where(LeftoverLog.service_period_date >= period_start)
+        .where(LeftoverLog.service_period_date <= period_end)
+        .group_by(MenuItem.name)
+    ).all()
+    dishes = []
+    for name, prepared, leftover in rows:
+        prepared, leftover = float(prepared or 0), float(leftover or 0)
+        dishes.append(
+            {
+                "menu_item_name": name,
+                "prepared": prepared,
+                "served": prepared - leftover,
+                "leftover": leftover,
+                "leftover_percent": (leftover / prepared * 100) if prepared else 0.0,
+            }
+        )
+    dishes.sort(key=lambda d: (-d["leftover_percent"], d["menu_item_name"]))
+    prepared = sum(d["prepared"] for d in dishes)
+    leftover = sum(d["leftover"] for d in dishes)
+    return {
+        "prepared": prepared,
+        "served": prepared - leftover,
+        "leftover": leftover,
+        "leftover_percent": (leftover / prepared * 100) if prepared else 0.0,
+        "dishes": dishes,
+    }
+
+
+_MEAL_ORDER = {"Breakfast": 0, "Lunch": 1, "Dinner": 2}
+
+
+def _staffing_data(db: Session, period_start: date, period_end: date) -> list[dict]:
+    """Who was assigned to which duty: every published shift in the period, with
+    the people on it and their station."""
+    schedules = db.scalars(
+        select(ShiftSchedule)
+        .where(ShiftSchedule.date >= period_start)
+        .where(ShiftSchedule.date <= period_end)
+        .where(ShiftSchedule.status == "published")
+    ).all()
+    schedules.sort(key=lambda s: (s.date, _MEAL_ORDER.get(s.meal_period, 9)))
+    shifts = []
+    for schedule in schedules:
+        staff = db.execute(
+            select(User.name, ShiftAssignment.station, ShiftAssignment.attendance_status)
+            .join(User, User.user_id == ShiftAssignment.staff_id)
+            .where(ShiftAssignment.schedule_id == schedule.schedule_id)
+            .order_by(User.name)
+        ).all()
+        shifts.append(
+            {
+                "date": schedule.date,
+                "meal_period": schedule.meal_period,
+                "staff": [{"name": n, "station": st, "attendance": att} for n, st, att in staff],
+            }
+        )
+    return shifts
+
+
+def _report_extras(db: Session, period_start: date, period_end: date) -> dict:
+    return {
+        "leftover": _leftover_data(db, period_start, period_end),
+        "staffing": _staffing_data(db, period_start, period_end),
+    }
+
+
 def _has_any_data(forecast_data: list, waste_data: dict, budget_data: dict) -> bool:
     return bool(forecast_data) or waste_data["log_count"] > 0 or budget_data["spent"] > 0
 
@@ -114,7 +194,7 @@ def generate_weekly_report(db: Session, *, period_start: date, period_end: date)
     db.flush()
 
     try:
-        pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data)
+        pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data, _report_extras(db, report.period_start, report.period_end))
         report.pdf_path = pdf_path
     except Exception:
         # NFR4.1 — retried automatically up to 3 times by the Celery task
@@ -150,6 +230,7 @@ def report_summary(db: Session, report: Report) -> dict:
         },
         "waste": waste_data,
         "budget": budget_data,
+        **_report_extras(db, report.period_start, report.period_end),
     }
 
 
@@ -164,7 +245,7 @@ def regenerate_report(db: Session, report: Report) -> Report:
         raise NoDataForPeriodError
 
     try:
-        report.pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data)
+        report.pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data, _report_extras(db, report.period_start, report.period_end))
         report.status = "generated"
         report.generated_at = datetime.now(timezone.utc)
     except Exception:
@@ -194,7 +275,7 @@ def ensure_pdf(db: Session, report: Report) -> str | None:
     if not _has_any_data(forecast_data, waste_data, budget_data):
         return None
 
-    report.pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data)
+    report.pdf_path = _render_pdf(report, forecast_data, waste_data, budget_data, _report_extras(db, report.period_start, report.period_end))
     db.commit()
     return report.pdf_path
 
@@ -226,7 +307,9 @@ def _by_dish(forecast_data: list[dict]) -> list[dict]:
     return sorted(dishes, key=lambda d: d["error"], reverse=True)
 
 
-def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, budget_data: dict) -> str:
+def _render_pdf(
+    report: Report, forecast_data: list[dict], waste_data: dict, budget_data: dict, extras: dict | None = None
+) -> str:
     os.makedirs(REPORTS_DIR, exist_ok=True)
     filename = f"{report.period_end.isoformat()}_weekly_summary.pdf"
     path = os.path.join(REPORTS_DIR, filename)
@@ -240,7 +323,8 @@ def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, bud
     panel = colors.HexColor("#F3F4F6")
     rule = colors.HexColor("#D1D5DB")
     black = colors.black
-    page_count = 2
+    page_count = 3
+    extras = extras or {"leftover": None, "staffing": []}
 
     errors = [float(r["error"]) for r in forecast_data]
     mean_error = sum(errors) / len(errors) if errors else None
@@ -387,9 +471,85 @@ def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, bud
     footer(1)
     c.showPage()
 
-    # --- Page 2: Section 3 (Budget Utilisation) ---------------------------
+    # --- Page 2: Section 3 (% Leftover) and Section 4 (Staff Assignment) -----
     y = title_block(height - margin)
-    y = section(y - 28, "3. Budget Utilisation")
+    y = section(y - 28, "3. Leftover Calculation")
+    left = extras["leftover"]
+    c.setFont("Helvetica", 10)
+    if not left or not left["dishes"]:
+        c.drawString(margin, y, "No leftovers were recorded in this period.")
+        y -= 16
+    else:
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(
+            margin,
+            y,
+            f"{left['leftover_percent']:.1f}% of what was prepared was left over "
+            f"({left['leftover']:.0f} of {left['prepared']:.0f} portions).",
+        )
+        y -= 20
+        col_prep = margin + 8.4 * cm
+        col_served = margin + 11.0 * cm
+        col_left = margin + 13.6 * cm
+        col_pct = width - margin
+        row_h = 15
+        c.setFillColor(panel)
+        c.rect(margin, y - 4, content_w, row_h, fill=True, stroke=False)
+        c.setFillColor(black)
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(margin + 4, y, "Dish")
+        c.drawRightString(col_prep, y, "Prepared")
+        c.drawRightString(col_served, y, "Served")
+        c.drawRightString(col_left, y, "Left over")
+        c.drawRightString(col_pct - 4, y, "% left")
+        y -= row_h
+        c.setFont("Helvetica", 9)
+        for d in left["dishes"][:12]:
+            c.drawString(margin + 4, y, d["menu_item_name"])
+            c.drawRightString(col_prep, y, f"{d['prepared']:.0f}")
+            c.drawRightString(col_served, y, f"{d['served']:.0f}")
+            c.drawRightString(col_left, y, f"{d['leftover']:.0f}")
+            c.drawRightString(col_pct - 4, y, f"{d['leftover_percent']:.1f}%")
+            c.setStrokeColor(rule)
+            c.setLineWidth(0.4)
+            c.line(margin, y - 4, width - margin, y - 4)
+            y -= row_h
+        y = caption(
+            y - 2,
+            "Leftover = confirmed prep minus the portions served (completed orders). Highest share left over first.",
+        )
+
+    y -= 24
+    y = section(y, "4. Staff Assignment")
+    shifts = extras["staffing"]
+    if not shifts:
+        c.setFont("Helvetica", 10)
+        c.drawString(margin, y, "No shifts were published in this period.")
+        y -= 16
+    else:
+        for shift in shifts[:14]:
+            c.setFont("Helvetica-Bold", 9)
+            c.drawString(margin + 4, y, f"{_fmt_day(shift['date'])}  {shift['meal_period']}")
+            names = ", ".join(f"{p['name']} ({p['station']})" for p in shift["staff"]) or "no one assigned"
+            c.setFont("Helvetica", 9)
+            lines = simpleSplit(names, "Helvetica", 9, content_w - 5.2 * cm)
+            for i, line in enumerate(lines):
+                c.drawString(margin + 5.2 * cm, y, line)
+                if i < len(lines) - 1:
+                    y -= 11
+            c.setStrokeColor(rule)
+            c.setLineWidth(0.4)
+            c.line(margin, y - 4, width - margin, y - 4)
+            y -= 15
+        if len(shifts) > 14:
+            y = caption(y, f"and {len(shifts) - 14} more shifts this period.")
+    caption(y, "Source: published shift schedules and their assignments (FR8.1-FR8.5).")
+    footer(2)
+    c.showPage()
+
+    # --- Page 3: Section 5 (Budget Utilisation) ---------------------------
+    y = title_block(height - margin)
+    y = section(y - 28, "5. Budget Utilisation")
     spent = budget_data["spent"]
     limit = budget_data["limit"]
     rows = [
@@ -439,7 +599,7 @@ def _render_pdf(report: Report, forecast_data: list[dict], waste_data: dict, bud
             y -= 12
         y -= 4
     c.setFillColor(black)
-    footer(2)
+    footer(3)
     c.showPage()
     c.save()
     return path

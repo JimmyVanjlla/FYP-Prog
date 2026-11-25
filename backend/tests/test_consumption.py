@@ -12,7 +12,7 @@ TODAY = date.today()
 def _setup(client, *, stock="50", per_serving="0.200"):
     """One ingredient, one dish that uses `per_serving` of it per portion."""
     manager = auth_headers(register_and_login(client, email="manager@restaurant.com", role="Restaurant Manager"))
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     ingredient = client.post(
         "/inventory/ingredients", json={"name": "Rice", "unit": "kg", "current_stock": stock}, headers=inventory
     ).json()

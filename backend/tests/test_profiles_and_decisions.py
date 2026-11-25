@@ -142,14 +142,14 @@ class TestPasswordChange:
 
 def _purchase_order(client):
     manager = _manager(client)
-    officer = auth_headers(register_and_login(client, email="po@restaurant.com", role="Procurement Officer"))
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    officer = auth_headers(register_and_login(client, email="po@restaurant.com", role="Restaurant Manager"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     rice = client.post("/inventory/ingredients", json={"name": "Rice", "unit": "kg", "current_stock": "1"}, headers=inventory).json()
-    supplier = client.post("/procurement/suppliers", json={"name": "Cheap Co", "contact_info": "1"}, headers=officer).json()
+    supplier = client.post("/procurement/suppliers", json={"name": "Cheap Co", "contact_info": "1"}, headers=manager).json()
     client.post(
         "/procurement/suppliers/pricing",
         json={"supplier_id": supplier["supplier_id"], "ingredient_id": rice["ingredient_id"], "unit_price": "2.00"},
-        headers=officer,
+        headers=manager,
     ).raise_for_status()
     po = client.post(
         "/procurement/purchase-orders",
@@ -208,10 +208,11 @@ class TestPurchaseOrderDecisions:
         assert client.post("/procurement/purchase-orders/999/reject", json={"reason": "Not there"}, headers=manager).status_code == 404
 
     def test_only_a_manager_decides(self, client):
-        _manager_headers, officer, po = _purchase_order(client)
+        _manager_headers, _officer, po = _purchase_order(client)
+        supervisor = auth_headers(register_and_login(client, email="sup@restaurant.com", role="Shift Supervisor"))
         url = f"/procurement/purchase-orders/{po['po_id']}"
-        assert client.post(f"{url}/approve", headers=officer).status_code == 403
-        assert client.post(f"{url}/reject", json={"reason": "Not allowed"}, headers=officer).status_code == 403
+        assert client.post(f"{url}/approve", headers=supervisor).status_code == 403
+        assert client.post(f"{url}/reject", json={"reason": "Not allowed"}, headers=supervisor).status_code == 403
 
 
 def _portion_review(client, db_session):

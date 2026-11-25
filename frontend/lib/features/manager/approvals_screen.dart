@@ -384,7 +384,7 @@ class _PurchaseOrderTile extends StatelessWidget {
                 context,
                 '/procurement/purchase-orders/${po.poId}/approve',
                 title: 'Approve PO #${po.poId}?',
-                message: 'The order for ${money(po.totalCost)} goes ahead and the Procurement Officer is told. '
+                message: 'The order for ${money(po.totalCost)} goes ahead and the person who requested it is told. '
                     'You can no longer change this decision.',
                 onChanged: onChanged,
               ),

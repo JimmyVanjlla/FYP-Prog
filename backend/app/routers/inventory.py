@@ -23,7 +23,7 @@ from app.services.config import get_or_create_config
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
 
-_INVENTORY_WRITE_ROLES = (Role.INVENTORY_STAFF, Role.RESTAURANT_MANAGER)
+_INVENTORY_WRITE_ROLES = (Role.SHIFT_SUPERVISOR, Role.RESTAURANT_MANAGER)
 
 
 def _ingredient_out(ingredient, db: Session, default_threshold=None) -> IngredientOut:

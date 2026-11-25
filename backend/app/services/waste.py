@@ -9,10 +9,11 @@ get_unit_price (cheapest active supplier, 0.00 if nobody prices it yet).
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.dates import end_of_day, restaurant_today
+from app.models.forecasting import Forecast
 from app.models.inventory import Ingredient, StockAdjustment, StockBatch
 from app.models.kitchen import LeftoverLog
 from app.models.menu import MenuItem, RecipeIngredientLink
@@ -38,6 +39,8 @@ def record_leftover_waste(db: Session, leftover_log: LeftoverLog) -> list[WasteL
     per ingredient in that dish's recipe, converting servings -> ingredient
     units via RecipeIngredientLink.quantity_per_serving, per Algorithm
     CalculateWasteCost step 2."""
+    if leftover_log.leftover_quantity <= 0:
+        return []  # nothing was left, so nothing was wasted
     links = db.scalars(
         select(RecipeIngredientLink).where(RecipeIngredientLink.menu_item_id == leftover_log.menu_item_id)
     ).all()
@@ -301,3 +304,63 @@ def waste_summary(db: Session, *, weeks: int = 8, today: date | None = None) -> 
     )[:5]
 
     return {"weeks": buckets, "top_ingredients": top_ingredients, "top_dishes": top_dishes}
+
+
+def waste_prediction(db: Session, *, days: int = 7, today: date | None = None) -> dict:
+    """Expected leftover waste for the coming days.
+
+    For each dish: the portions forecast over the period (the kitchen preps to the
+    forecast) times the share the kitchen has recently been left with (the
+    leftover rate over the last 14 days), costed at the dish's ingredient cost per
+    portion. A dish with no recent leftover data is expected to waste nothing, and
+    one that is not forecast is not listed.
+
+        expected leftover portions = forecast portions x leftover rate
+        expected cost              = expected leftover portions x ingredient cost per portion
+
+    It is an estimate that moves as the forecast and the leftover rate do."""
+    from app.services.feedback import compute_leftover_rate  # feedback imports this module's neighbours
+
+    today = today or restaurant_today()
+    end = today + timedelta(days=days - 1)
+    forecast_by_item: dict[int, Decimal] = {}
+    for item_id, qty in db.execute(
+        select(Forecast.menu_item_id, func.sum(Forecast.predicted_quantity))
+        .where(Forecast.forecast_date >= today)
+        .where(Forecast.forecast_date <= end)
+        .group_by(Forecast.menu_item_id)
+    ):
+        forecast_by_item[item_id] = Decimal(qty or 0)
+
+    names = {i.menu_item_id: i.name for i in db.scalars(select(MenuItem).where(MenuItem.menu_item_id.in_(forecast_by_item)))}
+    dishes = []
+    for item_id, forecast_portions in forecast_by_item.items():
+        rate = compute_leftover_rate(db, item_id, today=today)
+        if rate is None or rate <= 0:
+            continue
+        cost_per_portion = sum(
+            (
+                link.quantity_per_serving * _get_unit_price(db, link.ingredient_id)
+                for link in db.scalars(select(RecipeIngredientLink).where(RecipeIngredientLink.menu_item_id == item_id))
+            ),
+            Decimal("0"),
+        )
+        leftover_portions = forecast_portions * rate / 100
+        dishes.append(
+            {
+                "menu_item_id": item_id,
+                "menu_item_name": names.get(item_id, f"Dish #{item_id}"),
+                "forecast_portions": forecast_portions.quantize(Decimal("0.1")),
+                "leftover_rate": rate.quantize(Decimal("0.1")),
+                "expected_leftover_portions": leftover_portions.quantize(Decimal("0.1")),
+                "expected_cost": (leftover_portions * cost_per_portion).quantize(Decimal("0.01")),
+            }
+        )
+    dishes.sort(key=lambda d: d["expected_cost"], reverse=True)
+    return {
+        "period_start": today,
+        "period_end": end,
+        "total_cost": sum((d["expected_cost"] for d in dishes), Decimal("0.00")),
+        "total_portions": sum((d["expected_leftover_portions"] for d in dishes), Decimal("0.0")),
+        "dishes": dishes,
+    }

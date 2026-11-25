@@ -10,7 +10,7 @@ import 'contact_fields.dart';
 /// Module 1 — "profile and credential management". Everyone can see and edit
 /// their own name and contact details and change their password. Their role
 /// and email are shown but not editable: a role is a permission only a
-/// Restaurant Manager or Owner grants, and the email is the login.
+/// Restaurant Manager grants, and the email is the login.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -145,7 +145,7 @@ class _ProfileBodyState extends State<_ProfileBody> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Text(
-            'Your role and email can only be changed by a Restaurant Manager or Owner.',
+            'Your role and email can only be changed by a Restaurant Manager.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
         ),

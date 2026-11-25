@@ -328,7 +328,7 @@ void main() {
       expect(find.text('Kay Kitchen'), findsWidgets);
       expect(find.text('kitchen@test.com'), findsOneWidget);
       expect(find.text('Kitchen Staff'), findsOneWidget);
-      expect(find.textContaining('only be changed by a Restaurant Manager or Owner'), findsOneWidget);
+      expect(find.textContaining('only be changed by a Restaurant Manager'), findsOneWidget);
       // No input holds the role or the email.
       expect(find.widgetWithText(TextFormField, 'Kitchen Staff'), findsNothing);
       expect(find.widgetWithText(TextFormField, 'kitchen@test.com'), findsNothing);
@@ -424,7 +424,7 @@ void main() {
       'user_id': 9,
       'name': 'Aisha Rahman',
       'email': 'aisha@x.com',
-      'role': 'Inventory Staff',
+      'role': 'Shift Supervisor',
       'is_active': true,
       'phone_number': '+60 12-345 6789',
       'address': '12 Jalan Bukit, KL',

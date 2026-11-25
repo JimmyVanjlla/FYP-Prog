@@ -25,7 +25,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
 
   bool get _canManage {
     final role = context.read<AuthState>().role;
-    return role == Roles.inventoryStaff || Roles.isManagement(role);
+    return role == Roles.shiftSupervisor || Roles.isManagement(role);
   }
 
   Future<({List<Json> ingredients, double defaultThreshold})> _load() async {

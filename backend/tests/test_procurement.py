@@ -4,7 +4,7 @@ from tests.conftest import auth_headers, register_and_login
 
 
 def _officer_token(client):
-    return register_and_login(client, email="officer@restaurant.com", role="Procurement Officer")
+    return register_and_login(client, email="officer@restaurant.com", role="Restaurant Manager")
 
 
 def _manager_token(client):
@@ -17,7 +17,7 @@ def _create_supplier_and_ingredient(client, officer_token, manager_token=None):
         json={"name": "Fresh Farm Supplies", "contact_info": "+60 12-345 6789"},
         headers=auth_headers(officer_token),
     ).json()
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Chicken Thigh", "unit": "kg", "current_stock": "5"},

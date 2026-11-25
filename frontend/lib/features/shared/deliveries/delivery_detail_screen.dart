@@ -101,10 +101,12 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final role = context.read<AuthState>().role;
-    final isDeliveryStaff = role == Roles.deliveryStaff;
-    final canUpdateStatus = isDeliveryStaff || Roles.isManagement(role);
-    final canResolve = canUpdateStatus || role == Roles.procurementOfficer;
-    final isInventory = role == Roles.inventoryStaff;
+    // The Manager receives deliveries (what physically arrived); the Shift
+    // Supervisor then records it into stock after the stock check.
+    final isDeliveryStaff = Roles.isManagement(role);
+    final canUpdateStatus = isDeliveryStaff;
+    final canResolve = canUpdateStatus || role == Roles.shiftSupervisor;
+    final isInventory = role == Roles.shiftSupervisor;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Delivery')),
@@ -149,7 +151,7 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
                           child: Text(
                             verified
                                 ? 'Verified against stock records ${friendlyDateTime(d.delivery['verified_at'])}.'
-                                : 'Received. Waiting for Inventory Staff to verify it against stock records.',
+                                : 'Received. Waiting for the Shift Supervisor to check it against stock records.',
                           ),
                         ),
                     ],

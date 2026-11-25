@@ -38,7 +38,7 @@ def test_failure_with_retries_left_just_retries_and_alerts_nobody(client, db_ses
 
 def test_failure_after_final_retry_alerts_manager_and_owner(client, db_session):
     manager_token = register_and_login(client, email="manager@restaurant.com", role="Restaurant Manager")
-    owner_token = register_and_login(client, email="owner@restaurant.com", role="Restaurant Owner")
+    owner_token = register_and_login(client, email="owner@restaurant.com", role="Restaurant Manager")
 
     original = RuntimeError("database is on fire")
     with pytest.raises(RuntimeError) as raised:

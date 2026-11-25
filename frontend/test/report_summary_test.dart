@@ -61,7 +61,7 @@ Future<void> _open(WidgetTester tester, Map<String, Handler> routes) async {
 }
 
 void main() {
-  testWidgets('shows the period, a written summary and the three sections in order', (tester) async {
+  testWidgets('shows the period, a written summary and the sections in order', (tester) async {
     await _open(tester, _routes(leftover: 60, expiry: 20, logs: 5));
 
     expect(find.text('WEEKLY REPORT'), findsOneWidget);
@@ -73,7 +73,46 @@ void main() {
 
     double y(String text) => tester.getTopLeft(find.text(text)).dy;
     expect(y('1. Forecast accuracy'), lessThan(y('2. Waste cost')));
-    expect(y('2. Waste cost'), lessThan(y('3. Budget utilisation')));
+    expect(y('2. Waste cost'), lessThan(y('3. Leftover calculation')));
+    expect(y('3. Leftover calculation'), lessThan(y('4. Staff assignment')));
+    expect(y('4. Staff assignment'), lessThan(y('5. Budget utilisation')));
+    // A report from before these sections existed says so rather than breaking.
+    expect(find.text('No leftovers were recorded in this period.'), findsOneWidget);
+    expect(find.text('No shifts were published in this period.'), findsOneWidget);
+  });
+
+  testWidgets('shows the leftover calculation and who was assigned to each shift', (tester) async {
+    final routes = _routes(leftover: 60, expiry: 20, logs: 5);
+    final base = routes['GET /reports/3/summary']!;
+    routes['GET /reports/3/summary'] = (body, query) => {
+      ...(base(body, query) as Map<String, dynamic>),
+      'leftover': {
+        'prepared': 100.0,
+        'served': 82.0,
+        'leftover': 18.0,
+        'leftover_percent': 18.0,
+        'dishes': [
+          {'menu_item_name': 'Curry Laksa', 'prepared': 80.0, 'served': 64.0, 'leftover': 16.0, 'leftover_percent': 20.0},
+          {'menu_item_name': 'Roti Telur', 'prepared': 20.0, 'served': 18.0, 'leftover': 2.0, 'leftover_percent': 10.0},
+        ],
+      },
+      'staffing': [
+        {
+          'date': '2026-11-10',
+          'meal_period': 'Lunch',
+          'staff': [
+            {'name': 'Aisha', 'station': 'Kitchen', 'attendance': 'unconfirmed'},
+            {'name': 'Bo', 'station': 'Kitchen', 'attendance': 'unconfirmed'},
+          ],
+        },
+      ],
+    };
+    await _open(tester, routes);
+
+    expect(find.textContaining('18.0% of what was prepared was left over'), findsOneWidget);
+    expect(find.textContaining('18 of 100 portions; 82 served'), findsOneWidget);
+    expect(find.textContaining('16 of 80'), findsOneWidget);
+    expect(find.textContaining('Aisha (Kitchen), Bo (Kitchen)'), findsOneWidget);
   });
 
   testWidgets('ranks dishes by how far off they were, furthest first, and totals each day', (tester) async {

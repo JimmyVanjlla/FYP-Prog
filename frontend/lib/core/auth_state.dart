@@ -7,48 +7,28 @@ import 'api_client.dart';
 import 'jwt.dart';
 import 'push_service.dart';
 
-/// The 7 staff roles (Ch1 §1.5.2 / Ch4 §4.1) — mirrors the backend's
+/// The 3 staff roles (reduced from 7 after the supervisor's review; Ch1
+/// §1.5.2 / Ch4 §4.1 describe the original set) — mirrors the backend's
 /// app/models/roles.py::Role. Kept as plain string constants (not a Dart
 /// enum) so a role value round-trips through JSON/JWT without a mapping
 /// table to keep in sync.
 class Roles {
-  static const owner = 'Restaurant Owner';
   static const manager = 'Restaurant Manager';
   static const kitchenStaff = 'Kitchen Staff';
-  static const inventoryStaff = 'Inventory Staff';
   static const shiftSupervisor = 'Shift Supervisor';
-  static const procurementOfficer = 'Procurement Officer';
-  static const deliveryStaff = 'Delivery/Logistics Staff';
 
-  static const all = [
-    owner,
-    manager,
-    kitchenStaff,
-    inventoryStaff,
-    shiftSupervisor,
-    procurementOfficer,
-    deliveryStaff,
-  ];
+  static const all = [manager, shiftSupervisor, kitchenStaff];
 
-  /// A Restaurant Owner can do everything a Restaurant Manager can.
-  static bool isManagement(String? role) => role == manager || role == owner;
+  /// The Manager is the only role that runs the restaurant's accounts, menu,
+  /// purchasing and deliveries.
+  static bool isManagement(String? role) => role == manager;
 
-  /// The roles [actor] may give to an account they create or edit. An Owner
-  /// can give any; a Manager only the roles below Manager. (The server
-  /// enforces the same rule.)
-  static List<String> assignableBy(String? actor) {
-    if (actor == owner) return all;
-    if (actor == manager) return [for (final r in all) if (r != owner && r != manager) r];
-    return const [];
-  }
+  /// The roles [actor] may give to an account they create or edit: a Manager
+  /// can give any of the three. (The server enforces the same rule.)
+  static List<String> assignableBy(String? actor) => actor == manager ? all : const [];
 
-  /// Whether [actor] may change or deactivate an account whose role is [target]:
-  /// a Manager cannot touch a Manager or an Owner.
-  static bool canManage(String? actor, String target) {
-    if (actor == owner) return true;
-    if (actor == manager) return target != owner && target != manager;
-    return false;
-  }
+  /// Whether [actor] may change or deactivate an account whose role is [target].
+  static bool canManage(String? actor, String target) => actor == manager;
 
   const Roles._();
 }
@@ -148,7 +128,7 @@ class AuthState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // There is no self-registration in the app: a Restaurant Manager or Owner
+  // There is no self-registration in the app: a Restaurant Manager
   // creates every account from the Staff screen (POST /users).
 
   Future<void> logout() async {

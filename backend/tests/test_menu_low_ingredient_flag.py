@@ -6,7 +6,7 @@ from tests.conftest import auth_headers, register_and_login
 
 def _dish_with_ingredient(client, *, stock, threshold=None):
     manager = auth_headers(register_and_login(client, email="manager@restaurant.com", role="Restaurant Manager"))
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     payload = {"name": "Rice", "unit": "kg", "current_stock": stock}
     if threshold is not None:
         payload["low_stock_threshold"] = threshold

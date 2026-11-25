@@ -9,7 +9,7 @@ import '../../core/json.dart';
 import '../../core/theme.dart';
 import 'staff_detail_screen.dart';
 
-/// FR1.4 / FR1.5 — a Restaurant Manager or Owner creates, deactivates and
+/// FR1.4 / FR1.5 — a Restaurant Manager creates, deactivates and
 /// reassigns staff accounts, keeps their contact details, and reviews the
 /// audit trail of what each account has done. Beyond the very first
 /// Manager/Owner, this screen is the only way an account gets created.

@@ -7,7 +7,7 @@ from tests.conftest import auth_headers, register_and_login
 
 def _setup(client):
     manager = auth_headers(register_and_login(client, email="manager@restaurant.com", role="Restaurant Manager"))
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
     kitchen = auth_headers(register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff"))
 
     ingredient = client.post(
@@ -142,7 +142,7 @@ def test_leftover_waste_does_not_touch_stock(client):
         "ingredient_id": ctx["ingredient"]["ingredient_id"],
         "quantity_wasted": "1",
     }
-    assert client.post("/waste/logs", json=body, headers=ctx["kitchen"]).status_code == 201
+    assert client.post("/waste/logs", json=body, headers=ctx["inventory"]).status_code == 201
     assert float(_stock(client, ctx)) == 25.0
 
 
@@ -181,12 +181,12 @@ def test_leftover_waste_is_capped_at_what_was_prepared(client):
     ok = client.post(
         "/waste/logs",
         json={"source_type": "leftover", "source_ref_id": leftover_id, "ingredient_id": ingredient_id, "quantity_wasted": "1.5"},
-        headers=ctx["kitchen"],
+        headers=ctx["inventory"],
     )
     too_much = client.post(
         "/waste/logs",
         json={"source_type": "leftover", "source_ref_id": leftover_id, "ingredient_id": ingredient_id, "quantity_wasted": "2.5"},
-        headers=ctx["kitchen"],
+        headers=ctx["inventory"],
     )
 
     assert ok.status_code == 201
@@ -194,7 +194,9 @@ def test_leftover_waste_is_capped_at_what_was_prepared(client):
     assert "prepared" in too_much.json()["detail"]
 
 
-def test_only_kitchen_inventory_and_manager_can_log_waste(client):
+def test_only_the_shift_supervisor_records_waste_by_hand(client):
     ctx = _setup(client)
-    delivery = auth_headers(register_and_login(client, email="delivery@restaurant.com", role="Delivery/Logistics Staff"))
-    assert client.post("/waste/logs", json=_expiry(ctx, "1"), headers=delivery).status_code == 403
+    manager = auth_headers(register_and_login(client, email="boss@restaurant.com", role="Restaurant Manager"))
+    for who in (ctx["kitchen"], manager):
+        assert client.post("/waste/logs", json=_expiry(ctx, "1"), headers=who).status_code == 403
+    assert client.post("/waste/logs", json=_expiry(ctx, "1"), headers=ctx["inventory"]).status_code == 201

@@ -24,13 +24,9 @@ BASE_URL = "http://127.0.0.1:8000"
 PASSWORD = "Password123!"
 
 ACCOUNTS = [
-    ("Owner Account", "owner@test.com", "Restaurant Owner"),
     ("Manager Account", "manager@test.com", "Restaurant Manager"),
     ("Kitchen Account", "kitchen@test.com", "Kitchen Staff"),
-    ("Inventory Account", "inventory@test.com", "Inventory Staff"),
     ("Supervisor Account", "supervisor@test.com", "Shift Supervisor"),
-    ("Procurement Account", "procurement@test.com", "Procurement Officer"),
-    ("Delivery Account", "delivery@test.com", "Delivery/Logistics Staff"),
 ]
 
 # (name, unit, starting_stock, low_stock_threshold or None for system default)
@@ -157,9 +153,9 @@ def main() -> None:
 
     manager = auth(tokens["Restaurant Manager"])
     kitchen = auth(tokens["Kitchen Staff"])
-    inventory_staff = auth(tokens["Inventory Staff"])
-    procurement = auth(tokens["Procurement Officer"])
-    delivery_staff = auth(tokens["Delivery/Logistics Staff"])
+    inventory_staff = auth(tokens["Shift Supervisor"])
+    procurement = manager  # suppliers and prices are the Manager's
+    delivery_staff = manager  # the Manager receives deliveries
 
     print("== Creating ingredients ==")
     ingredient_ids: dict[str, int] = {}

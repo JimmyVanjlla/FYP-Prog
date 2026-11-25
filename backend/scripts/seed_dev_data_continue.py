@@ -18,9 +18,7 @@ PASSWORD = "Password123!"
 ACCOUNTS = {
     "Restaurant Manager": "manager@test.com",
     "Kitchen Staff": "kitchen@test.com",
-    "Inventory Staff": "inventory@test.com",
-    "Procurement Officer": "procurement@test.com",
-    "Delivery/Logistics Staff": "delivery@test.com",
+    "Shift Supervisor": "supervisor@test.com",
 }
 
 
@@ -38,9 +36,9 @@ def main() -> None:
     client = httpx.Client(base_url=BASE_URL, timeout=300)
     tokens = {role: login(client, email) for role, email in ACCOUNTS.items()}
     manager = auth(tokens["Restaurant Manager"])
-    procurement = auth(tokens["Procurement Officer"])
-    delivery_staff = auth(tokens["Delivery/Logistics Staff"])
-    inventory_staff = auth(tokens["Inventory Staff"])
+    procurement = manager  # suppliers and prices are the Manager's
+    delivery_staff = manager  # the Manager receives deliveries
+    inventory_staff = auth(tokens["Shift Supervisor"])
 
     today = date.today()
 

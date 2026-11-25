@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/auth_state.dart';
 import '../core/theme.dart';
 import 'kitchen_staff/leftover_log_screen.dart';
+import 'kitchen_staff/orders_screen.dart';
 import 'kitchen_staff/prep_screen.dart';
 import 'manager/approvals_screen.dart';
 import 'manager/reports_screen.dart';
@@ -46,7 +47,6 @@ const _myShifts = Destination('My shifts', Icons.schedule_rounded, MyScheduleScr
 List<Destination> destinationsFor(String? role) {
   switch (role) {
     case Roles.manager:
-    case Roles.owner:
       return const [
         Destination('Needs attention', Icons.fact_check_rounded, ApprovalsScreen()),
         _menu,
@@ -55,6 +55,7 @@ List<Destination> destinationsFor(String? role) {
         Destination('Waste', Icons.delete_outline_rounded, WasteScreen()),
         Destination('Reports', Icons.summarize_rounded, ReportsScreen()),
         Destination('Purchasing', Icons.receipt_long_rounded, PurchaseOrdersScreen()),
+        Destination('Suppliers', Icons.storefront_rounded, SuppliersScreen()),
         _deliveries,
         Destination('Staff', Icons.groups_rounded, StaffScreen()),
         Destination('Settings', Icons.tune_rounded, SettingsScreen()),
@@ -62,36 +63,24 @@ List<Destination> destinationsFor(String? role) {
     case Roles.kitchenStaff:
       return const [
         Destination('Prep', Icons.soup_kitchen_rounded, PrepScreen()),
+        Destination('Orders', Icons.receipt_long_rounded, OrdersScreen()),
         Destination('Leftovers', Icons.restaurant_rounded, LeftoverLogScreen()),
         _menu,
         _inventory,
-        _myShifts,
-      ];
-    case Roles.inventoryStaff:
-      return const [
-        _inventory,
-        Destination('Restock requests', Icons.add_shopping_cart_rounded, RestockingRequestsScreen()),
-        _deliveries,
-        _menu,
         _myShifts,
       ];
     case Roles.shiftSupervisor:
       return const [
         Destination('Schedules', Icons.event_note_rounded, SchedulesScreen()),
         _forecasts,
-        _menu,
-        _myShifts,
-      ];
-    case Roles.procurementOfficer:
-      return const [
+        _inventory,
+        Destination('Restock requests', Icons.add_shopping_cart_rounded, RestockingRequestsScreen()),
         Destination('Purchasing', Icons.receipt_long_rounded, PurchaseOrdersScreen()),
-        Destination('Suppliers', Icons.storefront_rounded, SuppliersScreen()),
         _deliveries,
+        Destination('Waste', Icons.delete_outline_rounded, WasteScreen()),
         _menu,
         _myShifts,
       ];
-    case Roles.deliveryStaff:
-      return const [_deliveries, _myShifts];
     default:
       return const [_menu];
   }

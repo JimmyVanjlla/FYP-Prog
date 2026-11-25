@@ -160,7 +160,7 @@ def test_non_manager_cannot_view_audit_log(client):
 
 
 def test_self_registering_a_second_manager_is_rejected(client):
-    """NFR-Security — open self-registration for Restaurant Owner/Manager
+    """NFR-Security — open self-registration for Restaurant Manager/Manager
     would let anyone grant themselves manager-level access with no
     authorization check. The very first one is a bootstrap exception
     (nobody with Manager access exists yet to provision it); once it
@@ -193,7 +193,7 @@ def test_owner_can_provision_another_manager_account(client):
     accounts via POST /users rather than open self-service. (A Manager no
     longer can: see tests/test_account_rules.py.)"""
     manager_token = register_and_login(
-        client, email="bootstrap.owner@restaurant.com", role="Restaurant Owner"
+        client, email="bootstrap.owner@restaurant.com", role="Restaurant Manager"
     )
     resp = client.post(
         "/users",
@@ -230,7 +230,7 @@ def test_non_manager_cannot_provision_staff_accounts(client):
             "name": "New Hire",
             "email": "newhire@restaurant.com",
             "password": "password123",
-            "role": "Inventory Staff",
+            "role": "Shift Supervisor",
         },
         headers=auth_headers(token),
     )
@@ -309,7 +309,7 @@ def test_every_state_changing_request_is_audit_logged(client):
 
 def test_audit_log_entry_is_attributed_to_the_acting_user(client):
     manager_token = register_and_login(client, email="audit.manager2@restaurant.com", role="Restaurant Manager")
-    inventory_token = register_and_login(client, email="audit.inventory@restaurant.com", role="Inventory Staff")
+    inventory_token = register_and_login(client, email="audit.inventory@restaurant.com", role="Shift Supervisor")
     me = client.get("/users/me", headers=auth_headers(inventory_token)).json()
 
     client.post(

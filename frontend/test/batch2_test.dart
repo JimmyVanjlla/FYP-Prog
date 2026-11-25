@@ -37,20 +37,17 @@ void main() {
   });
 
   group('who can manage which accounts', () {
-    test('an Owner assigns any role; a Manager only the roles below Manager', () {
-      expect(Roles.assignableBy(Roles.owner), Roles.all);
-      final byManager = Roles.assignableBy(Roles.manager);
-      expect(byManager, isNot(contains(Roles.owner)));
-      expect(byManager, isNot(contains(Roles.manager)));
-      expect(byManager, contains(Roles.kitchenStaff));
+    test('a Manager assigns any of the three roles; nobody else assigns any', () {
+      expect(Roles.assignableBy(Roles.manager), Roles.all);
+      expect(Roles.all, hasLength(3));
+      expect(Roles.assignableBy(Roles.shiftSupervisor), isEmpty);
       expect(Roles.assignableBy(Roles.kitchenStaff), isEmpty);
     });
 
-    test('a Manager cannot manage a Manager or an Owner', () {
+    test('only a Manager manages accounts', () {
       expect(Roles.canManage(Roles.manager, Roles.kitchenStaff), isTrue);
-      expect(Roles.canManage(Roles.manager, Roles.manager), isFalse);
-      expect(Roles.canManage(Roles.manager, Roles.owner), isFalse);
-      expect(Roles.canManage(Roles.owner, Roles.manager), isTrue);
+      expect(Roles.canManage(Roles.manager, Roles.manager), isTrue);
+      expect(Roles.canManage(Roles.shiftSupervisor, Roles.kitchenStaff), isFalse);
     });
 
     Json user(int id, String name, String role) => {
@@ -61,16 +58,11 @@ void main() {
       'is_active': true,
     };
     final staffRoutes = <String, Handler>{
-      'GET /users': (_, _) => [user(1, 'Amy', Roles.kitchenStaff), user(2, 'Bo', Roles.manager), user(3, 'Cy', Roles.owner)],
+      'GET /users': (_, _) => [user(1, 'Amy', Roles.kitchenStaff), user(2, 'Bo', Roles.manager), user(3, 'Cy', Roles.shiftSupervisor)],
     };
 
-    testWidgets('a Manager sees the manage menu only on accounts below Manager', (tester) async {
+    testWidgets('a Manager sees the manage menu on every account', (tester) async {
       await pumpAs(tester, Roles.manager, const Scaffold(body: StaffScreen()), routes: staffRoutes);
-      expect(find.byType(PopupMenuButton<String>), findsOneWidget); // Amy only
-    });
-
-    testWidgets('an Owner sees it on every account', (tester) async {
-      await pumpAs(tester, Roles.owner, const Scaffold(body: StaffScreen()), routes: staffRoutes);
       expect(find.byType(PopupMenuButton<String>), findsNWidgets(3));
     });
   });
@@ -197,7 +189,7 @@ void main() {
     testWidgets('has a number, supplier, itemised amounts and a total', (tester) async {
       await pumpAs(
         tester,
-        Roles.procurementOfficer,
+        Roles.shiftSupervisor,
         PurchaseOrderDocumentScreen(order: order(), supplier: supplier, ingredients: ingredients),
         routes: routes,
       );
@@ -230,7 +222,7 @@ void main() {
     testWidgets('flagging a supplier issue needs words, not just numbers', (tester) async {
       final api = await pumpAs(
         tester,
-        Roles.procurementOfficer,
+        Roles.shiftSupervisor,
         PurchaseOrderDocumentScreen(order: order(status: 'delivered'), supplier: supplier, ingredients: ingredients),
         routes: routes,
       );
@@ -272,7 +264,7 @@ void main() {
           'utilisation_pct': '40.00',
         },
       };
-      await pumpAs(tester, Roles.procurementOfficer, const Scaffold(body: PurchaseOrdersScreen()), routes: routes);
+      await pumpAs(tester, Roles.shiftSupervisor, const Scaffold(body: PurchaseOrdersScreen()), routes: routes);
 
       await tester.tap(find.text('Chicken'));
       await tester.pumpAndSettle();

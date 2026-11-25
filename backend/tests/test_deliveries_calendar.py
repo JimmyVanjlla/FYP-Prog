@@ -1,5 +1,5 @@
 """FR10.1: the delivery calendar, which needs a date window and (since
-Delivery/Logistics Staff can't read purchase orders) the supplier on each
+Restaurant Manager can't read purchase orders) the supplier on each
 row; plus the line items behind a PO."""
 from tests.conftest import auth_headers, register_and_login
 from tests.test_delivery import _setup_po
@@ -35,9 +35,7 @@ def test_deliveries_can_be_listed_for_a_date_window(client):
 
 def test_delivery_list_carries_supplier_and_value_for_staff_who_cannot_read_pos(client):
     _scheduled(client)
-    delivery_staff = auth_headers(
-        register_and_login(client, email="delivery@restaurant.com", role="Delivery/Logistics Staff")
-    )
+    delivery_staff = auth_headers(register_and_login(client, email="cook@restaurant.com", role="Kitchen Staff"))
 
     # They really can't read purchase orders directly...
     assert client.get("/procurement/purchase-orders", headers=delivery_staff).status_code == 403

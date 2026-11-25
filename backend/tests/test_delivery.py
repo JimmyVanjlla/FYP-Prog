@@ -2,13 +2,13 @@ from tests.conftest import auth_headers, register_and_login
 
 
 def _setup_po(client):
-    officer_token = register_and_login(client, email="officer@restaurant.com", role="Procurement Officer")
+    officer_token = register_and_login(client, email="officer@restaurant.com", role="Restaurant Manager")
     supplier = client.post(
         "/procurement/suppliers",
         json={"name": "Fresh Farm Supplies", "contact_info": "+60 12-345 6789"},
         headers=auth_headers(officer_token),
     ).json()
-    inv_token = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     ingredient = client.post(
         "/inventory/ingredients",
         json={"name": "Chicken Thigh", "unit": "kg", "current_stock": "5"},
@@ -51,9 +51,9 @@ def test_schedule_delivery_seeds_expected_quantities(client):
 
 
 def test_confirm_receipt_within_threshold_does_not_update_stock_yet(client):
-    """UC-DM-02/UC-IM-01 — confirm-receipt (Delivery/Logistics Staff)
+    """UC-DM-02/UC-IM-01 — confirm-receipt (Restaurant Manager)
     records what arrived and moves status to "delivered", but does NOT
-    touch Ingredient.current_stock; that's a separate Inventory Staff
+    touch Ingredient.current_stock; that's a separate Shift Supervisor
     step (verify_delivery, checked in the next test)."""
     officer_token, ingredient, po = _setup_po(client)
     delivery = client.post(
@@ -62,7 +62,7 @@ def test_confirm_receipt_within_threshold_does_not_update_stock_yet(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery@restaurant.com", role="Restaurant Manager"
     )
     delivery_id = delivery["delivery_id"]
 
@@ -86,7 +86,7 @@ def test_confirm_receipt_within_threshold_does_not_update_stock_yet(client):
 
 
 def test_verify_delivery_then_updates_stock(client):
-    """UC-IM-01 — Inventory Staff's separate verification step is what
+    """UC-IM-01 — Shift Supervisor's separate verification step is what
     actually updates stock."""
     officer_token, ingredient, po = _setup_po(client)
     delivery = client.post(
@@ -95,7 +95,7 @@ def test_verify_delivery_then_updates_stock(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery1b@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery1b@restaurant.com", role="Restaurant Manager"
     )
     client.post(
         f"/deliveries/{delivery['delivery_id']}/confirm-receipt",
@@ -103,7 +103,7 @@ def test_verify_delivery_then_updates_stock(client):
         headers=auth_headers(delivery_token),
     )
 
-    inv_token = register_and_login(client, email="inv_verify@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv_verify@restaurant.com", role="Shift Supervisor")
     resp = client.post(f"/deliveries/{delivery['delivery_id']}/verify", headers=auth_headers(inv_token))
     assert resp.status_code == 200
     body = resp.json()
@@ -127,7 +127,7 @@ def test_verify_delivery_blocked_while_discrepancy_open(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery2@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery2@restaurant.com", role="Restaurant Manager"
     )
     client.post(
         f"/deliveries/{delivery['delivery_id']}/confirm-receipt",
@@ -135,7 +135,7 @@ def test_verify_delivery_blocked_while_discrepancy_open(client):
         headers=auth_headers(delivery_token),
     )
 
-    inv_token = register_and_login(client, email="inv_verify2@restaurant.com", role="Inventory Staff")
+    inv_token = register_and_login(client, email="inv_verify2@restaurant.com", role="Shift Supervisor")
     resp = client.post(f"/deliveries/{delivery['delivery_id']}/verify", headers=auth_headers(inv_token))
     assert resp.status_code == 409
 
@@ -154,7 +154,7 @@ def test_confirm_receipt_beyond_threshold_creates_discrepancy_and_return_pending
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery3@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery3@restaurant.com", role="Restaurant Manager"
     )
 
     resp = client.post(
@@ -179,7 +179,7 @@ def test_confirm_receipt_rejects_negative_quantity(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery4@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery4@restaurant.com", role="Restaurant Manager"
     )
 
     resp = client.post(
@@ -218,7 +218,7 @@ def test_update_delivery_status_pre_receipt_tracking(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery5@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery5@restaurant.com", role="Restaurant Manager"
     )
 
     resp = client.patch(
@@ -240,7 +240,7 @@ def test_update_delivery_status_rejects_unsettable_value(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery6@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery6@restaurant.com", role="Restaurant Manager"
     )
 
     resp = client.patch(
@@ -261,7 +261,7 @@ def test_return_resolved_blocked_while_discrepancy_open(client):
         headers=auth_headers(officer_token),
     ).json()
     delivery_token = register_and_login(
-        client, email="delivery7@restaurant.com", role="Delivery/Logistics Staff"
+        client, email="delivery7@restaurant.com", role="Restaurant Manager"
     )
     confirm = client.post(
         f"/deliveries/{delivery['delivery_id']}/confirm-receipt",
@@ -299,7 +299,7 @@ def test_deviation_threshold_is_configurable(client):
         json={"po_id": po["po_id"], "scheduled_date": "2026-08-15"},
         headers=auth_headers(officer_token),
     ).json()
-    delivery_token = register_and_login(client, email="delivery.cfg@restaurant.com", role="Delivery/Logistics Staff")
+    delivery_token = register_and_login(client, email="delivery.cfg@restaurant.com", role="Restaurant Manager")
 
     assert client.patch(
         "/config", json={"delivery_deviation_threshold": "2.00"}, headers=auth_headers(manager_token)
@@ -331,7 +331,7 @@ def test_receipt_cannot_be_confirmed_twice(client):
         json={"po_id": po["po_id"], "scheduled_date": "2026-08-15"},
         headers=auth_headers(officer_token),
     ).json()
-    delivery_token = register_and_login(client, email="delivery.twice@restaurant.com", role="Delivery/Logistics Staff")
+    delivery_token = register_and_login(client, email="delivery.twice@restaurant.com", role="Restaurant Manager")
     url = f"/deliveries/{delivery['delivery_id']}/confirm-receipt"
     body = {"received_quantities": {"1": "25.000"}}
 

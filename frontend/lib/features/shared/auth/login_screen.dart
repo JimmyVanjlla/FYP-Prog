@@ -159,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'No account yet? Your Restaurant Manager or Owner creates it for you.',
+                        'No account yet? Your Restaurant Manager creates it for you.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                         textAlign: TextAlign.center,
                       ),

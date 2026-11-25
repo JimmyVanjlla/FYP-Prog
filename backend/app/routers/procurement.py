@@ -27,7 +27,12 @@ from app.services import procurement as procurement_service
 
 router = APIRouter(prefix="/procurement", tags=["procurement"])
 
-_PROCUREMENT_ROLES = (Role.PROCUREMENT_OFFICER, Role.RESTAURANT_MANAGER)
+# Purchasing is the Manager's, and the Shift Supervisor submits restock purchase
+# requests (purchase orders) for the Manager to approve. The supplier list,
+# prices and budget are the Manager's alone to change; the Supervisor can see
+# them to build an order.
+_PROCUREMENT_ROLES = (Role.RESTAURANT_MANAGER, Role.SHIFT_SUPERVISOR)
+_MANAGER_ONLY = (Role.RESTAURANT_MANAGER,)
 
 
 @router.get("/suppliers", response_model=list[SupplierOut])
@@ -43,7 +48,7 @@ def list_suppliers(
 
 @router.post("/suppliers", response_model=SupplierOut, status_code=status.HTTP_201_CREATED)
 def create_supplier(
-    data: SupplierCreate, db: Session = Depends(get_db), _staff: User = Depends(require_role(*_PROCUREMENT_ROLES))
+    data: SupplierCreate, db: Session = Depends(get_db), _staff: User = Depends(require_role(*_MANAGER_ONLY))
 ) -> SupplierOut:
     """FR9.1."""
     return procurement_service.create_supplier(db, name=data.name, contact_info=data.contact_info)
@@ -53,7 +58,7 @@ def create_supplier(
 def deactivate_supplier(
     supplier_id: int,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+    _staff: User = Depends(require_role(*_MANAGER_ONLY)),
 ) -> SupplierOut:
     """UC-PS-04 Alt Flow 3a."""
     try:
@@ -66,7 +71,7 @@ def deactivate_supplier(
 def reactivate_supplier(
     supplier_id: int,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+    _staff: User = Depends(require_role(*_MANAGER_ONLY)),
 ) -> SupplierOut:
     """The reverse of deactivation."""
     try:
@@ -79,7 +84,7 @@ def reactivate_supplier(
 def set_supplier_pricing(
     data: SupplierPricingCreate,
     db: Session = Depends(get_db),
-    _staff: User = Depends(require_role(*_PROCUREMENT_ROLES)),
+    _staff: User = Depends(require_role(*_MANAGER_ONLY)),
 ) -> SupplierPricingOut:
     """FR9.1."""
     return procurement_service.set_supplier_pricing(
@@ -150,7 +155,7 @@ def list_purchase_order_items(
 def create_purchase_order(
     data: PurchaseOrderCreate,
     db: Session = Depends(get_db),
-    officer: User = Depends(require_role(Role.PROCUREMENT_OFFICER)),
+    officer: User = Depends(require_role(Role.SHIFT_SUPERVISOR, Role.RESTAURANT_MANAGER)),
 ) -> PurchaseOrderOut:
     """FR9.3 / FR9.6."""
     try:

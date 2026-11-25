@@ -28,7 +28,13 @@ class WasteScreen extends StatelessWidget {
         final logs = await api.listWasteLogs();
         final summary = asJson(await api.getJson('/waste/summary', query: {'weeks': 8}));
         final ingredients = await api.listIngredients();
+        // The prediction is an extra; the screen still works without it.
+        Json prediction = {};
+        try {
+          prediction = asJson(await api.getJson('/waste/prediction', query: {'days': 7}));
+        } catch (_) {}
         return _WasteData(
+          prediction: prediction,
           logs: logs,
           weeks: asJsonList(summary['weeks']),
           topDishes: asJsonList(summary['top_dishes']),
@@ -73,6 +79,10 @@ class WasteScreen extends StatelessWidget {
                 ),
               ],
             ),
+            if (data.prediction.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _PredictionCard(prediction: data.prediction),
+            ],
             const SizedBox(height: 20),
             const SectionHeader(icon: Icons.bar_chart_rounded, label: 'Waste cost by week'),
             if (!anyWaste)
@@ -133,6 +143,7 @@ class WasteScreen extends StatelessWidget {
 }
 
 class _WasteData {
+  final Json prediction;
   final List<dynamic> logs;
   final List<Json> weeks;
   final List<Json> topDishes;
@@ -140,6 +151,7 @@ class _WasteData {
   final Map<int, dynamic> ingredients;
 
   _WasteData({
+    required this.prediction,
     required this.logs,
     required this.weeks,
     required this.topDishes,
@@ -297,6 +309,70 @@ class _RankedBars extends StatelessWidget {
                         color: scheme.primary,
                         backgroundColor: scheme.primary.withValues(alpha: 0.10),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+/// What the next week is expected to waste: the forecast portions times the share
+/// the kitchen has recently been left with, costed from the recipes.
+class _PredictionCard extends StatelessWidget {
+  final Json prediction;
+
+  const _PredictionCard({required this.prediction});
+
+  @override
+  Widget build(BuildContext context) {
+    final dishes = asJsonList(prediction['dishes']);
+    final total = asDouble(prediction['total_cost']);
+    final portions = asDouble(prediction['total_portions']);
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const IconBadge(icon: Icons.query_stats_rounded),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Expected waste, next 7 days',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        dishes.isEmpty
+                            ? 'Nothing expected: no dish has had leftovers recently.'
+                            : 'About ${portions.round()} portions, from the forecast and recent leftovers.',
+                        style: TextStyle(color: muted, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Text('RM ${total.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              ],
+            ),
+            if (dishes.isNotEmpty) const SizedBox(height: 10),
+            for (final d in dishes.take(3))
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    Expanded(child: Text(d['menu_item_name'] as String)),
+                    Text(
+                      '~${asDouble(d['expected_leftover_portions']).round()} portions  ·  RM ${asDouble(d['expected_cost']).toStringAsFixed(2)}',
+                      style: TextStyle(color: muted),
                     ),
                   ],
                 ),

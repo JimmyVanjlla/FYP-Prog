@@ -10,8 +10,8 @@ from tests.conftest import auth_headers, register_and_login
 
 def _setup(client, db_session, *, stock="0"):
     manager = auth_headers(register_and_login(client, email="manager@restaurant.com", role="Restaurant Manager"))
-    officer = auth_headers(register_and_login(client, email="po@restaurant.com", role="Procurement Officer"))
-    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Inventory Staff"))
+    officer = auth_headers(register_and_login(client, email="po@restaurant.com", role="Restaurant Manager"))
+    inventory = auth_headers(register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor"))
 
     item = client.post(
         "/menu-items", json={"name": "Nasi Lemak", "price": "6.50", "category": "Rice"}, headers=manager

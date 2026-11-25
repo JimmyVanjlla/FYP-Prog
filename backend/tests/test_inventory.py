@@ -2,7 +2,7 @@ from tests.conftest import auth_headers, register_and_login
 
 
 def _inventory_staff_token(client):
-    return register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    return register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
 
 
 def test_create_ingredient(client):
@@ -148,7 +148,7 @@ def test_non_kitchen_staff_cannot_submit_restocking_request(client):
     resp = client.post(
         "/inventory/restocking-requests",
         json={"ingredient_id": ingredient["ingredient_id"], "quantity": "10"},
-        headers=auth_headers(token),  # Inventory Staff, not Kitchen Staff
+        headers=auth_headers(token),  # Shift Supervisor, not Kitchen Staff
     )
     assert resp.status_code == 403
 

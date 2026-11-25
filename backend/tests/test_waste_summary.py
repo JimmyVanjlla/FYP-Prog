@@ -15,7 +15,7 @@ from tests.conftest import auth_headers, register_and_login
 
 def _setup_dish(client):
     manager = register_and_login(client, email="manager@restaurant.com", role="Restaurant Manager")
-    inv = register_and_login(client, email="inv@restaurant.com", role="Inventory Staff")
+    inv = register_and_login(client, email="inv@restaurant.com", role="Shift Supervisor")
     kitchen = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")
     item = client.post(
         "/menu-items", json={"name": "Curry Laksa", "price": "8.00", "category": "Noodles"}, headers=auth_headers(manager)

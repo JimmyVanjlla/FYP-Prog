@@ -32,7 +32,7 @@ def check_near_expiry_batches_task(self) -> dict:
         if result["near_expiry_alerts"]:
             notification_service.notify(
                 db,
-                recipient_role="Inventory Staff",
+                recipient_role="Shift Supervisor",
                 type_="near_expiry_alert",
                 message=(
                     f"{len(result['near_expiry_alerts'])} batch(es) approaching expiry — "
