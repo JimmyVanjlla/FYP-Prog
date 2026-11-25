@@ -4,7 +4,7 @@ Algorithm "CheckLowStockThreshold" and "CheckNearExpiryBatches" (Ch4
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.core.dates import restaurant_today
@@ -292,13 +292,16 @@ def _portions_consumed(db: Session, start: date, end: date, *, actual_only: bool
         for f in db.scalars(select(Forecast).where(Forecast.forecast_date.between(start, end))):
             per_key[(f.menu_item_id, f.meal_period, f.forecast_date)] = Decimal(f.predicted_quantity)
 
+    # Orders the end-of-day button has already counted add nothing here, but they
+    # still count as "there were orders", so the forecast must not stand in for them.
+    not_yet_counted = func.sum(case((Order.stock_counted.is_(False), Order.quantity), else_=0))
     for menu_item_id, meal_period, order_date, qty in db.execute(
-        select(Order.menu_item_id, Order.meal_period, Order.order_date, func.sum(Order.quantity))
+        select(Order.menu_item_id, Order.meal_period, Order.order_date, not_yet_counted)
         .where(Order.order_date.between(start, end))
         .where(Order.status == "completed")
         .group_by(Order.menu_item_id, Order.meal_period, Order.order_date)
     ):
-        per_key[(menu_item_id, meal_period, order_date)] = Decimal(qty)
+        per_key[(menu_item_id, meal_period, order_date)] = Decimal(qty or 0)
 
     totals: dict[int, Decimal] = {}
     for (menu_item_id, _period, _day), qty in per_key.items():
@@ -308,45 +311,54 @@ def _portions_consumed(db: Session, start: date, end: date, *, actual_only: bool
 
 def apply_forecasted_consumption(db: Session, *, today: date | None = None, include_today: bool = False) -> dict:
     """FR3.1 — deducts the ingredients consumed since the last run from
-    current stock. Runs daily (see app/tasks/inventory_tasks.py) and only
-    ever covers days that have fully ended, each exactly once, tracked by
+    current stock. Runs daily (see app/tasks/inventory_tasks.py) and covers days
+    that have fully ended, each exactly once, tracked by
     SystemConfig.stock_consumption_applied_through. The first ever run just
     starts the clock at yesterday instead of back-deducting history.
 
-    With include_today (the "end of day" button), today is counted too, from
-    the orders the kitchen has completed so far (never the forecast, since the
-    day is not over). The clock moves to today, so the scheduled run that
-    follows starts tomorrow and nothing is counted twice.
+    With include_today (the "end of day" button), the orders the kitchen has
+    completed today are counted too, never the forecast, since the day is not
+    over. Each order counted is marked, so pressing the button again counts only
+    orders completed since, and the nightly run that follows skips them: nothing
+    is counted twice.
 
     Stock is floored at zero (a negative on-hand figure would just mean the
     recipes or order counts are off, and FR3.6 forbids negative stock), and
     the Shift Supervisor is alerted for any ingredient this pushes below its
     low-stock threshold."""
     today = today or (restaurant_today() if include_today else date.today())
-    through = today if include_today else today - timedelta(days=1)
+    yesterday = today - timedelta(days=1)
     config = get_or_create_config(db)
     last = config.stock_consumption_applied_through
 
     if last is None:
+        config.stock_consumption_applied_through = yesterday
+        db.commit()
         if not include_today:
-            config.stock_consumption_applied_through = through
-            db.commit()
             return {"initialised": True, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
-        last = today - timedelta(days=1)  # first ever run: count today only, never back-deduct history
-    if last >= through:
+        last = yesterday  # first ever run: never back-deduct history
+
+    finished_days = max((yesterday - last).days, 0)
+    todays_orders = []
+    if include_today:
+        todays_orders = list(
+            db.scalars(
+                select(Order)
+                .where(Order.order_date == today)
+                .where(Order.status == "completed")
+                .where(Order.stock_counted.is_(False))
+            )
+        )
+    if finished_days == 0 and not todays_orders:
         return {"initialised": False, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
 
-    start = last + timedelta(days=1)
     default_threshold = config.default_low_stock_threshold
     low_before = {i.ingredient_id for i in list_ingredients(db) if check_low_stock_threshold(db, i, default_threshold)}
 
-    if include_today:
-        portions = _portions_consumed(db, today, today, actual_only=True)
-        if start < today:
-            for item_id, qty in _portions_consumed(db, start, today - timedelta(days=1)).items():
-                portions[item_id] = portions.get(item_id, Decimal("0")) + qty
-    else:
-        portions = _portions_consumed(db, start, through)
+    portions = _portions_consumed(db, last + timedelta(days=1), yesterday) if finished_days else {}
+    for order in todays_orders:
+        portions[order.menu_item_id] = portions.get(order.menu_item_id, Decimal("0")) + Decimal(order.quantity)
+        order.stock_counted = True
     used: dict[int, Decimal] = {}
     if portions:
         links = db.scalars(select(RecipeIngredientLink).where(RecipeIngredientLink.menu_item_id.in_(portions)))
@@ -355,13 +367,15 @@ def apply_forecasted_consumption(db: Session, *, today: date | None = None, incl
                 used.get(link.ingredient_id, Decimal("0")) + portions[link.menu_item_id] * link.quantity_per_serving
             )
 
+    used = {ingredient_id: qty for ingredient_id, qty in used.items() if qty > 0}  # orders already counted add nothing
     for ingredient_id, quantity in used.items():
         ingredient = db.get(Ingredient, ingredient_id)
         if ingredient is None:
             continue
         ingredient.current_stock = max(Decimal("0"), ingredient.current_stock - quantity.quantize(Decimal("0.001")))
 
-    config.stock_consumption_applied_through = through
+    if finished_days:
+        config.stock_consumption_applied_through = yesterday
     db.commit()
 
     newly_low = [
@@ -380,7 +394,7 @@ def apply_forecasted_consumption(db: Session, *, today: date | None = None, incl
 
     return {
         "initialised": False,
-        "days_applied": (through - last).days,
+        "days_applied": finished_days,
         "ingredients_updated": len(used),
         "low_stock_alerts": len(newly_low),
     }

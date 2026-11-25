@@ -185,8 +185,41 @@ def test_the_overnight_job_does_not_count_a_day_the_button_already_counted(clien
 
     result = apply_forecasted_consumption(db_session, today=restaurant_today() + timedelta(days=1))
 
-    assert result["days_applied"] == 0 and result["ingredients_updated"] == 0
+    # The day has now finished, but every order in it was already counted: nothing
+    # more comes off, and the forecast does not stand in for orders that existed.
+    assert result["days_applied"] == 1 and result["ingredients_updated"] == 0
     assert _stock(client, inventory, ingredient) == Decimal("48.000")
+
+
+def test_orders_completed_after_the_first_count_are_counted_by_the_next_one(client, db_session):
+    """The scenario from the demo: count, complete more orders, count again."""
+    manager, inventory, ingredient, item = _setup(client)
+    _today_order(db_session, item, 10)
+    client.post("/inventory/consumption/end-of-day", headers=inventory)
+    assert _stock(client, inventory, ingredient) == Decimal("48.000")
+
+    _today_order(db_session, item, 5)  # completed after the first count
+    again = client.post("/inventory/consumption/end-of-day", headers=inventory).json()
+
+    assert again["ingredients_updated"] == 1
+    assert _stock(client, inventory, ingredient) == Decimal("47.000")  # 10 + 5 portions in all, each counted once
+    nothing = client.post("/inventory/consumption/end-of-day", headers=inventory).json()
+    assert nothing["ingredients_updated"] == 0
+    assert _stock(client, inventory, ingredient) == Decimal("47.000")
+
+
+def test_the_overnight_job_counts_only_the_orders_the_button_did_not(client, db_session):
+    from app.core.dates import restaurant_today
+    from app.services.inventory import apply_forecasted_consumption
+
+    manager, inventory, ingredient, item = _setup(client)
+    _today_order(db_session, item, 10)
+    client.post("/inventory/consumption/end-of-day", headers=inventory)  # 10 counted: stock 48
+    _today_order(db_session, item, 5)  # completed later, never counted by the button
+
+    apply_forecasted_consumption(db_session, today=restaurant_today() + timedelta(days=1))
+
+    assert _stock(client, inventory, ingredient) == Decimal("47.000")  # the 5 left over, once
 
 
 def test_end_of_day_also_catches_up_finished_days_not_yet_counted(client, db_session):

@@ -238,9 +238,11 @@
                                                    (never below zero); pending orders and the
                                                    forecast are not counted
     Tap it again straight away.                    Expect: "Nothing new to count" (no double count)
-    The overnight job later starts from tomorrow, so nothing is counted twice. Run it on a
-    day you want stock to stay as documented only if you accept the figures moving; the
-    low-stock list and TEST_DATA stock levels change afterwards.
+    Complete more orders, then tap it again.       Expect: only the orders completed since the
+                                                   last count come off stock (each order is
+                                                   counted once, however many times you press)
+    The overnight job skips orders already counted, so nothing is counted twice. The stock
+    levels in this file change once you run the count; ask for them to be reset afterwards.
 
  K. Staff accounts  (manager@test.com > Staff > Add staff account)
     Name                     Test Chef

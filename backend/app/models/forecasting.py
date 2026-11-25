@@ -5,7 +5,7 @@ Module 4: Demand Forecasting — Order, Forecast, ForecastAccuracy [M4]
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -33,6 +33,9 @@ class Order(Base):
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=True
     )
+    # Set once the ingredients this order used have been taken off stock by the
+    # end-of-day count, so the nightly job (which counts whole days) skips it.
+    stock_counted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
 
 
 class Forecast(Base):
