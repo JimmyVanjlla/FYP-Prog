@@ -7,6 +7,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.dates import restaurant_today
 from app.models.forecasting import Forecast, Order
 from app.models.inventory import Ingredient, RestockingRequest, StockAdjustment, StockBatch
 from app.models.menu import RecipeIngredientLink
@@ -279,7 +280,7 @@ def check_near_expiry_batches(db: Session, *, today: date | None = None) -> dict
 # --- FR3.1: consumption --------------------------------------------------
 
 
-def _portions_consumed(db: Session, start: date, end: date) -> dict[int, Decimal]:
+def _portions_consumed(db: Session, start: date, end: date, *, actual_only: bool = False) -> dict[int, Decimal]:
     """Portions of each menu item consumed between start and end inclusive.
     For each (item, meal period, day) the actual logged orders are used when
     there are any, and the forecast stands in where there aren't — FR3.1 /
@@ -287,8 +288,9 @@ def _portions_consumed(db: Session, start: date, end: date) -> dict[int, Decimal
     forecasted consumption", and a real order record is strictly better than
     the prediction it would otherwise be replaced by."""
     per_key: dict[tuple[int, str, date], Decimal] = {}
-    for f in db.scalars(select(Forecast).where(Forecast.forecast_date.between(start, end))):
-        per_key[(f.menu_item_id, f.meal_period, f.forecast_date)] = Decimal(f.predicted_quantity)
+    if not actual_only:  # a day still in progress has no forecast to stand in for it
+        for f in db.scalars(select(Forecast).where(Forecast.forecast_date.between(start, end))):
+            per_key[(f.menu_item_id, f.meal_period, f.forecast_date)] = Decimal(f.predicted_quantity)
 
     for menu_item_id, meal_period, order_date, qty in db.execute(
         select(Order.menu_item_id, Order.meal_period, Order.order_date, func.sum(Order.quantity))
@@ -304,26 +306,33 @@ def _portions_consumed(db: Session, start: date, end: date) -> dict[int, Decimal
     return totals
 
 
-def apply_forecasted_consumption(db: Session, *, today: date | None = None) -> dict:
+def apply_forecasted_consumption(db: Session, *, today: date | None = None, include_today: bool = False) -> dict:
     """FR3.1 — deducts the ingredients consumed since the last run from
     current stock. Runs daily (see app/tasks/inventory_tasks.py) and only
     ever covers days that have fully ended, each exactly once, tracked by
     SystemConfig.stock_consumption_applied_through. The first ever run just
     starts the clock at yesterday instead of back-deducting history.
 
+    With include_today (the "end of day" button), today is counted too, from
+    the orders the kitchen has completed so far (never the forecast, since the
+    day is not over). The clock moves to today, so the scheduled run that
+    follows starts tomorrow and nothing is counted twice.
+
     Stock is floored at zero (a negative on-hand figure would just mean the
     recipes or order counts are off, and FR3.6 forbids negative stock), and
-    Inventory Staff are alerted for any ingredient this pushes below its
+    the Shift Supervisor is alerted for any ingredient this pushes below its
     low-stock threshold."""
-    today = today or date.today()
-    through = today - timedelta(days=1)
+    today = today or (restaurant_today() if include_today else date.today())
+    through = today if include_today else today - timedelta(days=1)
     config = get_or_create_config(db)
     last = config.stock_consumption_applied_through
 
     if last is None:
-        config.stock_consumption_applied_through = through
-        db.commit()
-        return {"initialised": True, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
+        if not include_today:
+            config.stock_consumption_applied_through = through
+            db.commit()
+            return {"initialised": True, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
+        last = today - timedelta(days=1)  # first ever run: count today only, never back-deduct history
     if last >= through:
         return {"initialised": False, "days_applied": 0, "ingredients_updated": 0, "low_stock_alerts": 0}
 
@@ -331,7 +340,13 @@ def apply_forecasted_consumption(db: Session, *, today: date | None = None) -> d
     default_threshold = config.default_low_stock_threshold
     low_before = {i.ingredient_id for i in list_ingredients(db) if check_low_stock_threshold(db, i, default_threshold)}
 
-    portions = _portions_consumed(db, start, through)
+    if include_today:
+        portions = _portions_consumed(db, today, today, actual_only=True)
+        if start < today:
+            for item_id, qty in _portions_consumed(db, start, today - timedelta(days=1)).items():
+                portions[item_id] = portions.get(item_id, Decimal("0")) + qty
+    else:
+        portions = _portions_consumed(db, start, through)
     used: dict[int, Decimal] = {}
     if portions:
         links = db.scalars(select(RecipeIngredientLink).where(RecipeIngredientLink.menu_item_id.in_(portions)))

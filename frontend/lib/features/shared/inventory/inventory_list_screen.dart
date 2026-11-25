@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../../core/async_view.dart';
 import '../../../core/auth_state.dart';
+import '../../../core/dialogs.dart';
 import '../../../core/json.dart';
 import '../../../core/theme.dart';
 import 'ingredient_detail_screen.dart';
@@ -26,6 +27,41 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   bool get _canManage {
     final role = context.read<AuthState>().role;
     return role == Roles.shiftSupervisor || Roles.isManagement(role);
+  }
+
+  /// The nightly stock count, on demand. The free server has no background
+  /// worker to run it overnight, so this takes today's completed orders off
+  /// stock now. Pressing it again counts nothing twice.
+  Future<void> _endOfDayCount(BuildContext context, Future<void> Function() reload) async {
+    final sure = await confirmAction(
+      context,
+      title: 'Run the end-of-day count?',
+      message: 'The ingredients used by the orders completed today are taken off stock now. '
+          'This normally runs overnight; the button is here for demonstration. '
+          'Pressing it again will not count anything twice.',
+      confirmLabel: 'Run count',
+    );
+    if (!sure || !context.mounted) return;
+    final api = context.read<AuthState>().api;
+    final messenger = ScaffoldMessenger.of(context);
+    Json? result;
+    final ok = await runAction(context, () async {
+      result = asJson(await api.postJson('/inventory/consumption/end-of-day'));
+    });
+    if (!ok) return;
+    final updated = (result?['ingredients_updated'] as num?)?.toInt() ?? 0;
+    final alerts = (result?['low_stock_alerts'] as num?)?.toInt() ?? 0;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          updated == 0
+              ? 'Nothing new to count: no completed orders since the last count.'
+              : 'Counted: $updated ${updated == 1 ? 'ingredient' : 'ingredients'} taken off stock'
+                  '${alerts > 0 ? ', $alerts now low' : ''}.',
+        ),
+      ),
+    );
+    await reload();
   }
 
   Future<({List<Json> ingredients, double defaultThreshold})> _load() async {
@@ -121,6 +157,14 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               for (final ingredient in groups.ok) tile(ingredient),
             ],
             if (_canManage) AddRow(label: 'Add ingredient', onTap: () => _showAddDialog(context, reload)),
+            if (_canManage) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => _endOfDayCount(context, reload),
+                icon: const Icon(Icons.nights_stay_outlined, size: 18),
+                label: const Text('End-of-day count (demo)'),
+              ),
+            ],
           ],
         );
       },

@@ -136,3 +136,73 @@ def test_inventory_staff_alerted_when_consumption_pushes_an_ingredient_below_thr
 def test_kitchen_staff_cannot_trigger_consumption(client):
     token = register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff")
     assert client.post("/inventory/consumption/apply", headers=auth_headers(token)).status_code == 403
+
+
+# ---------------------------------------------------------------- the end-of-day count, on demand
+def _today_order(db_session, item, qty, status="completed"):
+    from app.core.dates import restaurant_today
+    from app.models.forecasting import Order
+
+    db_session.add(
+        Order(menu_item_id=item["menu_item_id"], quantity=qty, meal_period="Lunch", order_date=restaurant_today(), status=status)
+    )
+    db_session.commit()
+
+
+def test_end_of_day_takes_todays_completed_orders_off_stock_and_ignores_the_forecast(client, db_session):
+    from app.core.dates import restaurant_today
+
+    manager, inventory, ingredient, item = _setup(client)
+    _today_order(db_session, item, 10)  # served: counts
+    _today_order(db_session, item, 5, status="pending")  # not served yet: does not
+    db_session.add(
+        Forecast(menu_item_id=item["menu_item_id"], meal_period="Dinner", forecast_date=restaurant_today(), predicted_quantity=Decimal("100"))
+    )
+    db_session.commit()  # today's forecast must not be used as if it were sales
+
+    body = client.post("/inventory/consumption/end-of-day", headers=inventory).json()
+
+    assert body["ingredients_updated"] == 1
+    assert _stock(client, inventory, ingredient) == Decimal("48.000")  # 10 portions x 0.2 kg
+
+
+def test_counting_the_end_of_day_twice_does_not_deduct_twice(client, db_session):
+    manager, inventory, ingredient, item = _setup(client)
+    _today_order(db_session, item, 10)
+    client.post("/inventory/consumption/end-of-day", headers=inventory)
+    again = client.post("/inventory/consumption/end-of-day", headers=inventory).json()
+    assert again["ingredients_updated"] == 0
+    assert _stock(client, inventory, ingredient) == Decimal("48.000")
+
+
+def test_the_overnight_job_does_not_count_a_day_the_button_already_counted(client, db_session):
+    from app.core.dates import restaurant_today
+    from app.services.inventory import apply_forecasted_consumption
+
+    manager, inventory, ingredient, item = _setup(client)
+    _today_order(db_session, item, 10)
+    client.post("/inventory/consumption/end-of-day", headers=inventory)
+
+    result = apply_forecasted_consumption(db_session, today=restaurant_today() + timedelta(days=1))
+
+    assert result["days_applied"] == 0 and result["ingredients_updated"] == 0
+    assert _stock(client, inventory, ingredient) == Decimal("48.000")
+
+
+def test_end_of_day_also_catches_up_finished_days_not_yet_counted(client, db_session):
+    from app.core.dates import restaurant_today
+
+    manager, inventory, ingredient, item = _setup(client)
+    today = restaurant_today()
+    _mark_applied_through(db_session, today - timedelta(days=2))
+    _order(client, manager, item, 5, today - timedelta(days=1))  # yesterday, a finished day
+    _today_order(db_session, item, 10)
+
+    client.post("/inventory/consumption/end-of-day", headers=inventory)
+
+    assert _stock(client, inventory, ingredient) == Decimal("47.000")  # (5 + 10) portions x 0.2 kg
+
+
+def test_only_the_supervisor_and_manager_can_run_the_end_of_day_count(client):
+    kitchen = auth_headers(register_and_login(client, email="kitchen@restaurant.com", role="Kitchen Staff"))
+    assert client.post("/inventory/consumption/end-of-day", headers=kitchen).status_code == 403

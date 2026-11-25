@@ -228,6 +228,20 @@
     The Supervisor and Manager can adjust stock and add batches; the Kitchen can request
     a restock.
 
+ J2. End-of-day count  (supervisor@test.com or manager@test.com > Inventory)
+    The nightly stock count needs the background worker, which the free host does not have,
+    so the Inventory screen has an "End-of-day count (demo)" button.
+    Complete some orders in the kitchen first (see F), then tap it and Run count.
+                                                   Expect: "Counted: N ingredients taken off
+                                                   stock"; each ingredient falls by portions
+                                                   completed today x its quantity per serving
+                                                   (never below zero); pending orders and the
+                                                   forecast are not counted
+    Tap it again straight away.                    Expect: "Nothing new to count" (no double count)
+    The overnight job later starts from tomorrow, so nothing is counted twice. Run it on a
+    day you want stock to stay as documented only if you accept the figures moving; the
+    low-stock list and TEST_DATA stock levels change afterwards.
+
  K. Staff accounts  (manager@test.com > Staff > Add staff account)
     Name                     Test Chef
     Email                    test.chef@example.com

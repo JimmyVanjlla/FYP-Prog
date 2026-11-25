@@ -196,6 +196,18 @@ def update_restocking_request(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="This request has already been decided.")
 
 
+@router.post("/consumption/end-of-day", response_model=ConsumptionApplyResult)
+def end_of_day_count(
+    db: Session = Depends(get_db),
+    _staff: User = Depends(require_role(*_INVENTORY_WRITE_ROLES)),
+) -> ConsumptionApplyResult:
+    """The end-of-day stock count, on demand: takes the ingredients used by
+    today's completed orders (and any finished days not yet counted) off stock.
+    Normally the daily job does this overnight; the free host has no background
+    worker, so this exists for demonstration. Counting twice does nothing new."""
+    return ConsumptionApplyResult(**inventory_service.apply_forecasted_consumption(db, include_today=True))
+
+
 @router.post("/consumption/apply", response_model=ConsumptionApplyResult)
 def apply_consumption(
     db: Session = Depends(get_db),

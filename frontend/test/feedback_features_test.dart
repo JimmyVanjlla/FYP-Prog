@@ -285,6 +285,66 @@ void main() {
     });
   });
 
+  group('end-of-day count', () {
+    Map<String, Handler> routes({int updated = 2, int alerts = 1}) => {
+      'GET /inventory/ingredients': (_, _) => [
+        {'ingredient_id': 1, 'name': 'Rice', 'unit': 'kg', 'current_stock': '50', 'is_low_stock': false},
+      ],
+      'POST /inventory/consumption/end-of-day': (_, _) => {
+        'initialised': false,
+        'days_applied': 1,
+        'ingredients_updated': updated,
+        'low_stock_alerts': alerts,
+      },
+    };
+
+    testWidgets('the supervisor can run it; the kitchen cannot', (tester) async {
+      await pumpAs(tester, Roles.kitchenStaff, const Scaffold(body: InventoryListScreen()), routes: routes());
+      expect(find.text('End-of-day count (demo)'), findsNothing);
+
+      await pumpAs(tester, Roles.shiftSupervisor, const Scaffold(body: InventoryListScreen()), routes: routes());
+      expect(find.text('End-of-day count (demo)'), findsOneWidget);
+    });
+
+    testWidgets('it asks first, then runs the count and says what it did', (tester) async {
+      final api = await pumpAs(tester, Roles.shiftSupervisor, const Scaffold(body: InventoryListScreen()), routes: routes());
+      tester.view.physicalSize = const Size(420, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('End-of-day count (demo)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Run the end-of-day count?'), findsOneWidget);
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+      expect(api.calls.where((c) => c.method == 'POST'), isEmpty);
+
+      await tester.tap(find.text('End-of-day count (demo)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Run count'));
+      await tester.pumpAndSettle();
+      expect(api.calls.singleWhere((c) => c.method == 'POST').path, '/inventory/consumption/end-of-day');
+      expect(find.textContaining('Counted: 2 ingredients taken off stock, 1 now low'), findsOneWidget);
+    });
+
+    testWidgets('when there is nothing new it says so', (tester) async {
+      await pumpAs(
+        tester,
+        Roles.shiftSupervisor,
+        const Scaffold(body: InventoryListScreen()),
+        routes: routes(updated: 0, alerts: 0),
+      );
+      tester.view.physicalSize = const Size(420, 2400);
+      addTearDown(tester.view.resetPhysicalSize);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('End-of-day count (demo)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Run count'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Nothing new to count'), findsOneWidget);
+    });
+  });
+
   group('phone numbers', () {
     test('are optional and checked for shape', () {
       expect(validateOptionalPhone(''), isNull);
