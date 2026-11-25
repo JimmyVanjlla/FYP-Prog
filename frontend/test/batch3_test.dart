@@ -61,6 +61,56 @@ void main() {
       expect(sent.body, {'status': 'fulfilled'});
     });
 
+    Map<String, Handler> formRoutes() => {
+      ..._ingredients,
+      'GET /inventory/restocking-requests': (_, _) => [_request(5, 'pending')],
+      'PATCH /inventory/restocking-requests/5': (_, _) => _request(5, 'fulfilled'),
+      'GET /procurement/suppliers': (_, _) => [
+        {'supplier_id': 1, 'name': 'Fresh Farm', 'contact_info': 'x', 'is_active': true},
+      ],
+      'GET /procurement/suppliers/pricing': (_, _) => [
+        {'pricing_id': 1, 'supplier_id': 1, 'ingredient_id': 1, 'unit_price': '4.00'},
+      ],
+      'GET /procurement/recommendations': (_, _) => <Json>[],
+      'GET /procurement/budget/utilisation': (_, _) => {
+        'month': '2026-11-01',
+        'budget_limit': '8000.00',
+        'spent': '1480.00',
+        'remaining': '6520.00',
+        'utilisation_pct': '18.50',
+      },
+    };
+
+    Future<void> approve(WidgetTester tester) async {
+      await tester.tap(find.text('Approve'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('does not order it or change stock'), findsOneWidget);
+      await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.widgetWithText(FilledButton, 'Approve')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('after approving it offers a purchase request with the item and quantity filled in', (tester) async {
+      await pumpAs(tester, Roles.shiftSupervisor, const Scaffold(body: RestockingRequestsScreen()), routes: formRoutes());
+      await approve(tester);
+
+      expect(find.text('Start a purchase request?'), findsOneWidget);
+      await tester.tap(find.text('Start request'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New purchase order'), findsOneWidget);
+      expect(find.text('RM 80.00'), findsWidgets); // the 20 kg asked for, at RM 4.00
+    });
+
+    testWidgets('"Not now" leaves it approved and opens nothing', (tester) async {
+      final api = await pumpAs(tester, Roles.shiftSupervisor, const Scaffold(body: RestockingRequestsScreen()), routes: formRoutes());
+      await approve(tester);
+
+      await tester.tap(find.text('Not now'));
+      await tester.pumpAndSettle();
+      expect(find.text('New purchase order'), findsNothing);
+      expect(api.calls.where((c) => c.method == 'PATCH'), hasLength(1));
+    });
+
     testWidgets('declining needs a reason made of words, and sends it', (tester) async {
       final api = await open(tester, [_request(5, 'pending')]);
 

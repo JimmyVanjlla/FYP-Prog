@@ -7,6 +7,7 @@ import '../../../core/dialogs.dart';
 import '../../../core/format.dart';
 import '../../../core/json.dart';
 import '../../../core/theme.dart';
+import '../../procurement_officer/purchase_order_form_screen.dart';
 
 /// UC-IM-06 / FR3.5 — Inventory Staff work through the restocking requests
 /// Kitchen Staff have sent, urgent ones first. Approving asks for
@@ -123,7 +124,8 @@ class _RequestTile extends StatelessWidget {
     final sure = await confirmAction(
       context,
       title: 'Approve this request?',
-      message: '$_what will be marked as restocked and the kitchen is told. You can no longer change this decision.',
+      message: 'The kitchen is told that $_what is approved. Approving does not order it or change stock: '
+          'stock goes up when the delivery is booked in. You can no longer change this decision.',
       confirmLabel: 'Approve',
     );
     if (!sure || !context.mounted) return;
@@ -133,7 +135,37 @@ class _RequestTile extends StatelessWidget {
       () => api.patchJson('/inventory/restocking-requests/${request['request_id']}', {'status': 'fulfilled'}),
       success: 'Approved.',
     );
-    if (ok) await onChanged();
+    if (!ok) return;
+    // Approval alone orders nothing, so offer the next step while it is fresh:
+    // a purchase request with this ingredient and quantity already filled in.
+    if (context.mounted) await _offerPurchaseRequest(context);
+    await onChanged();
+  }
+
+  Future<void> _offerPurchaseRequest(BuildContext context) async {
+    final start = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Start a purchase request?'),
+        content: Text(
+          '$_what is approved, but nothing has been ordered yet. Start a purchase request with it filled in, '
+          'and the Manager can approve the order.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Start request')),
+        ],
+      ),
+    );
+    if (start != true || !context.mounted) return;
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => PurchaseOrderFormScreen(
+          initialIngredientId: request['ingredient_id'] as int,
+          initialQuantity: trimNum(request['quantity']),
+        ),
+      ),
+    );
   }
 
   Future<void> _decline(BuildContext context) async {
